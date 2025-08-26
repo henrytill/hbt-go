@@ -217,6 +217,30 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 	}
 }
 
+// ApplyMappings applies label transformations to all entities in the collection
+func (c *Collection) ApplyMappings(mappings map[string]string) {
+	for i := range c.Value {
+		entity := &c.Value[i].Entity
+
+		// Create a new labels map for transformed labels
+		newLabels := make(map[string]struct{})
+
+		// Process existing labels
+		for label := range entity.Labels {
+			if newLabel, exists := mappings[label]; exists {
+				// Replace with mapped label
+				newLabels[newLabel] = struct{}{}
+			} else {
+				// Keep original label
+				newLabels[label] = struct{}{}
+			}
+		}
+
+		// Replace labels with transformed set
+		entity.Labels = newLabels
+	}
+}
+
 // Helper functions for time conversion
 func TimeToUnix(t time.Time) int64 {
 	return t.Unix()

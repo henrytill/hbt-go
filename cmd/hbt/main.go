@@ -240,6 +240,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Apply mappings if provided
+	if *config.Mappings != "" {
+		mappings, err := internal.LoadMappingsFromFile(*config.Mappings)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading mappings file: %v\n", err)
+			os.Exit(1)
+		}
+		collection.ApplyMappings(mappings)
+	}
+
 	// Handle analysis flags
 	if *config.Info {
 		fmt.Printf("Collection contains %d entities\n", collection.Length)

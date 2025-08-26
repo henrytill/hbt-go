@@ -10,6 +10,7 @@ GO_SOURCES += cmd/hbt/main.go
 GO_SOURCES += internal/types.go
 GO_SOURCES += internal/parser.go
 GO_SOURCES += internal/formatter.go
+GO_SOURCES += internal/mappings.go
 GO_SOURCES += internal/parser/markdown.go
 GO_SOURCES += internal/parser/xml.go
 GO_SOURCES += internal/parser/pinboard.go
