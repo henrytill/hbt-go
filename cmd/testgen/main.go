@@ -180,11 +180,11 @@ package main
 import (
 	"testing"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/testutil"
 )
 {{range .TestCases}}
 func {{.Name}}(t *testing.T) {
-	internal.RunHbtAndCompare(t, {{printf "%q" .Format}}, {{printf "%q" .InputFile}}, {{printf "%q" .OutputFile}})
+	testutil.RunHbtAndCompare(t, {{printf "%q" .Format}}, {{printf "%q" .InputFile}}, {{printf "%q" .OutputFile}})
 }
 {{end}}
 `

@@ -45,7 +45,7 @@ hbt_test.go: bin/testgen
 	$<
 
 .PHONY: test
-test: bin/hbt hbt_test.go internal/test_support.go
+test: bin/hbt hbt_test.go internal/testutil/testutil.go
 	$(GO) test -v
 
 .PHONY: clean
