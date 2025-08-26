@@ -189,21 +189,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Only show processing messages if not outputting to stdout
-	if *config.OutputFile != "" {
-		fmt.Printf("Processing file: %s\n", config.InputFile)
-		fmt.Printf("Input format: %s\n", *config.InputFormat)
-		if *config.OutputFormat != "" {
-			fmt.Printf("Output format: %s\n", *config.OutputFormat)
-		}
-	}
-	if *config.Info {
-		fmt.Println("Will show collection info")
-	}
-	if *config.ListTags {
-		fmt.Println("Will list all tags")
-	}
-
 	// Initialize parser and formatter registries
 	parserRegistry := internal.NewParserRegistry()
 	formatterRegistry := internal.NewFormatterRegistry()
