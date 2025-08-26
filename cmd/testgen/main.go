@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -127,35 +128,48 @@ func stripExpectedSuffix(fileName string) (string, string, bool) {
 
 // generateTestName creates a valid Go test function name
 func generateTestName(category, stem, format string) string {
-	// Convert to PascalCase and make it a valid Go identifier
 	parts := []string{"Test"}
-
 	caser := cases.Title(language.AmericanEnglish)
 
+	// Add category if present
 	if category != "" {
-		parts = append(parts, caser.String(category))
+		parts = append(parts, titleCaseComponent(category, caser))
 	}
 
+	// Add stem components if present
 	if stem != "" {
-		// Replace non-alphanumeric characters with underscores and title case each part
-		stemParts := strings.FieldsFunc(stem, func(r rune) bool {
-			return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
-		})
-
+		stemParts := splitIntoAlphanumericParts(stem)
 		for _, part := range stemParts {
 			if part != "" {
-				parts = append(parts, caser.String(part))
+				parts = append(parts, titleCaseComponent(part, caser))
 			}
 		}
 	}
 
-	if format == "html" {
-		parts = append(parts, "Html")
-	} else {
-		parts = append(parts, caser.String(format))
-	}
+	// Add format with special handling for HTML
+	parts = append(parts, formatTestSuffix(format, caser))
 
 	return strings.Join(parts, "")
+}
+
+// splitIntoAlphanumericParts splits a string on non-alphanumeric characters
+func splitIntoAlphanumericParts(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+}
+
+// titleCaseComponent applies title casing to a component
+func titleCaseComponent(s string, caser cases.Caser) string {
+	return caser.String(s)
+}
+
+// formatTestSuffix returns the appropriate test suffix for a format
+func formatTestSuffix(format string, caser cases.Caser) string {
+	if format == "html" {
+		return "Html" // Special case to match Go naming conventions
+	}
+	return caser.String(format)
 }
 
 func generateTestFile(outputFile string, testCases []TestCase) error {
