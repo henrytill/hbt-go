@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -243,22 +242,21 @@ func processPendingBookmark(collection *internal.Collection, folderStack []strin
 	}
 
 	// Parse tags
-	var labels []string
+	labels := make(map[string]struct{})
 	if bookmark.tags != "" {
 		tagList := strings.Split(bookmark.tags, ",")
 		for _, tag := range tagList {
 			tag = strings.TrimSpace(tag)
 			if tag != "" && tag != "toread" {
-				labels = append(labels, tag)
+				labels[tag] = struct{}{}
 			}
 		}
 	}
 
 	// Add folder labels
-	labels = append(labels, folderStack...)
-
-	// Sort labels alphabetically
-	sort.Strings(labels)
+	for _, folder := range folderStack {
+		labels[folder] = struct{}{}
+	}
 
 	// Parse privacy
 	shared := true // default to public
@@ -272,10 +270,10 @@ func processPendingBookmark(collection *internal.Collection, folderStack []strin
 	// Parse feed
 	isFeed := bookmark.feed == "true"
 
-	// Create names array
-	var names []string
+	// Create names map
+	names := make(map[string]struct{})
 	if bookmark.title != "" {
-		names = append(names, bookmark.title)
+		names[bookmark.title] = struct{}{}
 	}
 
 	// Create entity

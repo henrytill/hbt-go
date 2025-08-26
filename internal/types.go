@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"sort"
 	"time"
 )
@@ -21,6 +22,20 @@ type Node struct {
 
 // Entity represents a page in the collection
 type Entity struct {
+	URI           string              `yaml:"uri" json:"uri"`
+	CreatedAt     int64               `yaml:"createdAt" json:"createdAt"`
+	UpdatedAt     []int64             `yaml:"updatedAt" json:"updatedAt"`
+	Names         map[string]struct{} `yaml:"names" json:"names"`
+	Labels        map[string]struct{} `yaml:"labels" json:"labels"`
+	Shared        bool                `yaml:"shared" json:"shared"`
+	ToRead        bool                `yaml:"toRead" json:"toRead"`
+	IsFeed        bool                `yaml:"isFeed" json:"isFeed"`
+	Extended      *string             `yaml:"extended,omitempty" json:"extended,omitempty"`
+	LastVisitedAt *int64              `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
+}
+
+// entitySerialized represents the Entity struct with slice fields for serialization
+type entitySerialized struct {
 	URI           string   `yaml:"uri" json:"uri"`
 	CreatedAt     int64    `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt     []int64  `yaml:"updatedAt" json:"updatedAt"`
@@ -31,6 +46,89 @@ type Entity struct {
 	IsFeed        bool     `yaml:"isFeed" json:"isFeed"`
 	Extended      *string  `yaml:"extended,omitempty" json:"extended,omitempty"`
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
+}
+
+// toSerialized converts an Entity to its serialized representation
+func (e Entity) toSerialized() entitySerialized {
+	return entitySerialized{
+		URI:           e.URI,
+		CreatedAt:     e.CreatedAt,
+		UpdatedAt:     e.UpdatedAt,
+		Names:         MapToSortedSlice(e.Names),
+		Labels:        MapToSortedSlice(e.Labels),
+		Shared:        e.Shared,
+		ToRead:        e.ToRead,
+		IsFeed:        e.IsFeed,
+		Extended:      e.Extended,
+		LastVisitedAt: e.LastVisitedAt,
+	}
+}
+
+// MarshalYAML implements custom YAML marshaling for Entity
+func (e Entity) MarshalYAML() (any, error) {
+	return e.toSerialized(), nil
+}
+
+// fromSerialized converts a serialized representation back to Entity
+func (e *Entity) fromSerialized(s entitySerialized) {
+	e.URI = s.URI
+	e.CreatedAt = s.CreatedAt
+	e.UpdatedAt = s.UpdatedAt
+	e.Names = sliceToMap(s.Names)
+	e.Labels = sliceToMap(s.Labels)
+	e.Shared = s.Shared
+	e.ToRead = s.ToRead
+	e.IsFeed = s.IsFeed
+	e.Extended = s.Extended
+	e.LastVisitedAt = s.LastVisitedAt
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for Entity
+func (e *Entity) UnmarshalYAML(unmarshal func(any) error) error {
+	var aux entitySerialized
+	if err := unmarshal(&aux); err != nil {
+		return err
+	}
+	e.fromSerialized(aux)
+	return nil
+}
+
+// MarshalJSON implements custom JSON marshaling for Entity
+func (e Entity) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.toSerialized())
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for Entity
+func (e *Entity) UnmarshalJSON(data []byte) error {
+	var aux entitySerialized
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	e.fromSerialized(aux)
+	return nil
+}
+
+// Helper functions for map/slice conversion
+func MapToSortedSlice(m map[string]struct{}) []string {
+	if m == nil {
+		return []string{}
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sliceToMap(slice []string) map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, s := range slice {
+		if s != "" {
+			m[s] = struct{}{}
+		}
+	}
+	return m
 }
 
 // NewCollection creates a new empty collection
@@ -85,9 +183,19 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 			return existing.UpdatedAt[i] < existing.UpdatedAt[j]
 		})
 
-		// Merge names and labels (avoiding duplicates and sorting)
-		existing.Names = mergeStringSlices(existing.Names, entity.Names)
-		existing.Labels = mergeStringSlices(existing.Labels, entity.Labels)
+		// Merge names and labels using map union operations
+		if existing.Names == nil {
+			existing.Names = make(map[string]struct{})
+		}
+		if existing.Labels == nil {
+			existing.Labels = make(map[string]struct{})
+		}
+		for k := range entity.Names {
+			existing.Names[k] = struct{}{}
+		}
+		for k := range entity.Labels {
+			existing.Labels[k] = struct{}{}
+		}
 
 		// Merge other boolean fields (OR logic - if either is true, result is true)
 		existing.Shared = existing.Shared || entity.Shared
@@ -107,30 +215,6 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 		// Add new entity
 		return c.AddEntity(entity)
 	}
-}
-
-// mergeStringSlices merges two string slices, removing duplicates and sorting
-func mergeStringSlices(a, b []string) []string {
-	seen := make(map[string]bool)
-	result := []string{}
-
-	// Add all strings from both slices
-	for _, s := range a {
-		if s != "" && !seen[s] {
-			seen[s] = true
-			result = append(result, s)
-		}
-	}
-	for _, s := range b {
-		if s != "" && !seen[s] {
-			seen[s] = true
-			result = append(result, s)
-		}
-	}
-
-	// Sort alphabetically
-	sort.Strings(result)
-	return result
 }
 
 // Helper functions for time conversion

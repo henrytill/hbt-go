@@ -64,8 +64,8 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			URI:       entry.Href,
 			CreatedAt: internal.TimeToUnix(timestamp),
 			UpdatedAt: []int64{},
-			Names:     []string{},
-			Labels:    []string{},
+			Names:     make(map[string]struct{}),
+			Labels:    make(map[string]struct{}),
 			Shared:    entry.Shared == "yes",
 			ToRead:    entry.ToRead == "yes",
 			IsFeed:    false,
@@ -73,7 +73,9 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 
 		// Add description as name if present
 		if entry.Description != "" {
-			entity.Names = []string{entry.Description}
+			entity.Names = map[string]struct{}{entry.Description: {}}
+		} else {
+			entity.Names = make(map[string]struct{})
 		}
 
 		// Add extended description if present
@@ -82,9 +84,12 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 		}
 
 		// Parse tags (space-separated)
+		entity.Labels = make(map[string]struct{})
 		if entry.Tags != "" {
 			tags := strings.Fields(entry.Tags)
-			entity.Labels = tags
+			for _, tag := range tags {
+				entity.Labels[tag] = struct{}{}
+			}
 		}
 
 		// Create node

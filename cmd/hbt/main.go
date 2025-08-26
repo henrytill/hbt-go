@@ -249,7 +249,7 @@ func main() {
 	if *config.ListTags {
 		tags := make(map[string]bool)
 		for _, node := range collection.Value {
-			for _, label := range node.Entity.Labels {
+			for label := range node.Entity.Labels {
 				if label != "" {
 					tags[label] = true
 				}

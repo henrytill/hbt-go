@@ -85,17 +85,18 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 	}
 
 	// Parse names
-	var names []string
+	names := make(map[string]struct{})
 	if strings.TrimSpace(post.Description) != "" {
-		names = []string{strings.TrimSpace(post.Description)}
+		names[strings.TrimSpace(post.Description)] = struct{}{}
 	}
 
 	// Parse tags/labels
-	var labels []string
+	labels := make(map[string]struct{})
 	if strings.TrimSpace(post.Tag) != "" {
 		tags := strings.Fields(post.Tag) // Split on whitespace
-		labels = tags
-		sort.Strings(labels)
+		for _, tag := range tags {
+			labels[tag] = struct{}{}
+		}
 	}
 
 	// Parse boolean fields

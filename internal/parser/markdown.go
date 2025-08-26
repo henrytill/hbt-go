@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/url"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -145,27 +144,27 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 		URI:       linkURL,
 		CreatedAt: internal.TimeToUnix(state.currentDate),
 		UpdatedAt: []int64{},
-		Names:     []string{},
-		Labels:    []string{},
+		Names:     make(map[string]struct{}),
+		Labels:    make(map[string]struct{}),
 		Shared:    false,
 		ToRead:    false,
 		IsFeed:    false,
 	}
 
 	if linkTitle != "" {
-		entity.Names = []string{linkTitle}
+		entity.Names = map[string]struct{}{linkTitle: {}}
+	} else {
+		entity.Names = make(map[string]struct{})
 	}
 
 	// Add current labels
+	entity.Labels = make(map[string]struct{})
 	if len(state.labels) > 0 {
-		var filteredLabels []string
 		for _, label := range state.labels {
 			if strings.TrimSpace(label) != "" {
-				filteredLabels = append(filteredLabels, strings.TrimSpace(label))
+				entity.Labels[strings.TrimSpace(label)] = struct{}{}
 			}
 		}
-		entity.Labels = filteredLabels
-		sort.Strings(entity.Labels)
 	}
 
 	// Add entity to collection (or merge if URI already exists)

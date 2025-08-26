@@ -45,7 +45,7 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 			URI:           node.Entity.URI,
 			Title:         getFirstName(node.Entity.Names),
 			CreatedAt:     node.Entity.CreatedAt,
-			Labels:        node.Entity.Labels,
+			Labels:        internal.MapToSortedSlice(node.Entity.Labels),
 			Shared:        node.Entity.Shared,
 			ToRead:        node.Entity.ToRead,
 			IsFeed:        node.Entity.IsFeed,
@@ -88,9 +88,15 @@ type templateEntity struct {
 	Extended      *string
 }
 
-func getFirstName(names []string) string {
+func getFirstName(names map[string]struct{}) string {
 	if len(names) == 0 {
 		return ""
 	}
-	return names[0]
+	// Get first name alphabetically (for consistent ordering)
+	keys := make([]string, 0, len(names))
+	for k := range names {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys[0]
 }
