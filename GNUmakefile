@@ -20,17 +20,13 @@ GO_SOURCES += internal/formatter/yaml.go
 
 BIN =
 BIN += hbt
-BIN += testgen
 
 BIN_TARGETS = $(addprefix bin/,$(BIN))
 
 .PHONY: all
 all: $(BIN_TARGETS)
 
-bin/testgen:: cmd/testgen/main.go
-	$(GO) build -o $@ $<
-
-bin/%:: $(GO_SOURCES)
+bin/%: $(GO_SOURCES)
 	$(GO) build -o $@ cmd/$*/main.go
 
 .PHONY: lint
@@ -42,13 +38,11 @@ lint:
 fmt:
 	$(GO) fmt ./...
 
-hbt_test.go: bin/testgen
-	$<
-
 .PHONY: test
-test: bin/hbt hbt_test.go internal/testutil/testutil.go
-	$(GO) test -v
+test: bin/hbt
+	$(GO) generate ./integration
+	$(GO) test -v ./integration
 
 .PHONY: clean
 clean:
-	rm -f $(BIN_TARGETS) hbt_test.go
+	rm -f $(BIN_TARGETS)

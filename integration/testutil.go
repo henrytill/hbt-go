@@ -1,4 +1,4 @@
-package testutil
+package integration
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 
 func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
 	// Get absolute path to binary
-	binaryPath, err := filepath.Abs("bin/hbt")
+	binaryPath, err := filepath.Abs("../bin/hbt")
 	if err != nil {
 		t.Fatalf("Failed to get binary path: %v", err)
 	}
