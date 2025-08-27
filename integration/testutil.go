@@ -8,10 +8,18 @@ import (
 )
 
 func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
-	// Get absolute path to binary
-	binaryPath, err := filepath.Abs("../bin/hbt")
-	if err != nil {
-		t.Fatalf("Failed to get binary path: %v", err)
+	// Get binary path - check environment variable first, fallback to relative path
+	var binaryPath string
+	var err error
+
+	if envPath := os.Getenv("HBT_BINARY_PATH"); envPath != "" {
+		binaryPath = envPath
+	} else {
+		// Fallback to relative path for local development
+		binaryPath, err = filepath.Abs("../bin/hbt")
+		if err != nil {
+			t.Fatalf("Failed to get binary path: %v", err)
+		}
 	}
 
 	// Check if binary exists

@@ -9,146 +9,146 @@ import (
 )
 
 func TestHtmlBookmarksFeedsHtml(t *testing.T) {
-	RunHbtAndCompare(t, "html", "/workspaces/hbt-go/testdata/html/bookmarks_feeds.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_feeds.expected.html")
+	RunHbtAndCompare(t, "html", "../testdata/html/bookmarks_feeds.input.html", "../testdata/html/bookmarks_feeds.expected.html")
 }
 
 func TestHtmlBookmarksFeedsYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/html/bookmarks_feeds.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_feeds.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/html/bookmarks_feeds.input.html", "../testdata/html/bookmarks_feeds.expected.yaml")
 }
 
 func TestHtmlBookmarksFoldersHtml(t *testing.T) {
-	RunHbtAndCompare(t, "html", "/workspaces/hbt-go/testdata/html/bookmarks_folders.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_folders.expected.html")
+	RunHbtAndCompare(t, "html", "../testdata/html/bookmarks_folders.input.html", "../testdata/html/bookmarks_folders.expected.html")
 }
 
 func TestHtmlBookmarksFoldersYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/html/bookmarks_folders.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_folders.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/html/bookmarks_folders.input.html", "../testdata/html/bookmarks_folders.expected.yaml")
 }
 
 func TestHtmlBookmarksPinboardHtml(t *testing.T) {
-	RunHbtAndCompare(t, "html", "/workspaces/hbt-go/testdata/html/bookmarks_pinboard.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_pinboard.expected.html")
+	RunHbtAndCompare(t, "html", "../testdata/html/bookmarks_pinboard.input.html", "../testdata/html/bookmarks_pinboard.expected.html")
 }
 
 func TestHtmlBookmarksPinboardYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/html/bookmarks_pinboard.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_pinboard.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/html/bookmarks_pinboard.input.html", "../testdata/html/bookmarks_pinboard.expected.yaml")
 }
 
 func TestHtmlBookmarksPrivacyHtml(t *testing.T) {
-	RunHbtAndCompare(t, "html", "/workspaces/hbt-go/testdata/html/bookmarks_privacy.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_privacy.expected.html")
+	RunHbtAndCompare(t, "html", "../testdata/html/bookmarks_privacy.input.html", "../testdata/html/bookmarks_privacy.expected.html")
 }
 
 func TestHtmlBookmarksPrivacyYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/html/bookmarks_privacy.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_privacy.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/html/bookmarks_privacy.input.html", "../testdata/html/bookmarks_privacy.expected.yaml")
 }
 
 func TestHtmlBookmarksSimpleHtml(t *testing.T) {
-	RunHbtAndCompare(t, "html", "/workspaces/hbt-go/testdata/html/bookmarks_simple.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_simple.expected.html")
+	RunHbtAndCompare(t, "html", "../testdata/html/bookmarks_simple.input.html", "../testdata/html/bookmarks_simple.expected.html")
 }
 
 func TestHtmlBookmarksSimpleYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/html/bookmarks_simple.input.html", "/workspaces/hbt-go/testdata/html/bookmarks_simple.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/html/bookmarks_simple.input.html", "../testdata/html/bookmarks_simple.expected.yaml")
 }
 
 func TestMarkdownBasicYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/basic.input.md", "/workspaces/hbt-go/testdata/markdown/basic.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/basic.input.md", "../testdata/markdown/basic.expected.yaml")
 }
 
 func TestMarkdownDescendingDatesYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/descending_dates.input.md", "/workspaces/hbt-go/testdata/markdown/descending_dates.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/descending_dates.input.md", "../testdata/markdown/descending_dates.expected.yaml")
 }
 
 func TestMarkdownEmptyLinkYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/empty_link.input.md", "/workspaces/hbt-go/testdata/markdown/empty_link.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/empty_link.input.md", "../testdata/markdown/empty_link.expected.yaml")
 }
 
 func TestMarkdownIndentedDoubleYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/indented_double.input.md", "/workspaces/hbt-go/testdata/markdown/indented_double.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/indented_double.input.md", "../testdata/markdown/indented_double.expected.yaml")
 }
 
 func TestMarkdownIndentedYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/indented.input.md", "/workspaces/hbt-go/testdata/markdown/indented.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/indented.input.md", "../testdata/markdown/indented.expected.yaml")
 }
 
 func TestMarkdownInvertedParentYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/inverted_parent.input.md", "/workspaces/hbt-go/testdata/markdown/inverted_parent.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/inverted_parent.input.md", "../testdata/markdown/inverted_parent.expected.yaml")
 }
 
 func TestMarkdownInvertedSingleParentYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/inverted_single_parent.input.md", "/workspaces/hbt-go/testdata/markdown/inverted_single_parent.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/inverted_single_parent.input.md", "../testdata/markdown/inverted_single_parent.expected.yaml")
 }
 
 func TestMarkdownLabelYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/label.input.md", "/workspaces/hbt-go/testdata/markdown/label.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/label.input.md", "../testdata/markdown/label.expected.yaml")
 }
 
 func TestMarkdownLabelsYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/labels.input.md", "/workspaces/hbt-go/testdata/markdown/labels.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/labels.input.md", "../testdata/markdown/labels.expected.yaml")
 }
 
 func TestMarkdownLinkTextWithBackticksYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/link_text_with_backticks.input.md", "/workspaces/hbt-go/testdata/markdown/link_text_with_backticks.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/link_text_with_backticks.input.md", "../testdata/markdown/link_text_with_backticks.expected.yaml")
 }
 
 func TestMarkdownMixedDatesYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/mixed_dates.input.md", "/workspaces/hbt-go/testdata/markdown/mixed_dates.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/mixed_dates.input.md", "../testdata/markdown/mixed_dates.expected.yaml")
 }
 
 func TestMarkdownMixedLinkTextWithBackticksYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/mixed_link_text_with_backticks.input.md", "/workspaces/hbt-go/testdata/markdown/mixed_link_text_with_backticks.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/mixed_link_text_with_backticks.input.md", "../testdata/markdown/mixed_link_text_with_backticks.expected.yaml")
 }
 
 func TestMarkdownMultipleLabelsYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/multiple_labels.input.md", "/workspaces/hbt-go/testdata/markdown/multiple_labels.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/multiple_labels.input.md", "../testdata/markdown/multiple_labels.expected.yaml")
 }
 
 func TestMarkdownNestedYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/nested.input.md", "/workspaces/hbt-go/testdata/markdown/nested.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/nested.input.md", "../testdata/markdown/nested.expected.yaml")
 }
 
 func TestMarkdownNoLabelsYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/no_labels.input.md", "/workspaces/hbt-go/testdata/markdown/no_labels.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/no_labels.input.md", "../testdata/markdown/no_labels.expected.yaml")
 }
 
 func TestMarkdownNoTitleYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/no_title.input.md", "/workspaces/hbt-go/testdata/markdown/no_title.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/no_title.input.md", "../testdata/markdown/no_title.expected.yaml")
 }
 
 func TestMarkdownNoUrlYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/no_url.input.md", "/workspaces/hbt-go/testdata/markdown/no_url.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/no_url.input.md", "../testdata/markdown/no_url.expected.yaml")
 }
 
 func TestMarkdownOnlyDateYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/only_date.input.md", "/workspaces/hbt-go/testdata/markdown/only_date.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/only_date.input.md", "../testdata/markdown/only_date.expected.yaml")
 }
 
 func TestMarkdownParentYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/parent.input.md", "/workspaces/hbt-go/testdata/markdown/parent.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/parent.input.md", "../testdata/markdown/parent.expected.yaml")
 }
 
 func TestMarkdownParentsIndentedYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/parents_indented.input.md", "/workspaces/hbt-go/testdata/markdown/parents_indented.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/parents_indented.input.md", "../testdata/markdown/parents_indented.expected.yaml")
 }
 
 func TestMarkdownParentsYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/parents.input.md", "/workspaces/hbt-go/testdata/markdown/parents.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/parents.input.md", "../testdata/markdown/parents.expected.yaml")
 }
 
 func TestMarkdownSingleParentYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/single_parent.input.md", "/workspaces/hbt-go/testdata/markdown/single_parent.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/single_parent.input.md", "../testdata/markdown/single_parent.expected.yaml")
 }
 
 func TestMarkdownUpdateYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/markdown/update.input.md", "/workspaces/hbt-go/testdata/markdown/update.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/markdown/update.input.md", "../testdata/markdown/update.expected.yaml")
 }
 
 func TestPinboardEmptyYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/pinboard/empty.input.xml", "/workspaces/hbt-go/testdata/pinboard/empty.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/pinboard/empty.input.xml", "../testdata/pinboard/empty.expected.yaml")
 }
 
 func TestPinboardJsonSampleYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/pinboard/json_sample.input.json", "/workspaces/hbt-go/testdata/pinboard/json_sample.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/pinboard/json_sample.input.json", "../testdata/pinboard/json_sample.expected.yaml")
 }
 
 func TestPinboardXmlSampleYaml(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "/workspaces/hbt-go/testdata/pinboard/xml_sample.input.xml", "/workspaces/hbt-go/testdata/pinboard/xml_sample.expected.yaml")
+	RunHbtAndCompare(t, "yaml", "../testdata/pinboard/xml_sample.input.xml", "../testdata/pinboard/xml_sample.expected.yaml")
 }
 

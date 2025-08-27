@@ -27,10 +27,8 @@ type TestCase struct {
 
 func main() {
 	// go generate always runs from the package directory (integration/)
-	testDataDir, err := filepath.Abs("../testdata")
-	if err != nil {
-		log.Fatalf("Failed to get testdata path: %v", err)
-	}
+	// Use relative path that works in both dev and Nix build environments
+	testDataDir := "../testdata"
 	outputFile := "cli_test.go"
 
 	// Find all test cases
