@@ -35,8 +35,8 @@ fmt:
 	$(GO) fmt ./...
 
 test: $(BIN_TARGETS)
-	$(GO) generate ./integration
-	$(GO) test -v ./integration
+	$(GO) generate ./test
+	$(GO) test -v ./test
 
 clean:
 	rm -f $(BIN_TARGETS)

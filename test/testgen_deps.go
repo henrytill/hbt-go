@@ -1,4 +1,4 @@
-package integration
+package test
 
 import (
 	// Import dependencies needed by testgen.go so they get vendored
