@@ -48,30 +48,30 @@ type Collection struct {
 
 // entitySerialized represents the Entity struct with slice fields for serialization
 type entitySerialized struct {
-	URI           string   `yaml:"uri" json:"uri"`
-	CreatedAt     int64    `yaml:"createdAt" json:"createdAt"`
-	UpdatedAt     []int64  `yaml:"updatedAt" json:"updatedAt"`
-	Names         []string `yaml:"names" json:"names"`
-	Labels        []string `yaml:"labels" json:"labels"`
-	Shared        bool     `yaml:"shared" json:"shared"`
-	ToRead        bool     `yaml:"toRead" json:"toRead"`
-	IsFeed        bool     `yaml:"isFeed" json:"isFeed"`
-	Extended      *string  `yaml:"extended,omitempty" json:"extended,omitempty"`
+	URI           string   `yaml:"uri"                     json:"uri"`
+	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
+	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
+	Names         []string `yaml:"names"                   json:"names"`
+	Labels        []string `yaml:"labels"                  json:"labels"`
+	Shared        bool     `yaml:"shared"                  json:"shared"`
+	ToRead        bool     `yaml:"toRead"                  json:"toRead"`
+	IsFeed        bool     `yaml:"isFeed"                  json:"isFeed"`
+	Extended      *string  `yaml:"extended,omitempty"      json:"extended,omitempty"`
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
 // nodeSerialized represents the Node struct with entitySerialized for schema generation
 type nodeSerialized struct {
-	ID     uint             `yaml:"id" json:"id"`
+	ID     uint             `yaml:"id"     json:"id"`
 	Entity entitySerialized `yaml:"entity" json:"entity"`
-	Edges  []uint           `yaml:"edges" json:"edges"`
+	Edges  []uint           `yaml:"edges"  json:"edges"`
 }
 
 // collectionSerialized represents the Collection struct with serialized fields for schema generation
 type collectionSerialized struct {
 	Version string           `yaml:"version" json:"version"`
-	Length  uint             `yaml:"length" json:"length"`
-	Value   []nodeSerialized `yaml:"value" json:"value"`
+	Length  uint             `yaml:"length"  json:"length"`
+	Value   []nodeSerialized `yaml:"value"   json:"value"`
 }
 
 // =============================================================================
