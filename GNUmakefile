@@ -8,11 +8,23 @@ STATICCHECK = $(GOPATH)/bin/staticcheck
 BIN =
 BIN += hbt
 
+SOURCES =
+SOURCES += internal/formatter.go
+SOURCES += internal/formatter/html.go
+SOURCES += internal/formatter/yaml.go
+SOURCES += internal/mappings.go
+SOURCES += internal/parser.go
+SOURCES += internal/parser/html.go
+SOURCES += internal/parser/markdown.go
+SOURCES += internal/parser/pinboard.go
+SOURCES += internal/parser/xml.go
+SOURCES += internal/types.go
+
 BIN_TARGETS = $(addprefix bin/,$(BIN))
 
 all: $(BIN_TARGETS)
 
-bin/%:
+bin/%: $(SOURCES)
 	$(GO) build -o $@ cmd/$*/main.go
 
 lint:
