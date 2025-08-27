@@ -7,28 +7,20 @@ import (
 	"testing"
 )
 
-func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
-	// Get binary path - check environment variable first, fallback to relative path
-	var binaryPath string
-	var err error
-
-	if envPath := os.Getenv("HBT_BINARY_PATH"); envPath != "" {
-		binaryPath = envPath
-	} else {
-		// Fallback to relative path for local development
-		binaryPath, err = filepath.Abs("../bin/hbt")
-		if err != nil {
-			t.Fatalf("Failed to get binary path: %v", err)
-		}
+// Runs an executable with given arguments and compares the output to an expected file using diff.
+func RunExecutableAndCompare(
+	t *testing.T,
+	executablePath string,
+	args []string,
+	expectedFile string,
+) {
+	// Check if executable exists
+	if _, err := os.Stat(executablePath); os.IsNotExist(err) {
+		t.Fatalf("Executable not found at %s", executablePath)
 	}
 
-	// Check if binary exists
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Fatalf("Binary not found at %s. Run 'make all' first.", binaryPath)
-	}
-
-	// Run hbt command
-	cmd := exec.Command(binaryPath, "-t", format, inputFile)
+	// Run command
+	cmd := exec.Command(executablePath, args...)
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -74,4 +66,23 @@ func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
 	t.Logf("\n%s", string(diffOutput))
 
 	t.Fail()
+}
+
+func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
+	// Get binary path - check environment variable first, fallback to relative path
+	var binaryPath string
+	var err error
+
+	if envPath := os.Getenv("HBT_BINARY_PATH"); envPath != "" {
+		binaryPath = envPath
+	} else {
+		// Fallback to relative path for local development
+		binaryPath, err = filepath.Abs("../bin/hbt")
+		if err != nil {
+			t.Fatalf("Failed to get binary path: %v", err)
+		}
+	}
+
+	// Use the general function with hbt-specific arguments
+	RunExecutableAndCompare(t, binaryPath, []string{"-t", format, inputFile}, expectedFile)
 }
