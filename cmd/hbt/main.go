@@ -41,7 +41,6 @@ type Config struct {
 	OutputFile   *string
 	Info         *bool
 	ListTags     *bool
-	Schema       *bool
 	Mappings     *string
 	InputFile    string
 }
@@ -106,7 +105,6 @@ func main() {
 		OutputFile:   flag.String("o", "", "Output file (defaults to stdout)"),
 		Info:         flag.Bool("info", false, "Show collection info (entity count)"),
 		ListTags:     flag.Bool("list-tags", false, "List all tags"),
-		Schema:       flag.Bool("schema", false, "Output Collection JSON schema"),
 		Mappings:     flag.String("mappings", "", "Read mappings from FILE"),
 	}
 
@@ -126,11 +124,6 @@ func main() {
 	if showVersionFlag {
 		showVersion()
 		return
-	}
-
-	if *config.Schema {
-		fmt.Println("Schema output not yet implemented")
-		os.Exit(1)
 	}
 
 	args := flag.Args()

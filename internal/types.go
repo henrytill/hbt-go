@@ -60,14 +60,14 @@ type serializedEntity struct {
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
-// serializedNode represents the Node struct with entitySerialized for schema generation
+// serializedNode represents the Node struct with serialized entity for JSON/YAML output
 type serializedNode struct {
 	ID     uint             `yaml:"id"     json:"id"`
 	Entity serializedEntity `yaml:"entity" json:"entity"`
 	Edges  []uint           `yaml:"edges"  json:"edges"`
 }
 
-// serializedCollection represents the Collection struct with serialized fields for schema generation
+// serializedCollection represents the Collection struct with serialized fields for JSON/YAML output
 type serializedCollection struct {
 	Version string           `yaml:"version" json:"version"`
 	Length  uint             `yaml:"length"  json:"length"`
