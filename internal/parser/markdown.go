@@ -78,7 +78,6 @@ func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
 				}
 				state.labels[level] = headingText
 			}
-
 		case *ast.List:
 			if entering {
 				// Starting a list - push maybe parent to parents stack
@@ -92,7 +91,6 @@ func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
 				}
 				state.maybeParent = nil
 			}
-
 		case *ast.Link:
 			if entering {
 				linkURL := string(node.Destination)

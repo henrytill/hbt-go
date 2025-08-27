@@ -93,7 +93,6 @@ func (p *HTMLParser) parseUsingStack(root *html.Node, collection *internal.Colle
 					stack = append(stack, stackItem{node: c, popGroup: false})
 				}
 			}
-
 		case "dd":
 			if pendingBookmark != nil {
 				description := strings.TrimSpace(getTextContent(node))
@@ -101,7 +100,6 @@ func (p *HTMLParser) parseUsingStack(root *html.Node, collection *internal.Colle
 					pendingBookmark.description = description
 				}
 			}
-
 		case "dl":
 			// Push PopGroup marker first, then children in reverse order
 			stack = append(stack, stackItem{popGroup: true})
