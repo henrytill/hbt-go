@@ -119,8 +119,8 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 
 	entity := internal.Entity{
 		URI:       parsedURL,
-		CreatedAt: internal.TimeToUnix(createdAt),
-		UpdatedAt: []int64{},
+		CreatedAt: createdAt,
+		UpdatedAt: []time.Time{},
 		Names:     names,
 		Labels:    labels,
 		Shared:    shared,

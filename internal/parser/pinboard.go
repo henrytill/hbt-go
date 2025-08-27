@@ -69,8 +69,8 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 		// Create entity
 		entity := internal.Entity{
 			URI:       parsedURL,
-			CreatedAt: internal.TimeToUnix(timestamp),
-			UpdatedAt: []int64{},
+			CreatedAt: timestamp,
+			UpdatedAt: []time.Time{},
 			Names:     make(map[string]struct{}),
 			Labels:    make(map[string]struct{}),
 			Shared:    entry.Shared == "yes",

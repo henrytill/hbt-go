@@ -216,28 +216,29 @@ func processPendingBookmark(collection *internal.Collection, folderStack []strin
 	}
 
 	// Parse timestamps
-	var createdAt int64
+	var createdAt time.Time
 	if bookmark.addDate != "" {
 		if parsed, err := strconv.ParseInt(bookmark.addDate, 10, 64); err == nil {
-			createdAt = parsed
+			createdAt = time.Unix(parsed, 0)
 		}
 	}
-	if createdAt == 0 {
-		createdAt = time.Now().Unix()
+	if createdAt.IsZero() {
+		createdAt = time.Now()
 	}
 
-	var lastVisitedAt *int64
+	var lastVisitedAt *time.Time
 	if bookmark.lastVisit != "" {
 		if parsed, err := strconv.ParseInt(bookmark.lastVisit, 10, 64); err == nil {
-			lastVisitedAt = &parsed
+			t := time.Unix(parsed, 0)
+			lastVisitedAt = &t
 		}
 	}
 
 	// Parse updatedAt from LAST_MODIFIED
-	var updatedAt []int64
+	var updatedAt []time.Time
 	if bookmark.lastModified != "" {
 		if parsed, err := strconv.ParseInt(bookmark.lastModified, 10, 64); err == nil {
-			updatedAt = append(updatedAt, parsed)
+			updatedAt = append(updatedAt, time.Unix(parsed, 0))
 		}
 	}
 

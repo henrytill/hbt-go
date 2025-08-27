@@ -24,15 +24,15 @@ type Node struct {
 // Entity represents a page in the collection
 type Entity struct {
 	URI           *url.URL            `yaml:"uri" json:"uri"`
-	CreatedAt     int64               `yaml:"createdAt" json:"createdAt"`
-	UpdatedAt     []int64             `yaml:"updatedAt" json:"updatedAt"`
+	CreatedAt     time.Time           `yaml:"createdAt" json:"createdAt"`
+	UpdatedAt     []time.Time         `yaml:"updatedAt" json:"updatedAt"`
 	Names         map[string]struct{} `yaml:"names" json:"names"`
 	Labels        map[string]struct{} `yaml:"labels" json:"labels"`
 	Shared        bool                `yaml:"shared" json:"shared"`
 	ToRead        bool                `yaml:"toRead" json:"toRead"`
 	IsFeed        bool                `yaml:"isFeed" json:"isFeed"`
 	Extended      *string             `yaml:"extended,omitempty" json:"extended,omitempty"`
-	LastVisitedAt *int64              `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
+	LastVisitedAt *time.Time          `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
 // entitySerialized represents the Entity struct with slice fields for serialization
@@ -55,17 +55,30 @@ func (e Entity) toSerialized() entitySerialized {
 	if e.URI != nil {
 		uriString = e.URI.String()
 	}
+
+	// Convert time.Time fields to Unix timestamps for serialization
+	updatedAtUnix := make([]int64, len(e.UpdatedAt))
+	for i, t := range e.UpdatedAt {
+		updatedAtUnix[i] = t.Unix()
+	}
+
+	var lastVisitedAtUnix *int64
+	if e.LastVisitedAt != nil {
+		unix := e.LastVisitedAt.Unix()
+		lastVisitedAtUnix = &unix
+	}
+
 	return entitySerialized{
 		URI:           uriString,
-		CreatedAt:     e.CreatedAt,
-		UpdatedAt:     e.UpdatedAt,
+		CreatedAt:     e.CreatedAt.Unix(),
+		UpdatedAt:     updatedAtUnix,
 		Names:         MapToSortedSlice(e.Names),
 		Labels:        MapToSortedSlice(e.Labels),
 		Shared:        e.Shared,
 		ToRead:        e.ToRead,
 		IsFeed:        e.IsFeed,
 		Extended:      e.Extended,
-		LastVisitedAt: e.LastVisitedAt,
+		LastVisitedAt: lastVisitedAtUnix,
 	}
 }
 
@@ -85,15 +98,28 @@ func (e *Entity) fromSerialized(s entitySerialized) error {
 	} else {
 		e.URI = nil
 	}
-	e.CreatedAt = s.CreatedAt
-	e.UpdatedAt = s.UpdatedAt
+
+	// Convert Unix timestamps back to time.Time
+	e.CreatedAt = time.Unix(s.CreatedAt, 0)
+
+	e.UpdatedAt = make([]time.Time, len(s.UpdatedAt))
+	for i, unix := range s.UpdatedAt {
+		e.UpdatedAt[i] = time.Unix(unix, 0)
+	}
+
+	if s.LastVisitedAt != nil {
+		t := time.Unix(*s.LastVisitedAt, 0)
+		e.LastVisitedAt = &t
+	} else {
+		e.LastVisitedAt = nil
+	}
+
 	e.Names = sliceToMap(s.Names)
 	e.Labels = sliceToMap(s.Labels)
 	e.Shared = s.Shared
 	e.ToRead = s.ToRead
 	e.IsFeed = s.IsFeed
 	e.Extended = s.Extended
-	e.LastVisitedAt = s.LastVisitedAt
 	return nil
 }
 
@@ -186,17 +212,17 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 		existing := &c.Value[nodeID].Entity
 
 		// Determine earliest createdAt and merge updatedAt (following Rust logic)
-		if entity.CreatedAt < existing.CreatedAt {
+		if entity.CreatedAt.Before(existing.CreatedAt) {
 			// New entity is earlier, move existing createdAt to updatedAt
 			existing.UpdatedAt = append(existing.UpdatedAt, existing.CreatedAt)
 			existing.CreatedAt = entity.CreatedAt
-		} else if entity.CreatedAt > existing.CreatedAt {
+		} else if entity.CreatedAt.After(existing.CreatedAt) {
 			// New entity is later, add to updatedAt
 			existing.UpdatedAt = append(existing.UpdatedAt, entity.CreatedAt)
 		}
 		// Sort updatedAt to maintain chronological order
 		sort.Slice(existing.UpdatedAt, func(i, j int) bool {
-			return existing.UpdatedAt[i] < existing.UpdatedAt[j]
+			return existing.UpdatedAt[i].Before(existing.UpdatedAt[j])
 		})
 
 		// Merge names and labels using map union operations
@@ -255,13 +281,4 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 		// Replace labels with transformed set
 		entity.Labels = newLabels
 	}
-}
-
-// Helper functions for time conversion
-func TimeToUnix(t time.Time) int64 {
-	return t.Unix()
-}
-
-func UnixToTime(unix int64) time.Time {
-	return time.Unix(unix, 0)
 }

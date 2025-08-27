@@ -143,8 +143,8 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 
 	entity := internal.Entity{
 		URI:       parsedURL,
-		CreatedAt: internal.TimeToUnix(state.currentDate),
-		UpdatedAt: []int64{},
+		CreatedAt: state.currentDate,
+		UpdatedAt: []time.Time{},
 		Names:     make(map[string]struct{}),
 		Labels:    make(map[string]struct{}),
 		Shared:    false,

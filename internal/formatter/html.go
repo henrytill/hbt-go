@@ -45,21 +45,29 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 		if node.Entity.URI != nil {
 			uriString = node.Entity.URI.String()
 		}
+		// Convert time.Time to Unix timestamps for HTML template
+		var lastVisitedAtUnix *int64
+		if node.Entity.LastVisitedAt != nil {
+			unix := node.Entity.LastVisitedAt.Unix()
+			lastVisitedAtUnix = &unix
+		}
+
 		entity := templateEntity{
 			URI:           uriString,
 			Title:         getFirstName(node.Entity.Names),
-			CreatedAt:     node.Entity.CreatedAt,
+			CreatedAt:     node.Entity.CreatedAt.Unix(),
 			Labels:        internal.MapToSortedSlice(node.Entity.Labels),
 			Shared:        node.Entity.Shared,
 			ToRead:        node.Entity.ToRead,
 			IsFeed:        node.Entity.IsFeed,
-			LastVisitedAt: node.Entity.LastVisitedAt,
+			LastVisitedAt: lastVisitedAtUnix,
 			Extended:      node.Entity.Extended,
 		}
 
 		// Set LastModified if there are UpdatedAt values
 		if len(node.Entity.UpdatedAt) > 0 {
-			entity.LastModified = &node.Entity.UpdatedAt[0]
+			unix := node.Entity.UpdatedAt[0].Unix()
+			entity.LastModified = &unix
 		}
 
 		// Sort labels for consistent output
