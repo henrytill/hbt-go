@@ -1,3 +1,6 @@
+// Package internal provides core data types and operations for the hbt bookmark manager.
+// This package defines the fundamental Collection, Node, and Entity types that represent
+// bookmark collections and their associated metadata and relationships.
 package internal
 
 import (
@@ -7,33 +10,41 @@ import (
 	"time"
 )
 
-// Collection represents a serialized collection of bookmarks
-type Collection struct {
-	Version string `yaml:"version" json:"version"`
-	Length  uint   `yaml:"length" json:"length"`
-	Value   []Node `yaml:"value" json:"value"`
-}
+// =============================================================================
+// Core Data Types
+// =============================================================================
 
-// Node represents a serialized node in the collection graph
-type Node struct {
-	ID     uint   `yaml:"id" json:"id"`
-	Entity Entity `yaml:"entity" json:"entity"`
-	Edges  []uint `yaml:"edges" json:"edges"`
-}
-
-// Entity represents a page in the collection
+// Entity represents a bookmarked page with associated metadata and labels
 type Entity struct {
-	URI           *url.URL            `yaml:"uri" json:"uri"`
-	CreatedAt     time.Time           `yaml:"createdAt" json:"createdAt"`
-	UpdatedAt     []time.Time         `yaml:"updatedAt" json:"updatedAt"`
-	Names         map[string]struct{} `yaml:"names" json:"names"`
-	Labels        map[string]struct{} `yaml:"labels" json:"labels"`
-	Shared        bool                `yaml:"shared" json:"shared"`
-	ToRead        bool                `yaml:"toRead" json:"toRead"`
-	IsFeed        bool                `yaml:"isFeed" json:"isFeed"`
-	Extended      *string             `yaml:"extended,omitempty" json:"extended,omitempty"`
-	LastVisitedAt *time.Time          `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
+	URI           *url.URL
+	CreatedAt     time.Time
+	UpdatedAt     []time.Time
+	Names         map[string]struct{}
+	Labels        map[string]struct{}
+	Shared        bool
+	ToRead        bool
+	IsFeed        bool
+	Extended      *string
+	LastVisitedAt *time.Time
 }
+
+// Node represents a bookmark node in the collection graph
+type Node struct {
+	ID     uint
+	Entity Entity
+	Edges  []uint
+}
+
+// Collection represents a bookmark collection with version and metadata
+type Collection struct {
+	Version string
+	Length  uint
+	Value   []Node
+}
+
+// =============================================================================
+// Serialization Types
+// =============================================================================
 
 // entitySerialized represents the Entity struct with slice fields for serialization
 type entitySerialized struct {
@@ -49,125 +60,23 @@ type entitySerialized struct {
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
-// toSerialized converts an Entity to its serialized representation
-func (e Entity) toSerialized() entitySerialized {
-	var uriString string
-	if e.URI != nil {
-		uriString = e.URI.String()
-	}
-
-	// Convert time.Time fields to Unix timestamps for serialization
-	updatedAtUnix := make([]int64, len(e.UpdatedAt))
-	for i, t := range e.UpdatedAt {
-		updatedAtUnix[i] = t.Unix()
-	}
-
-	var lastVisitedAtUnix *int64
-	if e.LastVisitedAt != nil {
-		unix := e.LastVisitedAt.Unix()
-		lastVisitedAtUnix = &unix
-	}
-
-	return entitySerialized{
-		URI:           uriString,
-		CreatedAt:     e.CreatedAt.Unix(),
-		UpdatedAt:     updatedAtUnix,
-		Names:         MapToSortedSlice(e.Names),
-		Labels:        MapToSortedSlice(e.Labels),
-		Shared:        e.Shared,
-		ToRead:        e.ToRead,
-		IsFeed:        e.IsFeed,
-		Extended:      e.Extended,
-		LastVisitedAt: lastVisitedAtUnix,
-	}
+// nodeSerialized represents the Node struct with entitySerialized for schema generation
+type nodeSerialized struct {
+	ID     uint             `yaml:"id" json:"id"`
+	Entity entitySerialized `yaml:"entity" json:"entity"`
+	Edges  []uint           `yaml:"edges" json:"edges"`
 }
 
-// MarshalYAML implements custom YAML marshaling for Entity
-func (e Entity) MarshalYAML() (any, error) {
-	return e.toSerialized(), nil
+// collectionSerialized represents the Collection struct with serialized fields for schema generation
+type collectionSerialized struct {
+	Version string           `yaml:"version" json:"version"`
+	Length  uint             `yaml:"length" json:"length"`
+	Value   []nodeSerialized `yaml:"value" json:"value"`
 }
 
-// fromSerialized converts a serialized representation back to Entity
-func (e *Entity) fromSerialized(s entitySerialized) error {
-	if s.URI != "" {
-		parsedURL, err := url.Parse(s.URI)
-		if err != nil {
-			return err
-		}
-		e.URI = parsedURL
-	} else {
-		e.URI = nil
-	}
-
-	// Convert Unix timestamps back to time.Time
-	e.CreatedAt = time.Unix(s.CreatedAt, 0)
-
-	e.UpdatedAt = make([]time.Time, len(s.UpdatedAt))
-	for i, unix := range s.UpdatedAt {
-		e.UpdatedAt[i] = time.Unix(unix, 0)
-	}
-
-	if s.LastVisitedAt != nil {
-		t := time.Unix(*s.LastVisitedAt, 0)
-		e.LastVisitedAt = &t
-	} else {
-		e.LastVisitedAt = nil
-	}
-
-	e.Names = sliceToMap(s.Names)
-	e.Labels = sliceToMap(s.Labels)
-	e.Shared = s.Shared
-	e.ToRead = s.ToRead
-	e.IsFeed = s.IsFeed
-	e.Extended = s.Extended
-	return nil
-}
-
-// UnmarshalYAML implements custom YAML unmarshaling for Entity
-func (e *Entity) UnmarshalYAML(unmarshal func(any) error) error {
-	var aux entitySerialized
-	if err := unmarshal(&aux); err != nil {
-		return err
-	}
-	return e.fromSerialized(aux)
-}
-
-// MarshalJSON implements custom JSON marshaling for Entity
-func (e Entity) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.toSerialized())
-}
-
-// UnmarshalJSON implements custom JSON unmarshaling for Entity
-func (e *Entity) UnmarshalJSON(data []byte) error {
-	var aux entitySerialized
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	return e.fromSerialized(aux)
-}
-
-// Helper functions for map/slice conversion
-func MapToSortedSlice(m map[string]struct{}) []string {
-	if m == nil {
-		return []string{}
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func sliceToMap(slice []string) map[string]struct{} {
-	m := make(map[string]struct{})
-	for _, s := range slice {
-		if s != "" {
-			m[s] = struct{}{}
-		}
-	}
-	return m
-}
+// =============================================================================
+// Constructor Functions
+// =============================================================================
 
 // NewCollection creates a new empty collection
 func NewCollection() *Collection {
@@ -177,6 +86,10 @@ func NewCollection() *Collection {
 		Value:   []Node{},
 	}
 }
+
+// =============================================================================
+// Core Business Logic Methods
+// =============================================================================
 
 // AddEntity adds an entity to the collection as a new node
 func (c *Collection) AddEntity(entity Entity) uint {
@@ -281,4 +194,190 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 		// Replace labels with transformed set
 		entity.Labels = newLabels
 	}
+}
+
+// =============================================================================
+// Utility Functions
+// =============================================================================
+
+// MapToSortedSlice converts a string set map to a sorted slice
+func MapToSortedSlice(m map[string]struct{}) []string {
+	if m == nil {
+		return []string{}
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// SliceToMap converts a string slice to a set map
+func SliceToMap(slice []string) map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, s := range slice {
+		if s != "" {
+			m[s] = struct{}{}
+		}
+	}
+	return m
+}
+
+// =============================================================================
+// Serialization Helper Functions
+// =============================================================================
+
+// toSerialized converts an Entity to its serialized representation
+func (e Entity) toSerialized() entitySerialized {
+	var uriString string
+	if e.URI != nil {
+		uriString = e.URI.String()
+	}
+
+	// Convert time.Time fields to Unix timestamps for serialization
+	updatedAtUnix := make([]int64, len(e.UpdatedAt))
+	for i, t := range e.UpdatedAt {
+		updatedAtUnix[i] = t.Unix()
+	}
+
+	var lastVisitedAtUnix *int64
+	if e.LastVisitedAt != nil {
+		unix := e.LastVisitedAt.Unix()
+		lastVisitedAtUnix = &unix
+	}
+
+	return entitySerialized{
+		URI:           uriString,
+		CreatedAt:     e.CreatedAt.Unix(),
+		UpdatedAt:     updatedAtUnix,
+		Names:         MapToSortedSlice(e.Names),
+		Labels:        MapToSortedSlice(e.Labels),
+		Shared:        e.Shared,
+		ToRead:        e.ToRead,
+		IsFeed:        e.IsFeed,
+		Extended:      e.Extended,
+		LastVisitedAt: lastVisitedAtUnix,
+	}
+}
+
+// fromSerialized converts a serialized representation back to Entity
+func (e *Entity) fromSerialized(s entitySerialized) error {
+	if s.URI != "" {
+		parsedURL, err := url.Parse(s.URI)
+		if err != nil {
+			return err
+		}
+		e.URI = parsedURL
+	} else {
+		e.URI = nil
+	}
+
+	// Convert Unix timestamps back to time.Time
+	e.CreatedAt = time.Unix(s.CreatedAt, 0)
+
+	e.UpdatedAt = make([]time.Time, len(s.UpdatedAt))
+	for i, unix := range s.UpdatedAt {
+		e.UpdatedAt[i] = time.Unix(unix, 0)
+	}
+
+	if s.LastVisitedAt != nil {
+		t := time.Unix(*s.LastVisitedAt, 0)
+		e.LastVisitedAt = &t
+	} else {
+		e.LastVisitedAt = nil
+	}
+
+	e.Names = SliceToMap(s.Names)
+	e.Labels = SliceToMap(s.Labels)
+	e.Shared = s.Shared
+	e.ToRead = s.ToRead
+	e.IsFeed = s.IsFeed
+	e.Extended = s.Extended
+	return nil
+}
+
+// toSerialized converts a Node to its serialized representation
+func (n Node) toSerialized() nodeSerialized {
+	return nodeSerialized{
+		ID:     n.ID,
+		Entity: n.Entity.toSerialized(),
+		Edges:  n.Edges,
+	}
+}
+
+// fromSerialized converts a serialized representation back to Node
+func (n *Node) fromSerialized(s nodeSerialized) error {
+	var entity Entity
+	if err := entity.fromSerialized(s.Entity); err != nil {
+		return err
+	}
+
+	n.ID = s.ID
+	n.Entity = entity
+	n.Edges = s.Edges
+	return nil
+}
+
+// toSerialized converts a Collection to its serialized representation
+func (c *Collection) toSerialized() collectionSerialized {
+	value := make([]nodeSerialized, len(c.Value))
+	for i, node := range c.Value {
+		value[i] = node.toSerialized()
+	}
+
+	return collectionSerialized{
+		Version: c.Version,
+		Length:  c.Length,
+		Value:   value,
+	}
+}
+
+// fromSerialized converts a serialized representation back to Collection
+func (c *Collection) fromSerialized(s collectionSerialized) error {
+	c.Version = s.Version
+	c.Length = s.Length
+	c.Value = make([]Node, len(s.Value))
+
+	for i, nodeSer := range s.Value {
+		var node Node
+		if err := node.fromSerialized(nodeSer); err != nil {
+			return err
+		}
+		c.Value[i] = node
+	}
+
+	return nil
+}
+
+// =============================================================================
+// Marshaling/Unmarshaling Methods
+// =============================================================================
+
+// MarshalYAML implements custom YAML marshaling for Collection
+func (c *Collection) MarshalYAML() (any, error) {
+	return c.toSerialized(), nil
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for Collection
+func (c *Collection) UnmarshalYAML(unmarshal func(any) error) error {
+	var aux collectionSerialized
+	if err := unmarshal(&aux); err != nil {
+		return err
+	}
+	return c.fromSerialized(aux)
+}
+
+// MarshalJSON implements custom JSON marshaling for Collection
+func (c *Collection) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.toSerialized())
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for Collection
+func (c *Collection) UnmarshalJSON(data []byte) error {
+	var aux collectionSerialized
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	return c.fromSerialized(aux)
 }
