@@ -4,8 +4,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 )
+
+const updateExpectedEnvVar = "HBT_UPDATE_EXPECTED"
+
+// shouldUpdateExpected checks if the environment variable specified by updateExpectedEnvVar is set to a truthy value.
+func shouldUpdateExpected() bool {
+	value := strings.TrimSpace(os.Getenv(updateExpectedEnvVar))
+	if value == "" {
+		return false
+	}
+
+	b, err := strconv.ParseBool(value)
+	return err == nil && b
+}
 
 // Runs an executable with given arguments and compares the output to an expected file using diff.
 func RunExecutableAndCompare(
@@ -49,6 +64,15 @@ func RunExecutableAndCompare(
 
 	if _, err := actualFile.Write(output); err != nil {
 		t.Fatalf("Failed to write actual output to temp file: %v", err)
+	}
+
+	// Check if we should promote the actual output to replace the expected file
+	if shouldUpdateExpected() {
+		if err := os.WriteFile(expectedFile, output, 0644); err != nil {
+			t.Fatalf("Failed to update expected file %s: %v", expectedFile, err)
+		}
+		t.Logf("Updated expected file: %s", expectedFile)
+		return
 	}
 
 	// Use the `diff` command to generate a unified diff.
