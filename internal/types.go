@@ -46,8 +46,8 @@ type Collection struct {
 // Serialization Types
 // =============================================================================
 
-// entitySerialized represents the Entity struct with slice fields for serialization
-type entitySerialized struct {
+// serializedEntity represents the Entity struct with slice fields for serialization
+type serializedEntity struct {
 	URI           string   `yaml:"uri"                     json:"uri"`
 	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
 	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
@@ -60,18 +60,18 @@ type entitySerialized struct {
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
-// nodeSerialized represents the Node struct with entitySerialized for schema generation
-type nodeSerialized struct {
+// serializedNode represents the Node struct with entitySerialized for schema generation
+type serializedNode struct {
 	ID     uint             `yaml:"id"     json:"id"`
-	Entity entitySerialized `yaml:"entity" json:"entity"`
+	Entity serializedEntity `yaml:"entity" json:"entity"`
 	Edges  []uint           `yaml:"edges"  json:"edges"`
 }
 
-// collectionSerialized represents the Collection struct with serialized fields for schema generation
-type collectionSerialized struct {
+// serializedCollection represents the Collection struct with serialized fields for schema generation
+type serializedCollection struct {
 	Version string           `yaml:"version" json:"version"`
 	Length  uint             `yaml:"length"  json:"length"`
-	Value   []nodeSerialized `yaml:"value"   json:"value"`
+	Value   []serializedNode `yaml:"value"   json:"value"`
 }
 
 // =============================================================================
@@ -229,7 +229,7 @@ func SliceToMap(slice []string) map[string]struct{} {
 // =============================================================================
 
 // toSerialized converts an Entity to its serialized representation
-func (e Entity) toSerialized() entitySerialized {
+func (e Entity) toSerialized() serializedEntity {
 	var uriString string
 	if e.URI != nil {
 		uriString = e.URI.String()
@@ -247,7 +247,7 @@ func (e Entity) toSerialized() entitySerialized {
 		lastVisitedAtUnix = &unix
 	}
 
-	return entitySerialized{
+	return serializedEntity{
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
 		UpdatedAt:     updatedAtUnix,
@@ -262,7 +262,7 @@ func (e Entity) toSerialized() entitySerialized {
 }
 
 // fromSerialized converts a serialized representation back to Entity
-func (e *Entity) fromSerialized(s entitySerialized) error {
+func (e *Entity) fromSerialized(s serializedEntity) error {
 	if s.URI != "" {
 		parsedURL, err := url.Parse(s.URI)
 		if err != nil {
@@ -298,8 +298,8 @@ func (e *Entity) fromSerialized(s entitySerialized) error {
 }
 
 // toSerialized converts a Node to its serialized representation
-func (n Node) toSerialized() nodeSerialized {
-	return nodeSerialized{
+func (n Node) toSerialized() serializedNode {
+	return serializedNode{
 		ID:     n.ID,
 		Entity: n.Entity.toSerialized(),
 		Edges:  n.Edges,
@@ -307,7 +307,7 @@ func (n Node) toSerialized() nodeSerialized {
 }
 
 // fromSerialized converts a serialized representation back to Node
-func (n *Node) fromSerialized(s nodeSerialized) error {
+func (n *Node) fromSerialized(s serializedNode) error {
 	var entity Entity
 	if err := entity.fromSerialized(s.Entity); err != nil {
 		return err
@@ -320,13 +320,13 @@ func (n *Node) fromSerialized(s nodeSerialized) error {
 }
 
 // toSerialized converts a Collection to its serialized representation
-func (c *Collection) toSerialized() collectionSerialized {
-	value := make([]nodeSerialized, len(c.Value))
+func (c *Collection) toSerialized() serializedCollection {
+	value := make([]serializedNode, len(c.Value))
 	for i, node := range c.Value {
 		value[i] = node.toSerialized()
 	}
 
-	return collectionSerialized{
+	return serializedCollection{
 		Version: c.Version,
 		Length:  c.Length,
 		Value:   value,
@@ -334,14 +334,14 @@ func (c *Collection) toSerialized() collectionSerialized {
 }
 
 // fromSerialized converts a serialized representation back to Collection
-func (c *Collection) fromSerialized(s collectionSerialized) error {
+func (c *Collection) fromSerialized(s serializedCollection) error {
 	c.Version = s.Version
 	c.Length = s.Length
 	c.Value = make([]Node, len(s.Value))
 
-	for i, nodeSer := range s.Value {
+	for i, serNode := range s.Value {
 		var node Node
-		if err := node.fromSerialized(nodeSer); err != nil {
+		if err := node.fromSerialized(serNode); err != nil {
 			return err
 		}
 		c.Value[i] = node
@@ -361,7 +361,7 @@ func (c *Collection) MarshalYAML() (any, error) {
 
 // UnmarshalYAML implements custom YAML unmarshaling for Collection
 func (c *Collection) UnmarshalYAML(unmarshal func(any) error) error {
-	var aux collectionSerialized
+	var aux serializedCollection
 	if err := unmarshal(&aux); err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements custom JSON unmarshaling for Collection
 func (c *Collection) UnmarshalJSON(data []byte) error {
-	var aux collectionSerialized
+	var aux serializedCollection
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
