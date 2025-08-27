@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"io"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -59,9 +60,15 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			continue
 		}
 
+		// Parse URL
+		parsedURL, err := url.Parse(entry.Href)
+		if err != nil {
+			continue
+		}
+
 		// Create entity
 		entity := internal.Entity{
-			URI:       entry.Href,
+			URI:       parsedURL,
 			CreatedAt: internal.TimeToUnix(timestamp),
 			UpdatedAt: []int64{},
 			Names:     make(map[string]struct{}),

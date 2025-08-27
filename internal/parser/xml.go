@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/xml"
 	"io"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -84,6 +85,12 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 		return internal.Entity{}, err
 	}
 
+	// Parse URL
+	parsedURL, err := url.Parse(post.Href)
+	if err != nil {
+		return internal.Entity{}, err
+	}
+
 	// Parse names
 	names := make(map[string]struct{})
 	if strings.TrimSpace(post.Description) != "" {
@@ -111,7 +118,7 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 	}
 
 	entity := internal.Entity{
-		URI:       post.Href,
+		URI:       parsedURL,
 		CreatedAt: internal.TimeToUnix(createdAt),
 		UpdatedAt: []int64{},
 		Names:     names,

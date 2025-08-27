@@ -41,8 +41,12 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 	}
 
 	for _, node := range collection.Value {
+		var uriString string
+		if node.Entity.URI != nil {
+			uriString = node.Entity.URI.String()
+		}
 		entity := templateEntity{
-			URI:           node.Entity.URI,
+			URI:           uriString,
 			Title:         getFirstName(node.Entity.Names),
 			CreatedAt:     node.Entity.CreatedAt,
 			Labels:        internal.MapToSortedSlice(node.Entity.Labels),

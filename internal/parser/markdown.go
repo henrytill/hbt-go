@@ -132,16 +132,17 @@ func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
 }
 
 func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
-	// Normalize URL
-	if parsedURL, err := url.Parse(linkURL); err == nil {
-		if parsedURL.Path == "" {
-			parsedURL.Path = "/"
-		}
-		linkURL = parsedURL.String()
+	// Parse and normalize URL
+	parsedURL, err := url.Parse(linkURL)
+	if err != nil {
+		return 0, err
+	}
+	if parsedURL.Path == "" {
+		parsedURL.Path = "/"
 	}
 
 	entity := internal.Entity{
-		URI:       linkURL,
+		URI:       parsedURL,
 		CreatedAt: internal.TimeToUnix(state.currentDate),
 		UpdatedAt: []int64{},
 		Names:     make(map[string]struct{}),

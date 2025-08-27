@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"net/url"
 	"sort"
 	"time"
 )
@@ -22,7 +23,7 @@ type Node struct {
 
 // Entity represents a page in the collection
 type Entity struct {
-	URI           string              `yaml:"uri" json:"uri"`
+	URI           *url.URL            `yaml:"uri" json:"uri"`
 	CreatedAt     int64               `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt     []int64             `yaml:"updatedAt" json:"updatedAt"`
 	Names         map[string]struct{} `yaml:"names" json:"names"`
@@ -50,8 +51,12 @@ type entitySerialized struct {
 
 // toSerialized converts an Entity to its serialized representation
 func (e Entity) toSerialized() entitySerialized {
+	var uriString string
+	if e.URI != nil {
+		uriString = e.URI.String()
+	}
 	return entitySerialized{
-		URI:           e.URI,
+		URI:           uriString,
 		CreatedAt:     e.CreatedAt,
 		UpdatedAt:     e.UpdatedAt,
 		Names:         MapToSortedSlice(e.Names),
@@ -70,8 +75,16 @@ func (e Entity) MarshalYAML() (any, error) {
 }
 
 // fromSerialized converts a serialized representation back to Entity
-func (e *Entity) fromSerialized(s entitySerialized) {
-	e.URI = s.URI
+func (e *Entity) fromSerialized(s entitySerialized) error {
+	if s.URI != "" {
+		parsedURL, err := url.Parse(s.URI)
+		if err != nil {
+			return err
+		}
+		e.URI = parsedURL
+	} else {
+		e.URI = nil
+	}
 	e.CreatedAt = s.CreatedAt
 	e.UpdatedAt = s.UpdatedAt
 	e.Names = sliceToMap(s.Names)
@@ -81,6 +94,7 @@ func (e *Entity) fromSerialized(s entitySerialized) {
 	e.IsFeed = s.IsFeed
 	e.Extended = s.Extended
 	e.LastVisitedAt = s.LastVisitedAt
+	return nil
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling for Entity
@@ -89,8 +103,7 @@ func (e *Entity) UnmarshalYAML(unmarshal func(any) error) error {
 	if err := unmarshal(&aux); err != nil {
 		return err
 	}
-	e.fromSerialized(aux)
-	return nil
+	return e.fromSerialized(aux)
 }
 
 // MarshalJSON implements custom JSON marshaling for Entity
@@ -104,8 +117,7 @@ func (e *Entity) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	e.fromSerialized(aux)
-	return nil
+	return e.fromSerialized(aux)
 }
 
 // Helper functions for map/slice conversion
@@ -156,7 +168,7 @@ func (c *Collection) AddEntity(entity Entity) uint {
 // FindEntityByURI finds an existing entity by URI, returns node ID and true if found
 func (c *Collection) FindEntityByURI(uri string) (uint, bool) {
 	for _, node := range c.Value {
-		if node.Entity.URI == uri {
+		if node.Entity.URI != nil && node.Entity.URI.String() == uri {
 			return node.ID, true
 		}
 	}
@@ -165,7 +177,11 @@ func (c *Collection) FindEntityByURI(uri string) (uint, bool) {
 
 // UpsertEntity adds a new entity or merges with existing entity if URI matches
 func (c *Collection) UpsertEntity(entity Entity) uint {
-	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
+	var uriString string
+	if entity.URI != nil {
+		uriString = entity.URI.String()
+	}
+	if nodeID, exists := c.FindEntityByURI(uriString); exists {
 		// Merge with existing entity
 		existing := &c.Value[nodeID].Entity
 

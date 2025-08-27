@@ -278,7 +278,7 @@ func processPendingBookmark(collection *internal.Collection, folderStack []strin
 
 	// Create entity
 	entity := internal.Entity{
-		URI:       parsedURL.String(),
+		URI:       parsedURL,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 		Names:     names,
