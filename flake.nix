@@ -36,9 +36,8 @@
           '';
 
           meta = with final.lib; {
-            description = "A bookmark management tool";
+            description = "Heterogeneous Bookmark Transformation";
             homepage = "https://github.com/henrytill/hbt-go";
-            license = licenses.mit;
             maintainers = with maintainers; [ ];
           };
         };
