@@ -12,7 +12,13 @@ import (
 	"github.com/henrytill/hbt-go/internal/parser"
 )
 
-const version = "0.1.0-dev"
+// Build information - can be overridden at build time via ldflags
+var (
+	Version    = "0.1.0-dev"
+	Commit     = "unknown"
+	CommitDate = "unknown"
+	TreeState  = "unknown"
+)
 
 type InputFormat = internal.InputFormat
 type OutputFormat = internal.OutputFormat
@@ -57,7 +63,7 @@ func detectInputFormat(filename string) (InputFormat, error) {
 }
 
 func showVersion() {
-	fmt.Printf("hbt %s\n", version)
+	fmt.Printf("hbt %s\n", Version)
 }
 
 func showUsage() {

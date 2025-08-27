@@ -1,0 +1,31 @@
+# Version for this file.
+version: 1
+
+# List of env variables used during compilation.
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+
+# Flags for the compiler.
+flags:
+  - -trimpath
+  - -tags=netgo
+
+# The OS to compile for. `GOOS` env variable will be set to this value.
+goos: linux
+
+# The architecture to compile for. `GOARCH` env variable will be set to this value.
+goarch: amd64
+
+# Entrypoint to compile.
+main: ./cmd/hbt/main.go
+
+# Binary output name.
+binary: hbt-{{ .Os }}-{{ .Arch }}
+
+# ldflags generated dynamically in the workflow.
+ldflags:
+  - "-X main.Version={{ .Env.VERSION }}"
+  - "-X main.Commit={{ .Env.COMMIT }}"
+  - "-X main.CommitDate={{ .Env.COMMIT_DATE }}"
+  - "-X main.TreeState={{ .Env.TREE_STATE }}"
