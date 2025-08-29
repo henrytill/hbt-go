@@ -47,7 +47,10 @@ type stackItem struct {
 	popGroup bool
 }
 
-func (p *HTMLParser) parseUsingStack(root *html.Node, collection *internal.Collection) (*internal.Collection, error) {
+func (p *HTMLParser) parseUsingStack(
+	root *html.Node,
+	collection *internal.Collection,
+) (*internal.Collection, error) {
 	var stack []stackItem
 	var folderStack []string
 	var pendingBookmark *pendingBookmarkData
@@ -128,7 +131,12 @@ func (p *HTMLParser) parseUsingStack(root *html.Node, collection *internal.Colle
 	return collection, nil
 }
 
-func (p *HTMLParser) handleDTStack(dtNode *html.Node, collection *internal.Collection, folderStack *[]string, pendingBookmark **pendingBookmarkData) error {
+func (p *HTMLParser) handleDTStack(
+	dtNode *html.Node,
+	collection *internal.Collection,
+	folderStack *[]string,
+	pendingBookmark **pendingBookmarkData,
+) error {
 	// Process any pending bookmark first
 	if *pendingBookmark != nil {
 		if err := processPendingBookmark(collection, *folderStack, **pendingBookmark); err != nil {
@@ -202,7 +210,11 @@ func getTextContent(n *html.Node) string {
 	return result.String()
 }
 
-func processPendingBookmark(collection *internal.Collection, folderStack []string, bookmark pendingBookmarkData) error {
+func processPendingBookmark(
+	collection *internal.Collection,
+	folderStack []string,
+	bookmark pendingBookmarkData,
+) error {
 	if bookmark.href == nil {
 		return nil
 	}
