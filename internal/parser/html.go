@@ -311,7 +311,7 @@ func processPendingBookmark(collection *internal.Collection, folderStack []strin
 	}
 
 	// Add to collection
-	collection.AddEntity(entity)
+	collection.UpsertEntity(entity)
 
 	return nil
 }
