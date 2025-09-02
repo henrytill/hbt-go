@@ -105,9 +105,12 @@ func (c *Collection) AddEntity(entity Entity) uint {
 }
 
 // FindEntityByURI finds an existing entity by URI, returns node ID and true if found
-func (c *Collection) FindEntityByURI(uri string) (uint, bool) {
+func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
+	if uri == nil {
+		return 0, false
+	}
 	for _, node := range c.Value {
-		if node.Entity.URI != nil && node.Entity.URI.String() == uri {
+		if node.Entity.URI != nil && node.Entity.URI.String() == uri.String() {
 			return node.ID, true
 		}
 	}
@@ -116,11 +119,7 @@ func (c *Collection) FindEntityByURI(uri string) (uint, bool) {
 
 // UpsertEntity adds a new entity or merges with existing entity if URI matches
 func (c *Collection) UpsertEntity(entity Entity) uint {
-	var uriString string
-	if entity.URI != nil {
-		uriString = entity.URI.String()
-	}
-	if nodeID, exists := c.FindEntityByURI(uriString); exists {
+	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
 		// Merge with existing entity
 		existing := &c.Value[nodeID].Entity
 
@@ -133,6 +132,7 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 			// New entity is later, add to updatedAt
 			existing.UpdatedAt = append(existing.UpdatedAt, entity.CreatedAt)
 		}
+
 		// Sort updatedAt to maintain chronological order
 		sort.Slice(existing.UpdatedAt, func(i, j int) bool {
 			return existing.UpdatedAt[i].Before(existing.UpdatedAt[j])
@@ -158,18 +158,20 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 		existing.IsFeed = existing.IsFeed || entity.IsFeed
 
 		// Handle extended field - prefer non-empty values
+		// TODO clarify how to address merging extended
 		if entity.Extended != nil && *entity.Extended != "" {
 			existing.Extended = entity.Extended
 		}
 		if entity.LastVisitedAt != nil {
+			// TODO prefer newer
 			existing.LastVisitedAt = entity.LastVisitedAt
 		}
 
 		return nodeID
-	} else {
-		// Add new entity
-		return c.AddEntity(entity)
 	}
+
+	// Add new entity
+	return c.AddEntity(entity)
 }
 
 // ApplyMappings applies label transformations to all entities in the collection
