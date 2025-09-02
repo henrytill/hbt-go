@@ -12,7 +12,6 @@ import (
 	"github.com/henrytill/hbt-go/internal/parser"
 )
 
-// Build information - can be overridden at build time via ldflags
 var (
 	Version    = "0.1.0-dev"
 	Commit     = "unknown"
@@ -139,7 +138,6 @@ func main() {
 
 	config.InputFile = args[0]
 
-	// Parse input format
 	inputFormatStr = *fromFlag
 	if inputFormatStr == "" {
 		inputFormatStr = *fromFlagLong
@@ -161,7 +159,6 @@ func main() {
 		*config.InputFormat = format
 	}
 
-	// Parse output format
 	outputFormatStr = *toFlag
 	if outputFormatStr == "" {
 		outputFormatStr = *toFlagLong
@@ -176,33 +173,27 @@ func main() {
 		*config.OutputFormat = format
 	}
 
-	// Validate that we have either an output format or an analysis flag
 	if !*config.Info && !*config.ListTags && *config.OutputFormat == "" {
 		fmt.Fprintf(os.Stderr, "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)\n")
 		os.Exit(1)
 	}
 
-	// Check if input file exists
 	if _, err := os.Stat(config.InputFile); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "Error: Input file does not exist: %s\n", config.InputFile)
 		os.Exit(1)
 	}
 
-	// Initialize parser and formatter registries
 	parserRegistry := internal.NewParserRegistry()
 	formatterRegistry := internal.NewFormatterRegistry()
 
-	// Register available parsers
 	parserRegistry.Register(FormatMarkdown, parser.NewMarkdownParser())
 	parserRegistry.Register(FormatJSON, parser.NewPinboardParser())
 	parserRegistry.Register(FormatHTML, parser.NewHTMLParser())
 	parserRegistry.Register(FormatXML, parser.NewXMLParser())
 
-	// Register available formatters
 	formatterRegistry.Register(OutputYAML, formatter.NewYAMLFormatter())
 	formatterRegistry.Register(OutputHTML, formatter.NewHTMLFormatter())
 
-	// Process the file
 	inputFile, err := os.Open(config.InputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening input file: %v\n", err)
@@ -210,21 +201,18 @@ func main() {
 	}
 	defer inputFile.Close()
 
-	// Get parser for input format
 	selectedParser, err := parserRegistry.GetParser(*config.InputFormat)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Parse the input
 	collection, err := selectedParser.Parse(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing file: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Apply mappings if provided
 	if *config.Mappings != "" {
 		mappings, err := internal.LoadMappingsFromFile(*config.Mappings)
 		if err != nil {
@@ -234,7 +222,6 @@ func main() {
 		collection.ApplyMappings(mappings)
 	}
 
-	// Handle analysis flags
 	if *config.Info {
 		fmt.Printf("Collection contains %d entities\n", collection.Length)
 		return
@@ -256,7 +243,6 @@ func main() {
 		return
 	}
 
-	// Format and output
 	if *config.OutputFormat != "" {
 		selectedFormatter, err := formatterRegistry.GetFormatter(*config.OutputFormat)
 		if err != nil {

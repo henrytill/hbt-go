@@ -11,15 +11,12 @@ import (
 	"github.com/henrytill/hbt-go/internal"
 )
 
-// XMLParser implements parsing for Pinboard XML bookmark files
 type XMLParser struct{}
 
-// NewXMLParser creates a new XML parser
 func NewXMLParser() *XMLParser {
 	return &XMLParser{}
 }
 
-// Post represents a single bookmark post in Pinboard XML format
 type Post struct {
 	Href        string `xml:"href,attr"`
 	Time        string `xml:"time,attr"`
@@ -31,20 +28,17 @@ type Post struct {
 	ToRead      string `xml:"toread,attr"`
 }
 
-// Posts represents the root XML element containing posts
 type Posts struct {
 	User  string `xml:"user,attr"`
 	Posts []Post `xml:"post"`
 }
 
-// Parse parses a Pinboard XML bookmark file and returns a Collection
 func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	// Handle empty files
 	if len(content) == 0 {
 		return internal.NewCollection(), nil
 	}
@@ -57,12 +51,11 @@ func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
 
 	collection := internal.NewCollection()
 
-	// Sort posts by timestamp to ensure consistent ordering
 	sort.Slice(posts.Posts, func(i, j int) bool {
 		timeI, errI := time.Parse(time.RFC3339, posts.Posts[i].Time)
 		timeJ, errJ := time.Parse(time.RFC3339, posts.Posts[j].Time)
 		if errI != nil || errJ != nil {
-			return false // Keep original order if parsing fails
+			return false
 		}
 		return timeI.Before(timeJ)
 	})
@@ -79,38 +72,32 @@ func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
 }
 
 func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
-	// Parse time
 	createdAt, err := time.Parse(time.RFC3339, post.Time)
 	if err != nil {
 		return internal.Entity{}, err
 	}
 
-	// Parse URL
 	parsedURL, err := url.Parse(post.Href)
 	if err != nil {
 		return internal.Entity{}, err
 	}
 
-	// Parse names
 	names := make(map[string]struct{})
 	if strings.TrimSpace(post.Description) != "" {
 		names[strings.TrimSpace(post.Description)] = struct{}{}
 	}
 
-	// Parse tags/labels
 	labels := make(map[string]struct{})
 	if strings.TrimSpace(post.Tag) != "" {
-		tags := strings.Fields(post.Tag) // Split on whitespace
+		tags := strings.Fields(post.Tag)
 		for _, tag := range tags {
 			labels[tag] = struct{}{}
 		}
 	}
 
-	// Parse boolean fields
 	shared := post.Shared == "yes"
 	toRead := post.ToRead == "yes"
 
-	// Handle extended field
 	var extended *string
 	if strings.TrimSpace(post.Extended) != "" {
 		ext := strings.TrimSpace(post.Extended)

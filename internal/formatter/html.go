@@ -12,13 +12,11 @@ import (
 
 type HTMLFormatter struct{}
 
-// NewHTMLFormatter creates a new HTML formatter
 func NewHTMLFormatter() *HTMLFormatter {
 	return &HTMLFormatter{}
 }
 
 func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection) error {
-	// HTML template for Netscape bookmark format
 	const tmpl = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
@@ -33,7 +31,6 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 </DL><p>
 `
 
-	// Prepare template data
 	templateData := struct {
 		Entities []templateEntity
 	}{
@@ -45,7 +42,6 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 		if node.Entity.URI != nil {
 			uriString = node.Entity.URI.String()
 		}
-		// Convert time.Time to Unix timestamps for HTML template
 		var lastVisitedAtUnix *int64
 		if node.Entity.LastVisitedAt != nil {
 			unix := node.Entity.LastVisitedAt.Unix()
@@ -64,20 +60,17 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 			Extended:      node.Entity.Extended,
 		}
 
-		// Set LastModified if there are UpdatedAt values
 		if len(node.Entity.UpdatedAt) > 0 {
 			unix := node.Entity.UpdatedAt[0].Unix()
 			entity.LastModified = &unix
 		}
 
-		// Sort labels for consistent output
 		sort.Strings(entity.Labels)
 		entity.TagsString = strings.Join(entity.Labels, ",")
 
 		templateData.Entities = append(templateData.Entities, entity)
 	}
 
-	// Parse and execute template
 	t, err := template.New("html").Parse(tmpl)
 	if err != nil {
 		return fmt.Errorf("failed to parse HTML template: %w", err)
@@ -104,7 +97,6 @@ func getFirstName(names map[string]struct{}) string {
 	if len(names) == 0 {
 		return ""
 	}
-	// Get first name alphabetically (for consistent ordering)
 	keys := make([]string, 0, len(names))
 	for k := range names {
 		keys = append(keys, k)

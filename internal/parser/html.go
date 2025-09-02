@@ -14,7 +14,6 @@ import (
 
 type HTMLParser struct{}
 
-// NewHTMLParser creates a new HTML parser
 func NewHTMLParser() *HTMLParser {
 	return &HTMLParser{}
 }
@@ -55,7 +54,6 @@ func (p *HTMLParser) parseUsingStack(
 	var folderStack []string
 	var pendingBookmark *pendingBookmarkData
 
-	// Initialize stack with root's children in reverse order (like Rust implementation)
 	for c := root.LastChild; c != nil; c = c.PrevSibling {
 		if c.Type == html.ElementNode {
 			stack = append(stack, stackItem{node: c, popGroup: false})
@@ -67,7 +65,6 @@ func (p *HTMLParser) parseUsingStack(
 		stack = stack[:len(stack)-1]
 
 		if item.popGroup {
-			// Process any pending bookmark before popping folder
 			if pendingBookmark != nil {
 				if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
 					return nil, err
@@ -75,7 +72,6 @@ func (p *HTMLParser) parseUsingStack(
 				pendingBookmark = nil
 			}
 
-			// Pop a folder from the stack
 			if len(folderStack) > 0 {
 				folderStack = folderStack[:len(folderStack)-1]
 			}
@@ -90,7 +86,6 @@ func (p *HTMLParser) parseUsingStack(
 			if err := p.handleDTStack(node, collection, &folderStack, &pendingBookmark); err != nil {
 				return nil, err
 			}
-			// Also push children for processing (like nested DL elements)
 			for c := node.LastChild; c != nil; c = c.PrevSibling {
 				if c.Type == html.ElementNode {
 					stack = append(stack, stackItem{node: c, popGroup: false})
@@ -104,7 +99,6 @@ func (p *HTMLParser) parseUsingStack(
 				}
 			}
 		case "dl":
-			// Push PopGroup marker first, then children in reverse order
 			stack = append(stack, stackItem{popGroup: true})
 			for c := node.LastChild; c != nil; c = c.PrevSibling {
 				if c.Type == html.ElementNode {
@@ -112,7 +106,6 @@ func (p *HTMLParser) parseUsingStack(
 				}
 			}
 		default:
-			// Push children in reverse order for other elements
 			for c := node.LastChild; c != nil; c = c.PrevSibling {
 				if c.Type == html.ElementNode {
 					stack = append(stack, stackItem{node: c, popGroup: false})
@@ -121,7 +114,6 @@ func (p *HTMLParser) parseUsingStack(
 		}
 	}
 
-	// Process any remaining pending bookmark
 	if pendingBookmark != nil {
 		if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
 			return nil, err
@@ -137,7 +129,6 @@ func (p *HTMLParser) handleDTStack(
 	folderStack *[]string,
 	pendingBookmark **pendingBookmarkData,
 ) error {
-	// Process any pending bookmark first
 	if *pendingBookmark != nil {
 		if err := processPendingBookmark(collection, *folderStack, **pendingBookmark); err != nil {
 			return err
@@ -145,7 +136,6 @@ func (p *HTMLParser) handleDTStack(
 		*pendingBookmark = nil
 	}
 
-	// Look for A (bookmark) as direct child
 	aNode := findDirectChildElement(dtNode, "a")
 	if aNode != nil {
 		var maybeTitle *string
@@ -169,7 +159,6 @@ func (p *HTMLParser) handleDTStack(
 		return nil
 	}
 
-	// Look for H3 (folder) as direct child
 	h3Node := findDirectChildElement(dtNode, "h3")
 	if h3Node != nil {
 		folderName := strings.TrimSpace(getTextContent(h3Node))
@@ -219,18 +208,15 @@ func processPendingBookmark(
 		return nil
 	}
 
-	// Parse URL
 	parsedURL, err := url.Parse(*bookmark.href)
 	if err != nil {
 		return fmt.Errorf("failed to parse URL %s: %w", *bookmark.href, err)
 	}
 
-	// Normalize URL by ensuring it has trailing slash for consistency with test data
 	if parsedURL.Path == "" {
 		parsedURL.Path = "/"
 	}
 
-	// Parse timestamps
 	var createdAt time.Time
 	if bookmark.addDate != nil {
 		if parsed, err := strconv.ParseInt(*bookmark.addDate, 10, 64); err == nil {
@@ -249,7 +235,6 @@ func processPendingBookmark(
 		}
 	}
 
-	// Parse updatedAt from LAST_MODIFIED
 	var updatedAt []time.Time
 	if bookmark.lastModified != nil {
 		if parsed, err := strconv.ParseInt(*bookmark.lastModified, 10, 64); err == nil {
@@ -257,7 +242,6 @@ func processPendingBookmark(
 		}
 	}
 
-	// Parse tags
 	labels := make(map[string]struct{})
 	if bookmark.tags != nil {
 		tagList := strings.SplitSeq(*bookmark.tags, ",")
@@ -269,18 +253,15 @@ func processPendingBookmark(
 		}
 	}
 
-	// Add folder labels
 	for _, folder := range folderStack {
 		labels[folder] = struct{}{}
 	}
 
-	// Parse privacy
-	shared := true // default to public
+	shared := true
 	if bookmark.private != nil && *bookmark.private == "1" {
 		shared = false
 	}
 
-	// Parse toread
 	toRead := false
 	if bookmark.toread != nil && *bookmark.toread == "1" {
 		toRead = true
@@ -290,19 +271,16 @@ func processPendingBookmark(
 		toRead = toRead || strings.Contains(*bookmark.tags, "toread")
 	}
 
-	// Parse feed
 	isFeed := false
 	if bookmark.feed != nil && *bookmark.feed == "true" {
 		isFeed = true
 	}
 
-	// Create names map
 	names := make(map[string]struct{})
 	if bookmark.title != nil {
 		names[*bookmark.title] = struct{}{}
 	}
 
-	// Create entity
 	entity := internal.Entity{
 		URI:       parsedURL,
 		CreatedAt: createdAt,
@@ -322,7 +300,6 @@ func processPendingBookmark(
 		entity.LastVisitedAt = lastVisitedAt
 	}
 
-	// Add to collection
 	collection.UpsertEntity(entity)
 
 	return nil

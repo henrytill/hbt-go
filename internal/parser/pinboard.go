@@ -11,7 +11,6 @@ import (
 	"github.com/henrytill/hbt-go/internal"
 )
 
-// PinboardEntry represents a bookmark entry in Pinboard JSON format
 type PinboardEntry struct {
 	Href        string `json:"href"`
 	Description string `json:"description"`
@@ -24,15 +23,12 @@ type PinboardEntry struct {
 	Tags        string `json:"tags"`
 }
 
-// PinboardParser implements parsing for Pinboard JSON files
 type PinboardParser struct{}
 
-// NewPinboardParser creates a new Pinboard parser
 func NewPinboardParser() *PinboardParser {
 	return &PinboardParser{}
 }
 
-// Parse parses a Pinboard JSON file and returns a Collection
 func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 	var entries []PinboardEntry
 
@@ -43,7 +39,6 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 
 	var nodes []internal.Node
 
-	// Sort entries by time to match expected output order
 	sort.Slice(entries, func(i, j int) bool {
 		timeI, errI := time.Parse(time.RFC3339, entries[i].Time)
 		timeJ, errJ := time.Parse(time.RFC3339, entries[j].Time)
@@ -54,19 +49,16 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 	})
 
 	for i, entry := range entries {
-		// Parse timestamp
 		timestamp, err := time.Parse(time.RFC3339, entry.Time)
 		if err != nil {
 			continue
 		}
 
-		// Parse URL
 		parsedURL, err := url.Parse(entry.Href)
 		if err != nil {
 			continue
 		}
 
-		// Create entity
 		entity := internal.Entity{
 			URI:       parsedURL,
 			CreatedAt: timestamp,
@@ -78,19 +70,16 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			IsFeed:    false,
 		}
 
-		// Add description as name if present
 		if entry.Description != "" {
 			entity.Names = map[string]struct{}{entry.Description: {}}
 		} else {
 			entity.Names = make(map[string]struct{})
 		}
 
-		// Add extended description if present
 		if entry.Extended != "" {
 			entity.Extended = &entry.Extended
 		}
 
-		// Parse tags (space-separated)
 		entity.Labels = make(map[string]struct{})
 		if entry.Tags != "" {
 			tags := strings.Fields(entry.Tags)
@@ -99,7 +88,6 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			}
 		}
 
-		// Create node
 		node := internal.Node{
 			ID:     uint(i),
 			Entity: entity,

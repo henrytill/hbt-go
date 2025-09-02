@@ -17,7 +17,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// TestCase represents a generated test case
 type TestCase struct {
 	Name       string
 	InputFile  string
@@ -26,18 +25,14 @@ type TestCase struct {
 }
 
 func main() {
-	// go generate always runs from the package directory (test/)
-	// Use relative path that works in both dev and Nix build environments
 	testDataDir := "testdata"
 	outputFile := "cli_test.go"
 
-	// Find all test cases
 	testCases, err := findTestCases(testDataDir)
 	if err != nil {
 		log.Fatalf("Error finding test cases: %v", err)
 	}
 
-	// Generate test file
 	if err := generateTestFile(outputFile, testCases); err != nil {
 		log.Fatalf("Error generating test file: %v", err)
 	}
@@ -48,9 +43,8 @@ func main() {
 func findTestCases(testDataDir string) ([]TestCase, error) {
 	var testCases []TestCase
 
-	// Map to track input files by their stem (name without .input.ext)
 	inputFiles := make(map[string]string)
-	expectedFiles := make(map[string]map[string]string) // stem -> format -> file
+	expectedFiles := make(map[string]map[string]string)
 
 	err := filepath.WalkDir(testDataDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -63,12 +57,10 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 
 		fileName := d.Name()
 
-		// Check for input files
 		if stem, found := stripInputSuffix(fileName); found {
 			inputFiles[stem] = path
 		}
 
-		// Check for expected output files
 		if stem, format, found := stripExpectedSuffix(fileName); found {
 			if expectedFiles[stem] == nil {
 				expectedFiles[stem] = make(map[string]string)
@@ -83,11 +75,9 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 		return nil, err
 	}
 
-	// Generate test cases by matching input and expected files
 	for stem, inputPath := range inputFiles {
 		if outputs, exists := expectedFiles[stem]; exists {
 			for format, expectedPath := range outputs {
-				// Create test name based on path and format
 				category := filepath.Base(filepath.Dir(inputPath))
 				testName := generateTestName(category, stem, format)
 
@@ -101,7 +91,6 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 		}
 	}
 
-	// Sort test cases by name for deterministic output
 	sort.Slice(testCases, func(i, j int) bool {
 		return testCases[i].Name < testCases[j].Name
 	})
@@ -109,7 +98,6 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 	return testCases, nil
 }
 
-// stripInputSuffix removes input suffixes and returns the stem
 func stripInputSuffix(fileName string) (string, bool) {
 	suffixes := []string{".input.html", ".input.md", ".input.json", ".input.xml"}
 	for _, suffix := range suffixes {
@@ -120,7 +108,6 @@ func stripInputSuffix(fileName string) (string, bool) {
 	return "", false
 }
 
-// stripExpectedSuffix removes expected suffixes and returns stem and format
 func stripExpectedSuffix(fileName string) (string, string, bool) {
 	suffixes := map[string]string{
 		".expected.yaml": "yaml",
@@ -136,17 +123,14 @@ func stripExpectedSuffix(fileName string) (string, string, bool) {
 	return "", "", false
 }
 
-// generateTestName creates a valid Go test function name
 func generateTestName(category, stem, format string) string {
 	parts := []string{"Test"}
 	caser := cases.Title(language.AmericanEnglish)
 
-	// Add category if present
 	if category != "" {
 		parts = append(parts, caser.String(category))
 	}
 
-	// Add stem components if present
 	if stem != "" {
 		stemParts := splitIntoAlphanumericParts(stem)
 		for _, part := range stemParts {
@@ -156,23 +140,20 @@ func generateTestName(category, stem, format string) string {
 		}
 	}
 
-	// Add format with special handling for HTML
 	parts = append(parts, formatTestSuffix(format, caser))
 
 	return strings.Join(parts, "")
 }
 
-// splitIntoAlphanumericParts splits a string on non-alphanumeric characters
 func splitIntoAlphanumericParts(s string) []string {
 	return strings.FieldsFunc(s, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
 }
 
-// formatTestSuffix returns the appropriate test suffix for a format
 func formatTestSuffix(format string, caser cases.Caser) string {
 	if format == "html" {
-		return "Html" // Special case to match Go naming conventions
+		return "Html"
 	}
 	return caser.String(format)
 }
@@ -201,7 +182,6 @@ func {{.Name}}(t *testing.T) {
 		TestCases: testCases,
 	}
 
-	// Parse and execute template
 	tmpl, err := template.New("test").Parse(testTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse test template: %w", err)
