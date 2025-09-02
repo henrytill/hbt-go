@@ -41,13 +41,25 @@ func getAttr(n *html.Node, attrName string) *string {
 }
 
 func getTextContent(n *html.Node) string {
-	if n.Type == html.TextNode {
-		return n.Data
-	}
 	var result strings.Builder
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		result.WriteString(getTextContent(c))
+	var stack []*html.Node
+
+	stack = append(stack, n)
+
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if current.Type == html.TextNode {
+			result.WriteString(current.Data)
+			continue
+		}
+
+		for c := current.LastChild; c != nil; c = c.PrevSibling {
+			stack = append(stack, c)
+		}
 	}
+
 	return result.String()
 }
 

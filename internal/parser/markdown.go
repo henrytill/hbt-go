@@ -30,18 +30,40 @@ type parserState struct {
 
 func extractText(node ast.Node, content []byte) string {
 	var buf bytes.Buffer
-	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		switch childNode := child.(type) {
+
+	type stackItem struct {
+		node        ast.Node
+		postProcess string
+	}
+
+	var stack []stackItem
+	stack = append(stack, stackItem{node: node})
+
+	for len(stack) > 0 {
+		item := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if item.postProcess != "" {
+			buf.WriteString(item.postProcess)
+			continue
+		}
+
+		switch currentNode := item.node.(type) {
 		case *ast.Text:
-			buf.Write(childNode.Segment.Value(content))
+			buf.Write(currentNode.Segment.Value(content))
 		case *ast.CodeSpan:
 			buf.WriteByte('`')
-			buf.WriteString(extractText(child, content))
-			buf.WriteByte('`')
+			stack = append(stack, stackItem{postProcess: "`"})
+			for child := item.node.LastChild(); child != nil; child = child.PreviousSibling() {
+				stack = append(stack, stackItem{node: child})
+			}
 		default:
-			buf.WriteString(extractText(child, content))
+			for child := item.node.LastChild(); child != nil; child = child.PreviousSibling() {
+				stack = append(stack, stackItem{node: child})
+			}
 		}
 	}
+
 	return strings.TrimSpace(buf.String())
 }
 
