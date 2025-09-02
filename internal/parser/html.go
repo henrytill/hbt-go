@@ -31,6 +31,141 @@ type pendingBookmarkData struct {
 	description  *string
 }
 
+func getAttr(n *html.Node, attrName string) *string {
+	for _, attr := range n.Attr {
+		if strings.EqualFold(attr.Key, attrName) {
+			return &attr.Val
+		}
+	}
+	return nil
+}
+
+func getTextContent(n *html.Node) string {
+	if n.Type == html.TextNode {
+		return n.Data
+	}
+	var result strings.Builder
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		result.WriteString(getTextContent(c))
+	}
+	return result.String()
+}
+
+func findDirectChildElement(n *html.Node, tagName string) *html.Node {
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && strings.ToLower(c.Data) == tagName {
+			return c
+		}
+	}
+	return nil
+}
+
+func processPendingBookmark(
+	collection *internal.Collection,
+	folderStack []string,
+	bookmark pendingBookmarkData,
+) error {
+	if bookmark.href == nil {
+		return nil
+	}
+
+	parsedURL, err := url.Parse(*bookmark.href)
+	if err != nil {
+		return fmt.Errorf("failed to parse URL %s: %w", *bookmark.href, err)
+	}
+
+	if parsedURL.Path == "" {
+		parsedURL.Path = "/"
+	}
+
+	var createdAt time.Time
+	if bookmark.addDate != nil {
+		if parsed, err := strconv.ParseInt(*bookmark.addDate, 10, 64); err == nil {
+			createdAt = time.Unix(parsed, 0)
+		}
+	}
+	if createdAt.IsZero() {
+		createdAt = time.Now()
+	}
+
+	var lastVisitedAt *time.Time
+	if bookmark.lastVisit != nil {
+		if parsed, err := strconv.ParseInt(*bookmark.lastVisit, 10, 64); err == nil {
+			t := time.Unix(parsed, 0)
+			lastVisitedAt = &t
+		}
+	}
+
+	var updatedAt []time.Time
+	if bookmark.lastModified != nil {
+		if parsed, err := strconv.ParseInt(*bookmark.lastModified, 10, 64); err == nil {
+			updatedAt = append(updatedAt, time.Unix(parsed, 0))
+		}
+	}
+
+	labels := make(map[string]struct{})
+	if bookmark.tags != nil {
+		tagList := strings.SplitSeq(*bookmark.tags, ",")
+		for tag := range tagList {
+			tag = strings.TrimSpace(tag)
+			if tag != "" && tag != "toread" {
+				labels[tag] = struct{}{}
+			}
+		}
+	}
+
+	for _, folder := range folderStack {
+		labels[folder] = struct{}{}
+	}
+
+	shared := true
+	if bookmark.private != nil && *bookmark.private == "1" {
+		shared = false
+	}
+
+	toRead := false
+	if bookmark.toread != nil && *bookmark.toread == "1" {
+		toRead = true
+	}
+
+	if bookmark.tags != nil {
+		toRead = toRead || strings.Contains(*bookmark.tags, "toread")
+	}
+
+	isFeed := false
+	if bookmark.feed != nil && *bookmark.feed == "true" {
+		isFeed = true
+	}
+
+	names := make(map[string]struct{})
+	if bookmark.title != nil {
+		names[*bookmark.title] = struct{}{}
+	}
+
+	entity := internal.Entity{
+		URI:       parsedURL,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+		Names:     names,
+		Labels:    labels,
+		Shared:    shared,
+		ToRead:    toRead,
+		IsFeed:    isFeed,
+	}
+
+	if bookmark.description != nil {
+		entity.Extended = bookmark.description
+	}
+
+	if lastVisitedAt != nil {
+		entity.LastVisitedAt = lastVisitedAt
+	}
+
+	collection.UpsertEntity(entity)
+
+	return nil
+}
+
 func (p *HTMLParser) Parse(reader io.Reader) (*internal.Collection, error) {
 	doc, err := html.Parse(reader)
 	if err != nil {
@@ -166,141 +301,6 @@ func (p *HTMLParser) handleDTStack(
 			*folderStack = append(*folderStack, folderName)
 		}
 	}
-
-	return nil
-}
-
-func findDirectChildElement(n *html.Node, tagName string) *html.Node {
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && strings.ToLower(c.Data) == tagName {
-			return c
-		}
-	}
-	return nil
-}
-
-func getAttr(n *html.Node, attrName string) *string {
-	for _, attr := range n.Attr {
-		if strings.EqualFold(attr.Key, attrName) {
-			return &attr.Val
-		}
-	}
-	return nil
-}
-
-func getTextContent(n *html.Node) string {
-	if n.Type == html.TextNode {
-		return n.Data
-	}
-	var result strings.Builder
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		result.WriteString(getTextContent(c))
-	}
-	return result.String()
-}
-
-func processPendingBookmark(
-	collection *internal.Collection,
-	folderStack []string,
-	bookmark pendingBookmarkData,
-) error {
-	if bookmark.href == nil {
-		return nil
-	}
-
-	parsedURL, err := url.Parse(*bookmark.href)
-	if err != nil {
-		return fmt.Errorf("failed to parse URL %s: %w", *bookmark.href, err)
-	}
-
-	if parsedURL.Path == "" {
-		parsedURL.Path = "/"
-	}
-
-	var createdAt time.Time
-	if bookmark.addDate != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.addDate, 10, 64); err == nil {
-			createdAt = time.Unix(parsed, 0)
-		}
-	}
-	if createdAt.IsZero() {
-		createdAt = time.Now()
-	}
-
-	var lastVisitedAt *time.Time
-	if bookmark.lastVisit != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.lastVisit, 10, 64); err == nil {
-			t := time.Unix(parsed, 0)
-			lastVisitedAt = &t
-		}
-	}
-
-	var updatedAt []time.Time
-	if bookmark.lastModified != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.lastModified, 10, 64); err == nil {
-			updatedAt = append(updatedAt, time.Unix(parsed, 0))
-		}
-	}
-
-	labels := make(map[string]struct{})
-	if bookmark.tags != nil {
-		tagList := strings.SplitSeq(*bookmark.tags, ",")
-		for tag := range tagList {
-			tag = strings.TrimSpace(tag)
-			if tag != "" && tag != "toread" {
-				labels[tag] = struct{}{}
-			}
-		}
-	}
-
-	for _, folder := range folderStack {
-		labels[folder] = struct{}{}
-	}
-
-	shared := true
-	if bookmark.private != nil && *bookmark.private == "1" {
-		shared = false
-	}
-
-	toRead := false
-	if bookmark.toread != nil && *bookmark.toread == "1" {
-		toRead = true
-	}
-
-	if bookmark.tags != nil {
-		toRead = toRead || strings.Contains(*bookmark.tags, "toread")
-	}
-
-	isFeed := false
-	if bookmark.feed != nil && *bookmark.feed == "true" {
-		isFeed = true
-	}
-
-	names := make(map[string]struct{})
-	if bookmark.title != nil {
-		names[*bookmark.title] = struct{}{}
-	}
-
-	entity := internal.Entity{
-		URI:       parsedURL,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-		Names:     names,
-		Labels:    labels,
-		Shared:    shared,
-		ToRead:    toRead,
-		IsFeed:    isFeed,
-	}
-
-	if bookmark.description != nil {
-		entity.Extended = bookmark.description
-	}
-
-	if lastVisitedAt != nil {
-		entity.LastVisitedAt = lastVisitedAt
-	}
-
-	collection.UpsertEntity(entity)
 
 	return nil
 }

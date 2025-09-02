@@ -28,6 +28,23 @@ type parserState struct {
 	parents     []uint
 }
 
+func extractText(node ast.Node, content []byte) string {
+	var buf bytes.Buffer
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		switch childNode := child.(type) {
+		case *ast.Text:
+			buf.Write(childNode.Segment.Value(content))
+		case *ast.CodeSpan:
+			buf.WriteByte('`')
+			buf.WriteString(extractText(child, content))
+			buf.WriteByte('`')
+		default:
+			buf.WriteString(extractText(child, content))
+		}
+	}
+	return strings.TrimSpace(buf.String())
+}
+
 func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
@@ -165,21 +182,4 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 	}
 
 	return nodeID, nil
-}
-
-func extractText(node ast.Node, content []byte) string {
-	var buf bytes.Buffer
-	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		switch childNode := child.(type) {
-		case *ast.Text:
-			buf.Write(childNode.Segment.Value(content))
-		case *ast.CodeSpan:
-			buf.WriteByte('`')
-			buf.WriteString(extractText(child, content))
-			buf.WriteByte('`')
-		default:
-			buf.WriteString(extractText(child, content))
-		}
-	}
-	return strings.TrimSpace(buf.String())
 }

@@ -16,6 +16,32 @@ func NewHTMLFormatter() *HTMLFormatter {
 	return &HTMLFormatter{}
 }
 
+type templateEntity struct {
+	URI           string
+	Title         string
+	CreatedAt     int64
+	LastModified  *int64
+	Labels        []string
+	TagsString    string
+	Shared        bool
+	ToRead        bool
+	IsFeed        bool
+	LastVisitedAt *int64
+	Extended      *string
+}
+
+func getFirstName(names map[string]struct{}) string {
+	if len(names) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(names))
+	for k := range names {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys[0]
+}
+
 func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection) error {
 	const tmpl = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -77,30 +103,4 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 	}
 
 	return t.Execute(writer, templateData)
-}
-
-type templateEntity struct {
-	URI           string
-	Title         string
-	CreatedAt     int64
-	LastModified  *int64
-	Labels        []string
-	TagsString    string
-	Shared        bool
-	ToRead        bool
-	IsFeed        bool
-	LastVisitedAt *int64
-	Extended      *string
-}
-
-func getFirstName(names map[string]struct{}) string {
-	if len(names) == 0 {
-		return ""
-	}
-	keys := make([]string, 0, len(names))
-	for k := range names {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys[0]
 }
