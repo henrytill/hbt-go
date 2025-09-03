@@ -12,12 +12,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-type HTMLParser struct{}
-
-func NewHTMLParser() *HTMLParser {
-	return &HTMLParser{}
-}
-
 type pendingBookmarkData struct {
 	href         *string
 	title        *string
@@ -29,47 +23,6 @@ type pendingBookmarkData struct {
 	lastVisit    *string
 	feed         *string
 	description  *string
-}
-
-func getAttr(n *html.Node, attrName string) *string {
-	for _, attr := range n.Attr {
-		if strings.EqualFold(attr.Key, attrName) {
-			return &attr.Val
-		}
-	}
-	return nil
-}
-
-func getTextContent(n *html.Node) string {
-	var result strings.Builder
-	var stack []*html.Node
-
-	stack = append(stack, n)
-
-	for len(stack) > 0 {
-		current := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-
-		if current.Type == html.TextNode {
-			result.WriteString(current.Data)
-			continue
-		}
-
-		for c := current.LastChild; c != nil; c = c.PrevSibling {
-			stack = append(stack, c)
-		}
-	}
-
-	return result.String()
-}
-
-func findDirectChildElement(n *html.Node, tagName string) *html.Node {
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && strings.ToLower(c.Data) == tagName {
-			return c
-		}
-	}
-	return nil
 }
 
 func processPendingBookmark(
@@ -178,99 +131,48 @@ func processPendingBookmark(
 	return nil
 }
 
-func (p *HTMLParser) Parse(reader io.Reader) (*internal.Collection, error) {
-	doc, err := html.Parse(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse HTML: %w", err)
-	}
-
-	collection := internal.NewCollection()
-	return p.parseUsingStack(doc, collection)
-}
-
-type stackItem struct {
-	node     *html.Node
-	popGroup bool
-}
-
-func (p *HTMLParser) parseUsingStack(
-	root *html.Node,
-	collection *internal.Collection,
-) (*internal.Collection, error) {
-	var stack []stackItem
-	var folderStack []string
-	var pendingBookmark *pendingBookmarkData
-
-	for c := root.LastChild; c != nil; c = c.PrevSibling {
-		if c.Type == html.ElementNode {
-			stack = append(stack, stackItem{node: c, popGroup: false})
+func findDirectChildElement(n *html.Node, tagName string) *html.Node {
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && strings.ToLower(c.Data) == tagName {
+			return c
 		}
 	}
+	return nil
+}
+
+func getTextContent(n *html.Node) string {
+	var result strings.Builder
+	var stack []*html.Node
+
+	stack = append(stack, n)
 
 	for len(stack) > 0 {
-		item := stack[len(stack)-1]
+		current := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 
-		if item.popGroup {
-			if pendingBookmark != nil {
-				if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
-					return nil, err
-				}
-				pendingBookmark = nil
-			}
-
-			if len(folderStack) > 0 {
-				folderStack = folderStack[:len(folderStack)-1]
-			}
+		if current.Type == html.TextNode {
+			result.WriteString(current.Data)
 			continue
 		}
 
-		node := item.node
-		nodeName := strings.ToLower(node.Data)
-
-		switch nodeName {
-		case "dt":
-			if err := p.handleDTStack(node, collection, &folderStack, &pendingBookmark); err != nil {
-				return nil, err
-			}
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
-			}
-		case "dd":
-			if pendingBookmark != nil {
-				description := strings.TrimSpace(getTextContent(node))
-				if description != "" {
-					pendingBookmark.description = &description
-				}
-			}
-		case "dl":
-			stack = append(stack, stackItem{popGroup: true})
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
-			}
-		default:
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
-			}
+		for c := current.LastChild; c != nil; c = c.PrevSibling {
+			stack = append(stack, c)
 		}
 	}
 
-	if pendingBookmark != nil {
-		if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
-			return nil, err
-		}
-	}
-
-	return collection, nil
+	return result.String()
 }
 
-func (p *HTMLParser) handleDTStack(
+func getAttr(n *html.Node, attrName string) *string {
+	for _, attr := range n.Attr {
+		if strings.EqualFold(attr.Key, attrName) {
+			return &attr.Val
+		}
+	}
+	return nil
+}
+
+func (p *HTMLParser) handleDt(
 	dtNode *html.Node,
 	collection *internal.Collection,
 	folderStack *[]string,
@@ -315,4 +217,102 @@ func (p *HTMLParser) handleDTStack(
 	}
 
 	return nil
+}
+
+type stackItem struct {
+	node     *html.Node
+	popGroup bool
+}
+
+func (p *HTMLParser) parse(
+	root *html.Node,
+	collection *internal.Collection,
+) (*internal.Collection, error) {
+	var stack []stackItem
+	var folderStack []string
+	var pendingBookmark *pendingBookmarkData
+
+	for c := root.LastChild; c != nil; c = c.PrevSibling {
+		if c.Type == html.ElementNode {
+			stack = append(stack, stackItem{node: c, popGroup: false})
+		}
+	}
+
+	for len(stack) > 0 {
+		item := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if item.popGroup {
+			if pendingBookmark != nil {
+				if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
+					return nil, err
+				}
+				pendingBookmark = nil
+			}
+
+			if len(folderStack) > 0 {
+				folderStack = folderStack[:len(folderStack)-1]
+			}
+			continue
+		}
+
+		node := item.node
+		nodeName := strings.ToLower(node.Data)
+
+		switch nodeName {
+		case "dt":
+			if err := p.handleDt(node, collection, &folderStack, &pendingBookmark); err != nil {
+				return nil, err
+			}
+			for c := node.LastChild; c != nil; c = c.PrevSibling {
+				if c.Type == html.ElementNode {
+					stack = append(stack, stackItem{node: c, popGroup: false})
+				}
+			}
+		case "dd":
+			if pendingBookmark != nil {
+				description := strings.TrimSpace(getTextContent(node))
+				if description != "" {
+					pendingBookmark.description = &description
+				}
+			}
+		case "dl":
+			stack = append(stack, stackItem{popGroup: true})
+			for c := node.LastChild; c != nil; c = c.PrevSibling {
+				if c.Type == html.ElementNode {
+					stack = append(stack, stackItem{node: c, popGroup: false})
+				}
+			}
+		default:
+			for c := node.LastChild; c != nil; c = c.PrevSibling {
+				if c.Type == html.ElementNode {
+					stack = append(stack, stackItem{node: c, popGroup: false})
+				}
+			}
+		}
+	}
+
+	if pendingBookmark != nil {
+		if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
+			return nil, err
+		}
+	}
+
+	return collection, nil
+}
+
+type HTMLParser struct{}
+
+func NewHTMLParser() *HTMLParser {
+	return &HTMLParser{}
+}
+
+func (p *HTMLParser) Parse(reader io.Reader) (*internal.Collection, error) {
+	doc, err := html.Parse(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse HTML: %w", err)
+	}
+
+	collection := internal.NewCollection()
+	return p.parse(doc, collection)
 }
