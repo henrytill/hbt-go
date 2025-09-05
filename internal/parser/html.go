@@ -12,6 +12,12 @@ import (
 	"golang.org/x/net/html"
 )
 
+type HTMLParser struct{}
+
+func NewHTMLParser() *HTMLParser {
+	return &HTMLParser{}
+}
+
 type pendingBookmarkData struct {
 	href         *string
 	title        *string
@@ -219,15 +225,15 @@ func (p *HTMLParser) handleDt(
 	return nil
 }
 
-type stackItem struct {
-	node     *html.Node
-	popGroup bool
-}
-
 func (p *HTMLParser) parse(
 	root *html.Node,
 	collection *types.Collection,
 ) (*types.Collection, error) {
+	type stackItem struct {
+		node     *html.Node
+		popGroup bool
+	}
+
 	var stack []stackItem
 	var folderStack []string
 	var pendingBookmark *pendingBookmarkData
@@ -299,12 +305,6 @@ func (p *HTMLParser) parse(
 	}
 
 	return collection, nil
-}
-
-type HTMLParser struct{}
-
-func NewHTMLParser() *HTMLParser {
-	return &HTMLParser{}
 }
 
 func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
