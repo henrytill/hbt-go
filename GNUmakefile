@@ -9,6 +9,7 @@ BIN =
 BIN += hbt
 
 SOURCES =
+SOURCES += cmd/hbt/main.go
 SOURCES += internal/formatter.go
 SOURCES += internal/formatter/html.go
 SOURCES += internal/formatter/yaml.go
