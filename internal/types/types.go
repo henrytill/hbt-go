@@ -2,10 +2,13 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"sort"
 	"time"
+
+	"golang.org/x/mod/semver"
 )
 
 type Parser interface {
@@ -201,15 +204,53 @@ func (n *Node) fromSerialized(s serializedNode) error {
 	return nil
 }
 
+type Version string
+
+const ExpectedVersion Version = "v0.1.0"
+const ExpectedVersionReq = "^0.1.0" // conceptual - semver package doesn't have requirement matching
+
+func (v Version) IsValid() bool {
+	return semver.IsValid(string(v))
+}
+
+func NewVersion(v string) (Version, error) {
+	// Add 'v' prefix if not present for semver validation
+	if len(v) > 0 && v[0] != 'v' {
+		v = "v" + v
+	}
+	if !semver.IsValid(v) {
+		return "", fmt.Errorf("invalid semantic version: %s", v)
+	}
+	return Version(v), nil
+}
+
+func (v Version) String() string {
+	// For serialization compatibility, remove the 'v' prefix if present
+	s := string(v)
+	if len(s) > 0 && s[0] == 'v' {
+		return s[1:]
+	}
+	return s
+}
+
+func (v Version) Compare(other Version) int {
+	return semver.Compare(string(v), string(other))
+}
+
+func (v Version) IsCompatible() bool {
+	// For now, just check major version compatibility (v0.x.x)
+	return semver.Major(string(v)) == semver.Major(string(ExpectedVersion))
+}
+
 type Collection struct {
-	Version string
+	Version Version
 	Length  uint
 	Value   []Node
 }
 
 func NewCollection() *Collection {
 	return &Collection{
-		Version: "0.1.0",
+		Version: ExpectedVersion,
 		Length:  0,
 		Value:   []Node{},
 	}
@@ -289,14 +330,27 @@ func (c *Collection) toSerialized() serializedCollection {
 	}
 
 	return serializedCollection{
-		Version: c.Version,
+		Version: c.Version.String(),
 		Length:  c.Length,
 		Value:   value,
 	}
 }
 
 func (c *Collection) fromSerialized(s serializedCollection) error {
-	c.Version = s.Version
+	version, err := NewVersion(s.Version)
+	if err != nil {
+		return fmt.Errorf("invalid version in serialized data: %w", err)
+	}
+
+	if !version.IsCompatible() {
+		return fmt.Errorf(
+			"incompatible version: %s, expected compatible with %s",
+			version.String(),
+			ExpectedVersion.String(),
+		)
+	}
+
+	c.Version = version
 	c.Length = s.Length
 	c.Value = make([]Node, len(s.Value))
 

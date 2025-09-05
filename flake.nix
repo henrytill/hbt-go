@@ -23,7 +23,7 @@
             name = "hbt-src";
           };
 
-          vendorHash = "sha256-SeVjH+2YS+LulQnxoWhfECLZPUVn/jlN85E5SoI9ovg=";
+          vendorHash = "sha256-M4SWV8N9gpc4CaQMFlI86uyPqprFI8eoe6TWrvdSfks=";
 
           ldflags = [
             "-X main.commitHash=${self.rev or self.dirtyRev}"
