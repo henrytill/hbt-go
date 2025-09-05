@@ -67,13 +67,13 @@ func (p *XMLParser) convertPostToEntity(post Post) (types.Entity, error) {
 	}
 
 	names := make(map[Name]struct{})
-	if strings.TrimSpace(post.Description) != "" {
-		names[Name(strings.TrimSpace(post.Description))] = struct{}{}
+	if trimmedDesc := strings.TrimSpace(post.Description); trimmedDesc != "" {
+		names[Name(trimmedDesc)] = struct{}{}
 	}
 
 	labels := make(map[Label]struct{})
-	if strings.TrimSpace(post.Tags) != "" {
-		for tag := range strings.FieldsSeq(post.Tags) {
+	if trimmedTags := strings.TrimSpace(post.Tags); trimmedTags != "" {
+		for tag := range strings.FieldsSeq(trimmedTags) {
 			labels[Label(tag)] = struct{}{}
 		}
 	}
@@ -82,9 +82,8 @@ func (p *XMLParser) convertPostToEntity(post Post) (types.Entity, error) {
 	toRead := post.ToRead == "yes"
 
 	var extended *string
-	if strings.TrimSpace(post.Extended) != "" {
-		ext := strings.TrimSpace(post.Extended)
-		extended = &ext
+	if trimmedExt := strings.TrimSpace(post.Extended); trimmedExt != "" {
+		extended = &trimmedExt
 	}
 
 	entity := types.Entity{

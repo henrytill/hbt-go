@@ -186,8 +186,8 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 	entity.Labels = make(map[Label]struct{})
 	if len(state.labels) > 0 {
 		for _, label := range state.labels {
-			if strings.TrimSpace(label) != "" {
-				entity.Labels[Label(strings.TrimSpace(label))] = struct{}{}
+			if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
+				entity.Labels[Label(trimmedLabel)] = struct{}{}
 			}
 		}
 	}
