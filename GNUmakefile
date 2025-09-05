@@ -8,8 +8,10 @@ STATICCHECK = $(GOPATH)/bin/staticcheck
 BIN =
 BIN += hbt
 
+BINDIR = bin
+
 SOURCES =
-SOURCES += cmd/hbt/main.go
+SOURCES += internal/formats.go
 SOURCES += internal/formatter.go
 SOURCES += internal/formatter/html.go
 SOURCES += internal/formatter/yaml.go
@@ -21,12 +23,15 @@ SOURCES += internal/parser/pinboard.go
 SOURCES += internal/parser/xml.go
 SOURCES += internal/types/types.go
 
-BIN_TARGETS = $(addprefix bin/,$(BIN))
+BIN_TARGETS = $(addprefix $(BINDIR)/,$(BIN))
 
 all: $(BIN_TARGETS)
 
-bin/%: $(SOURCES)
-	$(GO) build -o $@ cmd/$*/main.go
+$(BINDIR):
+	mkdir -p $@
+
+$(BINDIR)/%: cmd/%/main.go $(SOURCES) | $(BINDIR)
+	$(GO) build -o $@ $<
 
 lint:
 	$(GO) vet ./...
@@ -42,4 +47,7 @@ test: $(BIN_TARGETS)
 clean:
 	rm -f $(BIN_TARGETS)
 
-.PHONY: all lint fmt test clean
+distclean: clean
+	rmdir $(BINDIR)
+
+.PHONY: all lint fmt test clean distclean
