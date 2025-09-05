@@ -92,44 +92,47 @@ func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
 	return 0, false
 }
 
+func (e *Entity) Absorb(other Entity) {
+	if other.CreatedAt.Before(e.CreatedAt) {
+		e.UpdatedAt = append(e.UpdatedAt, e.CreatedAt)
+		e.CreatedAt = other.CreatedAt
+	} else if other.CreatedAt.After(e.CreatedAt) {
+		e.UpdatedAt = append(e.UpdatedAt, other.CreatedAt)
+	}
+
+	sort.Slice(e.UpdatedAt, func(i, j int) bool {
+		return e.UpdatedAt[i].Before(e.UpdatedAt[j])
+	})
+
+	if e.Names == nil {
+		e.Names = make(map[Name]struct{})
+	}
+	if e.Labels == nil {
+		e.Labels = make(map[Label]struct{})
+	}
+	for k := range other.Names {
+		e.Names[k] = struct{}{}
+	}
+	for k := range other.Labels {
+		e.Labels[k] = struct{}{}
+	}
+
+	e.Shared = e.Shared || other.Shared
+	e.ToRead = e.ToRead || other.ToRead
+	e.IsFeed = e.IsFeed || other.IsFeed
+
+	if other.Extended != nil && *other.Extended != "" {
+		e.Extended = other.Extended
+	}
+	if other.LastVisitedAt != nil {
+		e.LastVisitedAt = other.LastVisitedAt
+	}
+}
+
 func (c *Collection) UpsertEntity(entity Entity) uint {
 	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
 		existing := &c.Value[nodeID].Entity
-		if entity.CreatedAt.Before(existing.CreatedAt) {
-			existing.UpdatedAt = append(existing.UpdatedAt, existing.CreatedAt)
-			existing.CreatedAt = entity.CreatedAt
-		} else if entity.CreatedAt.After(existing.CreatedAt) {
-			existing.UpdatedAt = append(existing.UpdatedAt, entity.CreatedAt)
-		}
-
-		sort.Slice(existing.UpdatedAt, func(i, j int) bool {
-			return existing.UpdatedAt[i].Before(existing.UpdatedAt[j])
-		})
-
-		if existing.Names == nil {
-			existing.Names = make(map[Name]struct{})
-		}
-		if existing.Labels == nil {
-			existing.Labels = make(map[Label]struct{})
-		}
-		for k := range entity.Names {
-			existing.Names[k] = struct{}{}
-		}
-		for k := range entity.Labels {
-			existing.Labels[k] = struct{}{}
-		}
-
-		existing.Shared = existing.Shared || entity.Shared
-		existing.ToRead = existing.ToRead || entity.ToRead
-		existing.IsFeed = existing.IsFeed || entity.IsFeed
-
-		if entity.Extended != nil && *entity.Extended != "" {
-			existing.Extended = entity.Extended
-		}
-		if entity.LastVisitedAt != nil {
-			existing.LastVisitedAt = entity.LastVisitedAt
-		}
-
+		existing.Absorb(entity)
 		return nodeID
 	}
 
