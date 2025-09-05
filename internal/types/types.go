@@ -240,6 +240,15 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 	return c.AddEntity(entity)
 }
 
+func (c *Collection) AddEdges(from, to uint) {
+	if from >= uint(len(c.Value)) || to >= uint(len(c.Value)) {
+		return
+	}
+
+	c.Value[from].Edges = append(c.Value[from].Edges, to)
+	c.Value[to].Edges = append(c.Value[to].Edges, from)
+}
+
 func (c *Collection) ApplyMappings(mappings map[string]string) {
 	for i := range c.Value {
 		entity := &c.Value[i].Entity

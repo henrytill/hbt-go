@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"net/url"
-	"slices"
 	"strings"
 	"time"
 
@@ -67,11 +66,7 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 
 	if len(state.parents) > 0 {
 		immediateParent := state.parents[len(state.parents)-1]
-		state.collection.Value[nodeID].Edges = append(state.collection.Value[nodeID].Edges, immediateParent)
-		state.collection.Value[immediateParent].Edges = append(state.collection.Value[immediateParent].Edges, nodeID)
-
-		slices.Sort(state.collection.Value[nodeID].Edges)
-		slices.Sort(state.collection.Value[immediateParent].Edges)
+		state.collection.AddEdges(nodeID, immediateParent)
 	}
 
 	return nodeID, nil
