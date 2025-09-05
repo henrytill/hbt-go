@@ -4,6 +4,7 @@ GO = go
 
 GOPATH = $(shell $(GO) env GOPATH)
 STATICCHECK = $(GOPATH)/bin/staticcheck
+DEADCODE = $(GOPATH)/bin/deadcode
 
 BIN =
 BIN += hbt
@@ -36,6 +37,7 @@ $(BINDIR)/%: cmd/%/main.go $(SOURCES) | $(BINDIR)
 lint:
 	$(GO) vet ./...
 	$(STATICCHECK) ./...
+	$(DEADCODE) -test ./...
 
 fmt:
 	$(GO) fmt ./...
