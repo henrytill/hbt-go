@@ -23,75 +23,6 @@ type Entity struct {
 	LastVisitedAt *time.Time
 }
 
-type Node struct {
-	ID     uint
-	Entity Entity
-	Edges  []uint
-}
-
-type Collection struct {
-	Version string
-	Length  uint
-	Value   []Node
-}
-
-type serializedEntity struct {
-	URI           string   `yaml:"uri"                     json:"uri"`
-	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
-	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
-	Names         []string `yaml:"names"                   json:"names"`
-	Labels        []string `yaml:"labels"                  json:"labels"`
-	Shared        bool     `yaml:"shared"                  json:"shared"`
-	ToRead        bool     `yaml:"toRead"                  json:"toRead"`
-	IsFeed        bool     `yaml:"isFeed"                  json:"isFeed"`
-	Extended      *string  `yaml:"extended,omitempty"      json:"extended,omitempty"`
-	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
-}
-
-type serializedNode struct {
-	ID     uint             `yaml:"id"     json:"id"`
-	Entity serializedEntity `yaml:"entity" json:"entity"`
-	Edges  []uint           `yaml:"edges"  json:"edges"`
-}
-
-type serializedCollection struct {
-	Version string           `yaml:"version" json:"version"`
-	Length  uint             `yaml:"length"  json:"length"`
-	Value   []serializedNode `yaml:"value"   json:"value"`
-}
-
-func NewCollection() *Collection {
-	return &Collection{
-		Version: "0.1.0",
-		Length:  0,
-		Value:   []Node{},
-	}
-}
-
-func (c *Collection) AddEntity(entity Entity) uint {
-	nodeID := c.Length
-	node := Node{
-		ID:     nodeID,
-		Entity: entity,
-		Edges:  []uint{},
-	}
-	c.Value = append(c.Value, node)
-	c.Length++
-	return nodeID
-}
-
-func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
-	if uri == nil {
-		return 0, false
-	}
-	for _, node := range c.Value {
-		if node.Entity.URI != nil && node.Entity.URI.String() == uri.String() {
-			return node.ID, true
-		}
-	}
-	return 0, false
-}
-
 func (e *Entity) Absorb(other Entity) {
 	if other.CreatedAt.Before(e.CreatedAt) {
 		e.UpdatedAt = append(e.UpdatedAt, e.CreatedAt)
@@ -129,32 +60,17 @@ func (e *Entity) Absorb(other Entity) {
 	}
 }
 
-func (c *Collection) UpsertEntity(entity Entity) uint {
-	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
-		existing := &c.Value[nodeID].Entity
-		existing.Absorb(entity)
-		return nodeID
-	}
-
-	return c.AddEntity(entity)
-}
-
-func (c *Collection) ApplyMappings(mappings map[string]string) {
-	for i := range c.Value {
-		entity := &c.Value[i].Entity
-
-		newLabels := make(map[Label]struct{})
-
-		for label := range entity.Labels {
-			if newLabel, exists := mappings[string(label)]; exists {
-				newLabels[Label(newLabel)] = struct{}{}
-			} else {
-				newLabels[label] = struct{}{}
-			}
-		}
-
-		entity.Labels = newLabels
-	}
+type serializedEntity struct {
+	URI           string   `yaml:"uri"                     json:"uri"`
+	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
+	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
+	Names         []string `yaml:"names"                   json:"names"`
+	Labels        []string `yaml:"labels"                  json:"labels"`
+	Shared        bool     `yaml:"shared"                  json:"shared"`
+	ToRead        bool     `yaml:"toRead"                  json:"toRead"`
+	IsFeed        bool     `yaml:"isFeed"                  json:"isFeed"`
+	Extended      *string  `yaml:"extended,omitempty"      json:"extended,omitempty"`
+	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
 func MapToSortedSlice[K ~string](m map[K]struct{}) []string {
@@ -244,6 +160,18 @@ func (e *Entity) fromSerialized(s serializedEntity) error {
 	return nil
 }
 
+type Node struct {
+	ID     uint
+	Entity Entity
+	Edges  []uint
+}
+
+type serializedNode struct {
+	ID     uint             `yaml:"id"     json:"id"`
+	Entity serializedEntity `yaml:"entity" json:"entity"`
+	Edges  []uint           `yaml:"edges"  json:"edges"`
+}
+
 func (n Node) toSerialized() serializedNode {
 	return serializedNode{
 		ID:     n.ID,
@@ -262,6 +190,78 @@ func (n *Node) fromSerialized(s serializedNode) error {
 	n.Entity = entity
 	n.Edges = s.Edges
 	return nil
+}
+
+type Collection struct {
+	Version string
+	Length  uint
+	Value   []Node
+}
+
+func NewCollection() *Collection {
+	return &Collection{
+		Version: "0.1.0",
+		Length:  0,
+		Value:   []Node{},
+	}
+}
+
+func (c *Collection) AddEntity(entity Entity) uint {
+	nodeID := c.Length
+	node := Node{
+		ID:     nodeID,
+		Entity: entity,
+		Edges:  []uint{},
+	}
+	c.Value = append(c.Value, node)
+	c.Length++
+	return nodeID
+}
+
+func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
+	if uri == nil {
+		return 0, false
+	}
+	for _, node := range c.Value {
+		if node.Entity.URI != nil && node.Entity.URI.String() == uri.String() {
+			return node.ID, true
+		}
+	}
+	return 0, false
+}
+
+func (c *Collection) UpsertEntity(entity Entity) uint {
+	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
+		existing := &c.Value[nodeID].Entity
+		existing.Absorb(entity)
+		return nodeID
+	}
+
+	return c.AddEntity(entity)
+}
+
+func (c *Collection) ApplyMappings(mappings map[string]string) {
+	for i := range c.Value {
+		entity := &c.Value[i].Entity
+
+		newLabels := make(map[Label]struct{})
+
+		for label := range entity.Labels {
+			if newLabel, exists := mappings[string(label)]; exists {
+				newLabels[Label(newLabel)] = struct{}{}
+			} else {
+				newLabels[label] = struct{}{}
+			}
+		}
+
+		entity.Labels = newLabels
+	}
+}
+
+type serializedCollection struct {
+	Version string           `yaml:"version" json:"version"`
+	Length  uint             `yaml:"length"  json:"length"`
+	Value   []serializedNode `yaml:"value"   json:"value"`
 }
 
 func (c *Collection) toSerialized() serializedCollection {
