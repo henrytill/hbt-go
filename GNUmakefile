@@ -13,17 +13,17 @@ BINDIR = bin
 
 SOURCES =
 SOURCES += internal/formats.go
-SOURCES += internal/formatter.go
+SOURCES += internal/types/types.go
+SOURCES += internal/mappings.go
+SOURCES += internal/formatter/types.go
 SOURCES += internal/formatter/html.go
 SOURCES += internal/formatter/yaml.go
-SOURCES += internal/mappings.go
-SOURCES += internal/parser.go
+SOURCES += internal/parser/types.go
 SOURCES += internal/parser/html.go
 SOURCES += internal/parser/markdown.go
 SOURCES += internal/parser/pinboard/types.go
 SOURCES += internal/parser/pinboard/json.go
 SOURCES += internal/parser/pinboard/xml.go
-SOURCES += internal/types/types.go
 
 BIN_TARGETS = $(addprefix $(BINDIR)/,$(BIN))
 

@@ -105,26 +105,22 @@ func Parse(format Format, r io.Reader) (*types.Collection, error) {
 		return nil, fmt.Errorf("format %s cannot be used for input", format.Name)
 	}
 
+	var p types.Parser
+
 	switch format {
 	case JSON:
-		posts, err := pinboard.ParseJSON(r)
-		if err != nil {
-			return nil, err
-		}
-		return pinboard.NewCollectionFromPosts(posts)
+		p = pinboard.NewPinboardJSONParser()
 	case XML:
-		posts, err := pinboard.ParseXML(r)
-		if err != nil {
-			return nil, err
-		}
-		return pinboard.NewCollectionFromPosts(posts)
+		p = pinboard.NewPinboardXMLParser()
 	case Markdown:
-		return parser.NewMarkdownParser().Parse(r)
+		p = parser.NewMarkdownParser()
 	case HTML:
-		return parser.NewHTMLParser().Parse(r)
+		p = parser.NewHTMLParser()
 	default:
 		return nil, fmt.Errorf("no parser available for format: %s", format.Name)
 	}
+
+	return p.Parse(r)
 }
 
 func Unparse(format Format, w io.Writer, collection *types.Collection) error {
@@ -132,12 +128,16 @@ func Unparse(format Format, w io.Writer, collection *types.Collection) error {
 		return fmt.Errorf("format %s cannot be used for output", format.Name)
 	}
 
+	var f types.Formatter
+
 	switch format {
 	case YAML:
-		return formatter.NewYAMLFormatter().Format(w, collection)
+		f = formatter.NewYAMLFormatter()
 	case HTML:
-		return formatter.NewHTMLFormatter().Format(w, collection)
+		f = formatter.NewHTMLFormatter()
 	default:
 		return fmt.Errorf("no formatter available for format: %s", format.Name)
 	}
+
+	return f.Format(w, collection)
 }

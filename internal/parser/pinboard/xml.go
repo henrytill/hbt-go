@@ -5,7 +5,15 @@ import (
 	"io"
 	"sort"
 	"time"
+
+	"github.com/henrytill/hbt-go/internal/types"
 )
+
+type PinboardXMLParser struct{}
+
+func NewPinboardXMLParser() *PinboardXMLParser {
+	return &PinboardXMLParser{}
+}
 
 func ParseXML(r io.Reader) ([]Post, error) {
 	content, err := io.ReadAll(r)
@@ -33,4 +41,12 @@ func ParseXML(r io.Reader) ([]Post, error) {
 	})
 
 	return posts.Posts, nil
+}
+
+func (p *PinboardXMLParser) Parse(r io.Reader) (*types.Collection, error) {
+	posts, err := ParseXML(r)
+	if err != nil {
+		return nil, err
+	}
+	return NewCollectionFromPosts(posts)
 }

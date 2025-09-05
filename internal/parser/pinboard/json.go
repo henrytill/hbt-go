@@ -5,7 +5,15 @@ import (
 	"io"
 	"sort"
 	"time"
+
+	"github.com/henrytill/hbt-go/internal/types"
 )
+
+type PinboardJSONParser struct{}
+
+func NewPinboardJSONParser() *PinboardJSONParser {
+	return &PinboardJSONParser{}
+}
 
 func ParseJSON(r io.Reader) ([]Post, error) {
 	var posts []Post
@@ -25,4 +33,12 @@ func ParseJSON(r io.Reader) ([]Post, error) {
 	})
 
 	return posts, nil
+}
+
+func (p *PinboardJSONParser) Parse(r io.Reader) (*types.Collection, error) {
+	posts, err := ParseJSON(r)
+	if err != nil {
+		return nil, err
+	}
+	return NewCollectionFromPosts(posts)
 }

@@ -2,10 +2,19 @@ package types
 
 import (
 	"encoding/json"
+	"io"
 	"net/url"
 	"sort"
 	"time"
 )
+
+type Parser interface {
+	Parse(r io.Reader) (*Collection, error)
+}
+
+type Formatter interface {
+	Format(w io.Writer, collection *Collection) error
+}
 
 type Name string
 type Label string
