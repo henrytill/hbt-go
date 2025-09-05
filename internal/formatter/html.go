@@ -30,9 +30,9 @@ type templateEntity struct {
 	Extended      *string
 }
 
-func getFirstName(names map[Name]struct{}) string {
+func getFirstName(names map[Name]struct{}, def string) string {
 	if len(names) == 0 {
-		return ""
+		return def
 	}
 	keys := make([]string, 0, len(names))
 	for k := range names {
@@ -76,7 +76,7 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *types.Collection) e
 
 		entity := templateEntity{
 			URI:           uriString,
-			Title:         getFirstName(node.Entity.Names),
+			Title:         getFirstName(node.Entity.Names, uriString),
 			CreatedAt:     node.Entity.CreatedAt.Unix(),
 			Labels:        types.MapToSortedSlice(node.Entity.Labels),
 			Shared:        node.Entity.Shared,
