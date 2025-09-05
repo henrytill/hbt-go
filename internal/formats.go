@@ -107,9 +107,17 @@ func Parse(format Format, r io.Reader) (*types.Collection, error) {
 
 	switch format {
 	case JSON:
-		return pinboard.NewJSONParser().Parse(r)
+		posts, err := pinboard.ParseJSON(r)
+		if err != nil {
+			return nil, err
+		}
+		return pinboard.NewCollectionFromPosts(posts)
 	case XML:
-		return pinboard.NewXMLParser().Parse(r)
+		posts, err := pinboard.ParseXML(r)
+		if err != nil {
+			return nil, err
+		}
+		return pinboard.NewCollectionFromPosts(posts)
 	case Markdown:
 		return parser.NewMarkdownParser().Parse(r)
 	case HTML:
