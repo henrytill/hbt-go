@@ -28,6 +28,55 @@ type parserState struct {
 	parents     []uint
 }
 
+func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
+	parsedURL, err := url.Parse(linkURL)
+	if err != nil {
+		return 0, err
+	}
+	if parsedURL.Path == "" {
+		parsedURL.Path = "/"
+	}
+
+	entity := types.Entity{
+		URI:       parsedURL,
+		CreatedAt: state.currentDate,
+		UpdatedAt: []time.Time{},
+		Names:     make(map[Name]struct{}),
+		Labels:    make(map[Label]struct{}),
+		Shared:    false,
+		ToRead:    false,
+		IsFeed:    false,
+	}
+
+	if linkTitle != "" {
+		entity.Names = map[Name]struct{}{Name(linkTitle): {}}
+	} else {
+		entity.Names = make(map[Name]struct{})
+	}
+
+	entity.Labels = make(map[Label]struct{})
+	if len(state.labels) > 0 {
+		for _, label := range state.labels {
+			if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
+				entity.Labels[Label(trimmedLabel)] = struct{}{}
+			}
+		}
+	}
+
+	nodeID := state.collection.UpsertEntity(entity)
+
+	if len(state.parents) > 0 {
+		immediateParent := state.parents[len(state.parents)-1]
+		state.collection.Value[nodeID].Edges = append(state.collection.Value[nodeID].Edges, immediateParent)
+		state.collection.Value[immediateParent].Edges = append(state.collection.Value[immediateParent].Edges, nodeID)
+
+		slices.Sort(state.collection.Value[nodeID].Edges)
+		slices.Sort(state.collection.Value[immediateParent].Edges)
+	}
+
+	return nodeID, nil
+}
+
 func extractText(node ast.Node, content []byte) string {
 	var buf bytes.Buffer
 
@@ -125,7 +174,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 				linkTitle := extractText(node, content)
 
 				if linkURL != "" {
-					id, err := p.saveEntity(state, linkURL, linkTitle)
+					id, err := saveEntity(state, linkURL, linkTitle)
 					if err != nil {
 						return ast.WalkStop, err
 					}
@@ -138,7 +187,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 				linkTitle := ""
 
 				if linkURL != "" {
-					id, err := p.saveEntity(state, linkURL, linkTitle)
+					id, err := saveEntity(state, linkURL, linkTitle)
 					if err != nil {
 						return ast.WalkStop, err
 					}
@@ -155,53 +204,4 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 	}
 
 	return state.collection, nil
-}
-
-func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
-	parsedURL, err := url.Parse(linkURL)
-	if err != nil {
-		return 0, err
-	}
-	if parsedURL.Path == "" {
-		parsedURL.Path = "/"
-	}
-
-	entity := types.Entity{
-		URI:       parsedURL,
-		CreatedAt: state.currentDate,
-		UpdatedAt: []time.Time{},
-		Names:     make(map[Name]struct{}),
-		Labels:    make(map[Label]struct{}),
-		Shared:    false,
-		ToRead:    false,
-		IsFeed:    false,
-	}
-
-	if linkTitle != "" {
-		entity.Names = map[Name]struct{}{Name(linkTitle): {}}
-	} else {
-		entity.Names = make(map[Name]struct{})
-	}
-
-	entity.Labels = make(map[Label]struct{})
-	if len(state.labels) > 0 {
-		for _, label := range state.labels {
-			if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
-				entity.Labels[Label(trimmedLabel)] = struct{}{}
-			}
-		}
-	}
-
-	nodeID := state.collection.UpsertEntity(entity)
-
-	if len(state.parents) > 0 {
-		immediateParent := state.parents[len(state.parents)-1]
-		state.collection.Value[nodeID].Edges = append(state.collection.Value[nodeID].Edges, immediateParent)
-		state.collection.Value[immediateParent].Edges = append(state.collection.Value[immediateParent].Edges, nodeID)
-
-		slices.Sort(state.collection.Value[nodeID].Edges)
-		slices.Sort(state.collection.Value[immediateParent].Edges)
-	}
-
-	return nodeID, nil
 }
