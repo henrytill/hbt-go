@@ -178,7 +178,7 @@ func getAttr(n *html.Node, attrName string) *string {
 	return nil
 }
 
-func (p *HTMLParser) handleDt(
+func handleDt(
 	dtNode *html.Node,
 	collection *types.Collection,
 	folderStack *[]string,
@@ -192,40 +192,40 @@ func (p *HTMLParser) handleDt(
 	}
 
 	aNode := findDirectChildElement(dtNode, "a")
-	if aNode != nil {
-		var maybeTitle *string
-		title := strings.TrimSpace(getTextContent(aNode))
-		if title != "" {
-			maybeTitle = &title
+	if aNode == nil {
+		h3Node := findDirectChildElement(dtNode, "h3")
+		if h3Node != nil {
+			folderName := strings.TrimSpace(getTextContent(h3Node))
+			if folderName != "" {
+				*folderStack = append(*folderStack, folderName)
+			}
 		}
-		bookmark := &pendingBookmarkData{
-			href:         getAttr(aNode, "href"),
-			title:        maybeTitle,
-			addDate:      getAttr(aNode, "add_date"),
-			lastModified: getAttr(aNode, "last_modified"),
-			tags:         getAttr(aNode, "tags"),
-			private:      getAttr(aNode, "private"),
-			toread:       getAttr(aNode, "toread"),
-			lastVisit:    getAttr(aNode, "last_visit"),
-			feed:         getAttr(aNode, "feed"),
-		}
-
-		*pendingBookmark = bookmark
 		return nil
 	}
 
-	h3Node := findDirectChildElement(dtNode, "h3")
-	if h3Node != nil {
-		folderName := strings.TrimSpace(getTextContent(h3Node))
-		if folderName != "" {
-			*folderStack = append(*folderStack, folderName)
-		}
+	var maybeTitle *string
+	title := strings.TrimSpace(getTextContent(aNode))
+	if title != "" {
+		maybeTitle = &title
 	}
 
+	bookmark := &pendingBookmarkData{
+		href:         getAttr(aNode, "href"),
+		title:        maybeTitle,
+		addDate:      getAttr(aNode, "add_date"),
+		lastModified: getAttr(aNode, "last_modified"),
+		tags:         getAttr(aNode, "tags"),
+		private:      getAttr(aNode, "private"),
+		toread:       getAttr(aNode, "toread"),
+		lastVisit:    getAttr(aNode, "last_visit"),
+		feed:         getAttr(aNode, "feed"),
+	}
+
+	*pendingBookmark = bookmark
 	return nil
 }
 
-func (p *HTMLParser) parse(
+func parse(
 	root *html.Node,
 	collection *types.Collection,
 ) (*types.Collection, error) {
@@ -267,13 +267,8 @@ func (p *HTMLParser) parse(
 
 		switch nodeName {
 		case "dt":
-			if err := p.handleDt(node, collection, &folderStack, &pendingBookmark); err != nil {
+			if err := handleDt(node, collection, &folderStack, &pendingBookmark); err != nil {
 				return nil, err
-			}
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
 			}
 		case "dd":
 			if pendingBookmark != nil {
@@ -282,20 +277,17 @@ func (p *HTMLParser) parse(
 					pendingBookmark.description = &description
 				}
 			}
+			continue
 		case "dl":
 			stack = append(stack, stackItem{popGroup: true})
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
-			}
-		default:
-			for c := node.LastChild; c != nil; c = c.PrevSibling {
-				if c.Type == html.ElementNode {
-					stack = append(stack, stackItem{node: c, popGroup: false})
-				}
+		}
+
+		for c := node.LastChild; c != nil; c = c.PrevSibling {
+			if c.Type == html.ElementNode {
+				stack = append(stack, stackItem{node: c, popGroup: false})
 			}
 		}
+
 	}
 
 	if pendingBookmark != nil {
@@ -314,5 +306,5 @@ func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
 	}
 
 	collection := types.NewCollection()
-	return p.parse(doc, collection)
+	return parse(doc, collection)
 }
