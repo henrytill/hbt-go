@@ -30,13 +30,13 @@ type templateEntity struct {
 	Extended      *string
 }
 
-func getFirstName(names map[string]struct{}) string {
+func getFirstName(names map[Name]struct{}) string {
 	if len(names) == 0 {
 		return ""
 	}
 	keys := make([]string, 0, len(names))
 	for k := range names {
-		keys = append(keys, k)
+		keys = append(keys, string(k))
 	}
 	sort.Strings(keys)
 	return keys[0]

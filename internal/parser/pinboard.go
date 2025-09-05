@@ -63,28 +63,28 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			URI:       parsedURL,
 			CreatedAt: timestamp,
 			UpdatedAt: []time.Time{},
-			Names:     make(map[string]struct{}),
-			Labels:    make(map[string]struct{}),
+			Names:     make(map[Name]struct{}),
+			Labels:    make(map[Label]struct{}),
 			Shared:    entry.Shared == "yes",
 			ToRead:    entry.ToRead == "yes",
 			IsFeed:    false,
 		}
 
 		if entry.Description != "" {
-			entity.Names = map[string]struct{}{entry.Description: {}}
+			entity.Names = map[Name]struct{}{Name(entry.Description): {}}
 		} else {
-			entity.Names = make(map[string]struct{})
+			entity.Names = make(map[Name]struct{})
 		}
 
 		if entry.Extended != "" {
 			entity.Extended = &entry.Extended
 		}
 
-		entity.Labels = make(map[string]struct{})
+		entity.Labels = make(map[Label]struct{})
 		if entry.Tags != "" {
 			tags := strings.Fields(entry.Tags)
 			for _, tag := range tags {
-				entity.Labels[tag] = struct{}{}
+				entity.Labels[Label(tag)] = struct{}{}
 			}
 		}
 

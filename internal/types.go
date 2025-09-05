@@ -7,12 +7,15 @@ import (
 	"time"
 )
 
+type Name string
+type Label string
+
 type Entity struct {
 	URI           *url.URL
 	CreatedAt     time.Time
 	UpdatedAt     []time.Time
-	Names         map[string]struct{}
-	Labels        map[string]struct{}
+	Names         map[Name]struct{}
+	Labels        map[Label]struct{}
 	Shared        bool
 	ToRead        bool
 	IsFeed        bool
@@ -104,10 +107,10 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 		})
 
 		if existing.Names == nil {
-			existing.Names = make(map[string]struct{})
+			existing.Names = make(map[Name]struct{})
 		}
 		if existing.Labels == nil {
-			existing.Labels = make(map[string]struct{})
+			existing.Labels = make(map[Label]struct{})
 		}
 		for k := range entity.Names {
 			existing.Names[k] = struct{}{}
@@ -137,11 +140,11 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 	for i := range c.Value {
 		entity := &c.Value[i].Entity
 
-		newLabels := make(map[string]struct{})
+		newLabels := make(map[Label]struct{})
 
 		for label := range entity.Labels {
-			if newLabel, exists := mappings[label]; exists {
-				newLabels[newLabel] = struct{}{}
+			if newLabel, exists := mappings[string(label)]; exists {
+				newLabels[Label(newLabel)] = struct{}{}
 			} else {
 				newLabels[label] = struct{}{}
 			}
@@ -151,23 +154,23 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 	}
 }
 
-func MapToSortedSlice(m map[string]struct{}) []string {
+func MapToSortedSlice[K ~string](m map[K]struct{}) []string {
 	if m == nil {
 		return []string{}
 	}
 	keys := make([]string, 0, len(m))
 	for k := range m {
-		keys = append(keys, k)
+		keys = append(keys, string(k))
 	}
 	sort.Strings(keys)
 	return keys
 }
 
-func SliceToMap(slice []string) map[string]struct{} {
-	m := make(map[string]struct{})
+func SliceToMap[K ~string](slice []string) map[K]struct{} {
+	m := make(map[K]struct{})
 	for _, s := range slice {
 		if s != "" {
-			m[s] = struct{}{}
+			m[K(s)] = struct{}{}
 		}
 	}
 	return m
@@ -229,8 +232,8 @@ func (e *Entity) fromSerialized(s serializedEntity) error {
 		e.LastVisitedAt = nil
 	}
 
-	e.Names = SliceToMap(s.Names)
-	e.Labels = SliceToMap(s.Labels)
+	e.Names = SliceToMap[Name](s.Names)
+	e.Labels = SliceToMap[Label](s.Labels)
 	e.Shared = s.Shared
 	e.ToRead = s.ToRead
 	e.IsFeed = s.IsFeed

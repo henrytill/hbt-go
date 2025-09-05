@@ -231,8 +231,8 @@ func main() {
 		tags := make(map[string]bool)
 		for _, node := range collection.Value {
 			for label := range node.Entity.Labels {
-				if label != "" {
-					tags[label] = true
+				if string(label) != "" {
+					tags[string(label)] = true
 				}
 			}
 		}

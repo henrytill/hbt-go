@@ -82,16 +82,16 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 		return internal.Entity{}, err
 	}
 
-	names := make(map[string]struct{})
+	names := make(map[Name]struct{})
 	if strings.TrimSpace(post.Description) != "" {
-		names[strings.TrimSpace(post.Description)] = struct{}{}
+		names[Name(strings.TrimSpace(post.Description))] = struct{}{}
 	}
 
-	labels := make(map[string]struct{})
+	labels := make(map[Label]struct{})
 	if strings.TrimSpace(post.Tag) != "" {
 		tags := strings.Fields(post.Tag)
 		for _, tag := range tags {
-			labels[tag] = struct{}{}
+			labels[Label(tag)] = struct{}{}
 		}
 	}
 

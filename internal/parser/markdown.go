@@ -170,24 +170,24 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 		URI:       parsedURL,
 		CreatedAt: state.currentDate,
 		UpdatedAt: []time.Time{},
-		Names:     make(map[string]struct{}),
-		Labels:    make(map[string]struct{}),
+		Names:     make(map[Name]struct{}),
+		Labels:    make(map[Label]struct{}),
 		Shared:    false,
 		ToRead:    false,
 		IsFeed:    false,
 	}
 
 	if linkTitle != "" {
-		entity.Names = map[string]struct{}{linkTitle: {}}
+		entity.Names = map[Name]struct{}{Name(linkTitle): {}}
 	} else {
-		entity.Names = make(map[string]struct{})
+		entity.Names = make(map[Name]struct{})
 	}
 
-	entity.Labels = make(map[string]struct{})
+	entity.Labels = make(map[Label]struct{})
 	if len(state.labels) > 0 {
 		for _, label := range state.labels {
 			if strings.TrimSpace(label) != "" {
-				entity.Labels[strings.TrimSpace(label)] = struct{}{}
+				entity.Labels[Label(strings.TrimSpace(label))] = struct{}{}
 			}
 		}
 	}

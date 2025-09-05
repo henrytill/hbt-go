@@ -68,19 +68,19 @@ func processPendingBookmark(
 		}
 	}
 
-	labels := make(map[string]struct{})
+	labels := make(map[Label]struct{})
 	if bookmark.tags != nil {
 		tagList := strings.SplitSeq(*bookmark.tags, ",")
 		for tag := range tagList {
 			tag = strings.TrimSpace(tag)
 			if tag != "" && tag != "toread" {
-				labels[tag] = struct{}{}
+				labels[Label(tag)] = struct{}{}
 			}
 		}
 	}
 
 	for _, folder := range folderStack {
-		labels[folder] = struct{}{}
+		labels[Label(folder)] = struct{}{}
 	}
 
 	shared := true
@@ -102,9 +102,9 @@ func processPendingBookmark(
 		isFeed = true
 	}
 
-	names := make(map[string]struct{})
+	names := make(map[Name]struct{})
 	if bookmark.title != nil {
-		names[*bookmark.title] = struct{}{}
+		names[Name(*bookmark.title)] = struct{}{}
 	}
 
 	entity := internal.Entity{
