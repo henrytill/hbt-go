@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/henrytill/hbt-go/internal"
+import "github.com/henrytill/hbt-go/internal/types"
 
-type Name = internal.Name
-type Label = internal.Label
+type Name = types.Name
+type Label = types.Label

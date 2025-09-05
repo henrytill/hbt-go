@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 type XMLParser struct{}
@@ -33,14 +33,14 @@ type Posts struct {
 	Posts []Post `xml:"post"`
 }
 
-func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
+func (p *XMLParser) Parse(r io.Reader) (*types.Collection, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(content) == 0 {
-		return internal.NewCollection(), nil
+		return types.NewCollection(), nil
 	}
 
 	var posts Posts
@@ -49,7 +49,7 @@ func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
 		return nil, err
 	}
 
-	collection := internal.NewCollection()
+	collection := types.NewCollection()
 
 	sort.Slice(posts.Posts, func(i, j int) bool {
 		timeI, errI := time.Parse(time.RFC3339, posts.Posts[i].Time)
@@ -71,15 +71,15 @@ func (p *XMLParser) Parse(r io.Reader) (*internal.Collection, error) {
 	return collection, nil
 }
 
-func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
+func (p *XMLParser) convertPostToEntity(post Post) (types.Entity, error) {
 	createdAt, err := time.Parse(time.RFC3339, post.Time)
 	if err != nil {
-		return internal.Entity{}, err
+		return types.Entity{}, err
 	}
 
 	parsedURL, err := url.Parse(post.Href)
 	if err != nil {
-		return internal.Entity{}, err
+		return types.Entity{}, err
 	}
 
 	names := make(map[Name]struct{})
@@ -104,7 +104,7 @@ func (p *XMLParser) convertPostToEntity(post Post) (internal.Entity, error) {
 		extended = &ext
 	}
 
-	entity := internal.Entity{
+	entity := types.Entity{
 		URI:       parsedURL,
 		CreatedAt: createdAt,
 		UpdatedAt: []time.Time{},

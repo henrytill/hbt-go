@@ -3,39 +3,39 @@ package internal
 import (
 	"fmt"
 	"io"
+
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 type Parser interface {
-	Parse(r io.Reader) (*Collection, error)
+	Parse(r io.Reader) (*types.Collection, error)
 }
 
 type ParserRegistry struct {
-	parsers map[InputFormat]Parser
+	parsers map[Format]Parser
 }
 
 func NewParserRegistry() *ParserRegistry {
 	return &ParserRegistry{
-		parsers: make(map[InputFormat]Parser),
+		parsers: make(map[Format]Parser),
 	}
 }
 
-func (r *ParserRegistry) Register(format InputFormat, parser Parser) {
+func (r *ParserRegistry) Register(format Format, parser Parser) error {
+	if !format.CanInput() {
+		return fmt.Errorf("format %s cannot be used for input", format.Name)
+	}
 	r.parsers[format] = parser
+	return nil
 }
 
-func (r *ParserRegistry) GetParser(format InputFormat) (Parser, error) {
+func (r *ParserRegistry) GetParser(format Format) (Parser, error) {
+	if !format.CanInput() {
+		return nil, fmt.Errorf("format %s cannot be used for input", format.Name)
+	}
 	parser, exists := r.parsers[format]
 	if !exists {
-		return nil, fmt.Errorf("no parser available for format: %s", format)
+		return nil, fmt.Errorf("no parser available for format: %s", format.Name)
 	}
 	return parser, nil
 }
-
-type InputFormat string
-
-const (
-	FormatHTML     InputFormat = "html"
-	FormatJSON     InputFormat = "json"
-	FormatXML      InputFormat = "xml"
-	FormatMarkdown InputFormat = "markdown"
-)

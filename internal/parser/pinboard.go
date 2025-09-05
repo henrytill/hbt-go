@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 type PinboardEntry struct {
@@ -29,7 +29,7 @@ func NewPinboardParser() *PinboardParser {
 	return &PinboardParser{}
 }
 
-func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
+func (p *PinboardParser) Parse(r io.Reader) (*types.Collection, error) {
 	var entries []PinboardEntry
 
 	decoder := json.NewDecoder(r)
@@ -37,7 +37,7 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 		return nil, err
 	}
 
-	var nodes []internal.Node
+	var nodes []types.Node
 
 	sort.Slice(entries, func(i, j int) bool {
 		timeI, errI := time.Parse(time.RFC3339, entries[i].Time)
@@ -59,7 +59,7 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			continue
 		}
 
-		entity := internal.Entity{
+		entity := types.Entity{
 			URI:       parsedURL,
 			CreatedAt: timestamp,
 			UpdatedAt: []time.Time{},
@@ -88,7 +88,7 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 			}
 		}
 
-		node := internal.Node{
+		node := types.Node{
 			ID:     uint(i),
 			Entity: entity,
 			Edges:  []uint{},
@@ -97,7 +97,7 @@ func (p *PinboardParser) Parse(r io.Reader) (*internal.Collection, error) {
 		nodes = append(nodes, node)
 	}
 
-	collection := &internal.Collection{
+	collection := &types.Collection{
 		Version: "0.1.0",
 		Length:  uint(len(nodes)),
 		Value:   nodes,

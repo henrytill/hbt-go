@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
@@ -21,7 +21,7 @@ func NewMarkdownParser() *MarkdownParser {
 }
 
 type parserState struct {
-	collection  *internal.Collection
+	collection  *types.Collection
 	currentDate time.Time
 	labels      []string
 	maybeParent *uint
@@ -67,7 +67,7 @@ func extractText(node ast.Node, content []byte) string {
 	return strings.TrimSpace(buf.String())
 }
 
-func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
+func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*internal.Collection, error) {
 	doc := md.Parser().Parse(text.NewReader(content))
 
 	state := &parserState{
-		collection:  internal.NewCollection(),
+		collection:  types.NewCollection(),
 		currentDate: time.Time{},
 		labels:      []string{},
 		maybeParent: nil,
@@ -166,7 +166,7 @@ func (p *MarkdownParser) saveEntity(state *parserState, linkURL, linkTitle strin
 		parsedURL.Path = "/"
 	}
 
-	entity := internal.Entity{
+	entity := types.Entity{
 		URI:       parsedURL,
 		CreatedAt: state.currentDate,
 		UpdatedAt: []time.Time{},

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 type HTMLFormatter struct{}
@@ -42,7 +42,7 @@ func getFirstName(names map[Name]struct{}) string {
 	return keys[0]
 }
 
-func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection) error {
+func (f *HTMLFormatter) Format(writer io.Writer, collection *types.Collection) error {
 	const tmpl = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
@@ -78,7 +78,7 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *internal.Collection
 			URI:           uriString,
 			Title:         getFirstName(node.Entity.Names),
 			CreatedAt:     node.Entity.CreatedAt.Unix(),
-			Labels:        internal.MapToSortedSlice(node.Entity.Labels),
+			Labels:        types.MapToSortedSlice(node.Entity.Labels),
 			Shared:        node.Entity.Shared,
 			ToRead:        node.Entity.ToRead,
 			IsFeed:        node.Entity.IsFeed,

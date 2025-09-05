@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/henrytill/hbt-go/internal"
-	"github.com/henrytill/hbt-go/internal/formatter"
-	"github.com/henrytill/hbt-go/internal/parser"
 )
 
 var (
@@ -19,24 +17,11 @@ var (
 	TreeState  = "unknown"
 )
 
-type InputFormat = internal.InputFormat
-type OutputFormat = internal.OutputFormat
-
-const (
-	FormatHTML     = internal.FormatHTML
-	FormatJSON     = internal.FormatJSON
-	FormatXML      = internal.FormatXML
-	FormatMarkdown = internal.FormatMarkdown
-)
-
-const (
-	OutputYAML = internal.OutputYAML
-	OutputHTML = internal.OutputHTML
-)
+type Format = internal.Format
 
 type Config struct {
-	InputFormat  *InputFormat
-	OutputFormat *OutputFormat
+	InputFormat  Format
+	OutputFormat Format
 	OutputFile   *string
 	Info         *bool
 	ListTags     *bool
@@ -44,20 +29,31 @@ type Config struct {
 	InputFile    string
 }
 
-func detectInputFormat(filename string) (InputFormat, error) {
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
-	case ".html":
-		return FormatHTML, nil
-	case ".json":
-		return FormatJSON, nil
-	case ".xml":
-		return FormatXML, nil
-	case ".md":
-		return FormatMarkdown, nil
-	default:
-		return "", fmt.Errorf("no parser for extension: %s", ext)
+func inputFormatsString() string {
+	formats := internal.AllInputFormats()
+	names := make([]string, len(formats))
+	for i, f := range formats {
+		names[i] = f.Name
 	}
+	return strings.Join(names, ", ")
+}
+
+func outputFormatsString() string {
+	formats := internal.AllOutputFormats()
+	names := make([]string, len(formats))
+	for i, f := range formats {
+		names[i] = f.Name
+	}
+	return strings.Join(names, ", ")
+}
+
+func detectInputFormat(filename string) (Format, error) {
+	format, ok := internal.DetectInputFormat(filename)
+	if !ok {
+		ext := filepath.Ext(filename)
+		return Format{}, fmt.Errorf("no parser for extension: %s", ext)
+	}
+	return format, nil
 }
 
 func showVersion() {
@@ -71,49 +67,25 @@ func showUsage() {
 	flag.PrintDefaults()
 }
 
-func parseInputFormat(s string) (InputFormat, error) {
-	switch strings.ToLower(s) {
-	case "html":
-		return FormatHTML, nil
-	case "json":
-		return FormatJSON, nil
-	case "xml":
-		return FormatXML, nil
-	case "markdown":
-		return FormatMarkdown, nil
-	default:
-		return "", fmt.Errorf("invalid input format: %s", s)
-	}
-}
-
-func parseOutputFormat(s string) (OutputFormat, error) {
-	switch strings.ToLower(s) {
-	case "yaml":
-		return OutputYAML, nil
-	case "html":
-		return OutputHTML, nil
-	default:
-		return "", fmt.Errorf("invalid output format: %s", s)
-	}
-}
-
 func main() {
 	config := Config{
-		InputFormat:  new(InputFormat),
-		OutputFormat: new(OutputFormat),
+		InputFormat:  Format{Capability: internal.CapInput},
+		OutputFormat: Format{Capability: internal.CapOutput},
 		OutputFile:   flag.String("o", "", "Output file (defaults to stdout)"),
 		Info:         flag.Bool("info", false, "Show collection info (entity count)"),
 		ListTags:     flag.Bool("list-tags", false, "List all tags"),
 		Mappings:     flag.String("mappings", "", "Read mappings from FILE"),
 	}
 
-	var inputFormatStr, outputFormatStr string
 	var showVersionFlag bool
 
-	fromFlag := flag.String("f", "", "Input format (html, json, xml, markdown)")
-	fromFlagLong := flag.String("from", "", "Input format (html, json, xml, markdown)")
-	toFlag := flag.String("t", "", "Output format (yaml, html)")
-	toFlagLong := flag.String("to", "", "Output format (yaml, html)")
+	inputFormats := inputFormatsString()
+	outputFormats := outputFormatsString()
+
+	flag.Var(&config.InputFormat, "f", fmt.Sprintf("Input format (%s)", inputFormats))
+	flag.Var(&config.InputFormat, "from", fmt.Sprintf("Input format (%s)", inputFormats))
+	flag.Var(&config.OutputFormat, "t", fmt.Sprintf("Output format (%s)", outputFormats))
+	flag.Var(&config.OutputFormat, "to", fmt.Sprintf("Output format (%s)", outputFormats))
 	flag.BoolVar(&showVersionFlag, "version", false, "Show version")
 	flag.BoolVar(&showVersionFlag, "V", false, "Show version")
 
@@ -138,42 +110,17 @@ func main() {
 
 	config.InputFile = args[0]
 
-	inputFormatStr = *fromFlag
-	if inputFormatStr == "" {
-		inputFormatStr = *fromFlagLong
-	}
-
-	if inputFormatStr != "" {
-		format, err := parseInputFormat(inputFormatStr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		*config.InputFormat = format
-	} else {
+	// If no input format was specified, detect it from the filename
+	if config.InputFormat.Name == "" {
 		format, err := detectInputFormat(config.InputFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		*config.InputFormat = format
+		config.InputFormat = format
 	}
 
-	outputFormatStr = *toFlag
-	if outputFormatStr == "" {
-		outputFormatStr = *toFlagLong
-	}
-
-	if outputFormatStr != "" {
-		format, err := parseOutputFormat(outputFormatStr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		*config.OutputFormat = format
-	}
-
-	if !*config.Info && !*config.ListTags && *config.OutputFormat == "" {
+	if !*config.Info && !*config.ListTags && config.OutputFormat.Name == "" {
 		fmt.Fprintf(os.Stderr, "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)\n")
 		os.Exit(1)
 	}
@@ -183,17 +130,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	parserRegistry := internal.NewParserRegistry()
-	formatterRegistry := internal.NewFormatterRegistry()
-
-	parserRegistry.Register(FormatMarkdown, parser.NewMarkdownParser())
-	parserRegistry.Register(FormatJSON, parser.NewPinboardParser())
-	parserRegistry.Register(FormatHTML, parser.NewHTMLParser())
-	parserRegistry.Register(FormatXML, parser.NewXMLParser())
-
-	formatterRegistry.Register(OutputYAML, formatter.NewYAMLFormatter())
-	formatterRegistry.Register(OutputHTML, formatter.NewHTMLFormatter())
-
 	inputFile, err := os.Open(config.InputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening input file: %v\n", err)
@@ -201,13 +137,7 @@ func main() {
 	}
 	defer inputFile.Close()
 
-	selectedParser, err := parserRegistry.GetParser(*config.InputFormat)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	collection, err := selectedParser.Parse(inputFile)
+	collection, err := internal.Parse(config.InputFormat, inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing file: %v\n", err)
 		os.Exit(1)
@@ -243,13 +173,7 @@ func main() {
 		return
 	}
 
-	if *config.OutputFormat != "" {
-		selectedFormatter, err := formatterRegistry.GetFormatter(*config.OutputFormat)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-
+	if config.OutputFormat.Name != "" {
 		var output *os.File
 		if *config.OutputFile != "" {
 			output, err = os.Create(*config.OutputFile)
@@ -262,7 +186,7 @@ func main() {
 			output = os.Stdout
 		}
 
-		err = selectedFormatter.Format(output, collection)
+		err = internal.Unparse(config.OutputFormat, output, collection)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
 			os.Exit(1)

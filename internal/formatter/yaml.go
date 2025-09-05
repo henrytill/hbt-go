@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/goccy/go-yaml"
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 type YAMLFormatter struct{}
@@ -13,7 +13,7 @@ func NewYAMLFormatter() *YAMLFormatter {
 	return &YAMLFormatter{}
 }
 
-func (f *YAMLFormatter) Format(w io.Writer, collection *internal.Collection) error {
+func (f *YAMLFormatter) Format(w io.Writer, collection *types.Collection) error {
 	encoder := yaml.NewEncoder(w,
 		yaml.UseSingleQuote(true),
 		yaml.Indent(2),

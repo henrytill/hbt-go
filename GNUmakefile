@@ -19,7 +19,7 @@ SOURCES += internal/parser/html.go
 SOURCES += internal/parser/markdown.go
 SOURCES += internal/parser/pinboard.go
 SOURCES += internal/parser/xml.go
-SOURCES += internal/types.go
+SOURCES += internal/types/types.go
 
 BIN_TARGETS = $(addprefix bin/,$(BIN))
 

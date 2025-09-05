@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 	"golang.org/x/net/html"
 )
 
@@ -26,7 +26,7 @@ type pendingBookmarkData struct {
 }
 
 func processPendingBookmark(
-	collection *internal.Collection,
+	collection *types.Collection,
 	folderStack []string,
 	bookmark pendingBookmarkData,
 ) error {
@@ -107,7 +107,7 @@ func processPendingBookmark(
 		names[Name(*bookmark.title)] = struct{}{}
 	}
 
-	entity := internal.Entity{
+	entity := types.Entity{
 		URI:       parsedURL,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
@@ -174,7 +174,7 @@ func getAttr(n *html.Node, attrName string) *string {
 
 func (p *HTMLParser) handleDt(
 	dtNode *html.Node,
-	collection *internal.Collection,
+	collection *types.Collection,
 	folderStack *[]string,
 	pendingBookmark **pendingBookmarkData,
 ) error {
@@ -226,8 +226,8 @@ type stackItem struct {
 
 func (p *HTMLParser) parse(
 	root *html.Node,
-	collection *internal.Collection,
-) (*internal.Collection, error) {
+	collection *types.Collection,
+) (*types.Collection, error) {
 	var stack []stackItem
 	var folderStack []string
 	var pendingBookmark *pendingBookmarkData
@@ -307,12 +307,12 @@ func NewHTMLParser() *HTMLParser {
 	return &HTMLParser{}
 }
 
-func (p *HTMLParser) Parse(reader io.Reader) (*internal.Collection, error) {
+func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
 	doc, err := html.Parse(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
-	collection := internal.NewCollection()
+	collection := types.NewCollection()
 	return p.parse(doc, collection)
 }
