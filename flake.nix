@@ -35,6 +35,8 @@
             export HBT_BINARY_PATH="$GOPATH/bin/hbt"
           '';
 
+          checkFlags = ["-v"];
+
           meta = with final.lib; {
             description = "Heterogeneous Bookmark Transformation";
             homepage = "https://github.com/henrytill/hbt-go";
