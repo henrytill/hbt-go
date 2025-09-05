@@ -20,8 +20,9 @@ SOURCES += internal/mappings.go
 SOURCES += internal/parser.go
 SOURCES += internal/parser/html.go
 SOURCES += internal/parser/markdown.go
-SOURCES += internal/parser/pinboard.go
-SOURCES += internal/parser/xml.go
+SOURCES += internal/parser/pinboard/types.go
+SOURCES += internal/parser/pinboard/json.go
+SOURCES += internal/parser/pinboard/xml.go
 SOURCES += internal/types/types.go
 
 BIN_TARGETS = $(addprefix $(BINDIR)/,$(BIN))

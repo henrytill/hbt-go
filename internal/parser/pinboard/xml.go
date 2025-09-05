@@ -1,4 +1,4 @@
-package parser
+package pinboard
 
 import (
 	"encoding/xml"
@@ -15,22 +15,6 @@ type XMLParser struct{}
 
 func NewXMLParser() *XMLParser {
 	return &XMLParser{}
-}
-
-type Post struct {
-	Href        string `xml:"href,attr"`
-	Time        string `xml:"time,attr"`
-	Description string `xml:"description,attr"`
-	Extended    string `xml:"extended,attr"`
-	Tag         string `xml:"tag,attr"`
-	Hash        string `xml:"hash,attr"`
-	Shared      string `xml:"shared,attr"`
-	ToRead      string `xml:"toread,attr"`
-}
-
-type Posts struct {
-	User  string `xml:"user,attr"`
-	Posts []Post `xml:"post"`
 }
 
 func (p *XMLParser) Parse(r io.Reader) (*types.Collection, error) {
@@ -88,9 +72,8 @@ func (p *XMLParser) convertPostToEntity(post Post) (types.Entity, error) {
 	}
 
 	labels := make(map[Label]struct{})
-	if strings.TrimSpace(post.Tag) != "" {
-		tags := strings.Fields(post.Tag)
-		for _, tag := range tags {
+	if strings.TrimSpace(post.Tags) != "" {
+		for tag := range strings.FieldsSeq(post.Tags) {
 			labels[Label(tag)] = struct{}{}
 		}
 	}

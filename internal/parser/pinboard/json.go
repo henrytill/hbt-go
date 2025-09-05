@@ -1,4 +1,4 @@
-package parser
+package pinboard
 
 import (
 	"encoding/json"
@@ -11,26 +11,14 @@ import (
 	"github.com/henrytill/hbt-go/internal/types"
 )
 
-type PinboardEntry struct {
-	Href        string `json:"href"`
-	Description string `json:"description"`
-	Extended    string `json:"extended"`
-	Meta        string `json:"meta"`
-	Hash        string `json:"hash"`
-	Time        string `json:"time"`
-	Shared      string `json:"shared"`
-	ToRead      string `json:"toread"`
-	Tags        string `json:"tags"`
+type JSONParser struct{}
+
+func NewJSONParser() *JSONParser {
+	return &JSONParser{}
 }
 
-type PinboardParser struct{}
-
-func NewPinboardParser() *PinboardParser {
-	return &PinboardParser{}
-}
-
-func (p *PinboardParser) Parse(r io.Reader) (*types.Collection, error) {
-	var entries []PinboardEntry
+func (p *JSONParser) Parse(r io.Reader) (*types.Collection, error) {
+	var entries []Post
 
 	decoder := json.NewDecoder(r)
 	if err := decoder.Decode(&entries); err != nil {
@@ -82,8 +70,7 @@ func (p *PinboardParser) Parse(r io.Reader) (*types.Collection, error) {
 
 		entity.Labels = make(map[Label]struct{})
 		if entry.Tags != "" {
-			tags := strings.Fields(entry.Tags)
-			for _, tag := range tags {
+			for tag := range strings.FieldsSeq(entry.Tags) {
 				entity.Labels[Label(tag)] = struct{}{}
 			}
 		}

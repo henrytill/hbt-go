@@ -7,6 +7,7 @@ import (
 
 	"github.com/henrytill/hbt-go/internal/formatter"
 	"github.com/henrytill/hbt-go/internal/parser"
+	"github.com/henrytill/hbt-go/internal/parser/pinboard"
 	"github.com/henrytill/hbt-go/internal/types"
 )
 
@@ -106,9 +107,9 @@ func Parse(format Format, r io.Reader) (*types.Collection, error) {
 
 	switch format {
 	case JSON:
-		return parser.NewPinboardParser().Parse(r)
+		return pinboard.NewJSONParser().Parse(r)
 	case XML:
-		return parser.NewXMLParser().Parse(r)
+		return pinboard.NewXMLParser().Parse(r)
 	case Markdown:
 		return parser.NewMarkdownParser().Parse(r)
 	case HTML:
