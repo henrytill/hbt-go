@@ -23,7 +23,7 @@ type Entity struct {
 	LastVisitedAt *time.Time
 }
 
-func (e *Entity) Absorb(other Entity) {
+func (e *Entity) absorb(other Entity) {
 	if other.CreatedAt.Before(e.CreatedAt) {
 		e.UpdatedAt = append(e.UpdatedAt, e.CreatedAt)
 		e.CreatedAt = other.CreatedAt
@@ -218,7 +218,7 @@ func (c *Collection) AddEntity(entity Entity) uint {
 	return nodeID
 }
 
-func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
+func (c *Collection) findEntityByURI(uri *url.URL) (uint, bool) {
 	if uri == nil {
 		return 0, false
 	}
@@ -231,9 +231,9 @@ func (c *Collection) FindEntityByURI(uri *url.URL) (uint, bool) {
 }
 
 func (c *Collection) UpsertEntity(entity Entity) uint {
-	if nodeID, exists := c.FindEntityByURI(entity.URI); exists {
+	if nodeID, exists := c.findEntityByURI(entity.URI); exists {
 		existing := &c.Value[nodeID].Entity
-		existing.Absorb(entity)
+		existing.absorb(entity)
 		return nodeID
 	}
 
