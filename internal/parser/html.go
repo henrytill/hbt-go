@@ -169,15 +169,6 @@ func getTextContent(n *html.Node) string {
 	return result.String()
 }
 
-func getAttr(n *html.Node, attrName string) *string {
-	for _, attr := range n.Attr {
-		if strings.EqualFold(attr.Key, attrName) {
-			return &attr.Val
-		}
-	}
-	return nil
-}
-
 func handleDt(
 	dtNode *html.Node,
 	collection *types.Collection,
@@ -209,16 +200,27 @@ func handleDt(
 		maybeTitle = &title
 	}
 
-	bookmark := &pendingBookmarkData{
-		href:         getAttr(aNode, "href"),
-		title:        maybeTitle,
-		addDate:      getAttr(aNode, "add_date"),
-		lastModified: getAttr(aNode, "last_modified"),
-		tags:         getAttr(aNode, "tags"),
-		private:      getAttr(aNode, "private"),
-		toread:       getAttr(aNode, "toread"),
-		lastVisit:    getAttr(aNode, "last_visit"),
-		feed:         getAttr(aNode, "feed"),
+	bookmark := &pendingBookmarkData{title: maybeTitle}
+
+	for _, attr := range aNode.Attr {
+		switch strings.ToLower(attr.Key) {
+		case "href":
+			bookmark.href = &attr.Val
+		case "add_date":
+			bookmark.addDate = &attr.Val
+		case "last_modified":
+			bookmark.lastModified = &attr.Val
+		case "tags":
+			bookmark.tags = &attr.Val
+		case "private":
+			bookmark.private = &attr.Val
+		case "toread":
+			bookmark.toread = &attr.Val
+		case "last_visit":
+			bookmark.lastVisit = &attr.Val
+		case "feed":
+			bookmark.feed = &attr.Val
+		}
 	}
 
 	*pendingBookmark = bookmark
