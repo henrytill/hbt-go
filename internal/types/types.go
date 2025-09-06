@@ -178,36 +178,6 @@ type serializedNode struct {
 	Edges  []uint           `yaml:"edges"  json:"edges"`
 }
 
-type Version string
-
-const ExpectedVersion Version = "v0.1.0"
-const ExpectedVersionReq = "^0.1.0" // conceptual - semver package doesn't have requirement matching
-
-func NewVersion(v string) (Version, error) {
-	// Add 'v' prefix if not present for semver validation
-	if len(v) > 0 && v[0] != 'v' {
-		v = "v" + v
-	}
-	if !semver.IsValid(v) {
-		return "", fmt.Errorf("invalid semantic version: %s", v)
-	}
-	return Version(v), nil
-}
-
-func (v Version) String() string {
-	// For serialization compatibility, remove the 'v' prefix if present
-	s := string(v)
-	if len(s) > 0 && s[0] == 'v' {
-		return s[1:]
-	}
-	return s
-}
-
-func (v Version) IsCompatible() bool {
-	// For now, just check major version compatibility (v0.x.x)
-	return semver.Major(string(v)) == semver.Major(string(ExpectedVersion))
-}
-
 type Collection struct {
 	entities []Entity
 	edges    [][]uint
@@ -281,6 +251,36 @@ func (c *Collection) Len() int {
 
 func (c *Collection) Entities() []Entity {
 	return c.entities
+}
+
+type Version string
+
+const ExpectedVersion Version = "v0.1.0"
+const ExpectedVersionReq = "^0.1.0" // conceptual - semver package doesn't have requirement matching
+
+func NewVersion(v string) (Version, error) {
+	// Add 'v' prefix if not present for semver validation
+	if len(v) > 0 && v[0] != 'v' {
+		v = "v" + v
+	}
+	if !semver.IsValid(v) {
+		return "", fmt.Errorf("invalid semantic version: %s", v)
+	}
+	return Version(v), nil
+}
+
+func (v Version) String() string {
+	// For serialization compatibility, remove the 'v' prefix if present
+	s := string(v)
+	if len(s) > 0 && s[0] == 'v' {
+		return s[1:]
+	}
+	return s
+}
+
+func (v Version) IsCompatible() bool {
+	// For now, just check major version compatibility (v0.x.x)
+	return semver.Major(string(v)) == semver.Major(string(ExpectedVersion))
 }
 
 type serializedCollection struct {
