@@ -96,12 +96,12 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *types.Collection) e
 	templateData := struct {
 		Entities []templateEntity
 	}{
-		Entities: make([]templateEntity, 0, len(collection.Value)),
+		Entities: make([]templateEntity, 0, collection.Len()),
 	}
 
-	for _, node := range collection.Value {
-		entity := newTemplateEntity(node.Entity)
-		templateData.Entities = append(templateData.Entities, entity)
+	for _, entity := range collection.Entities() {
+		templateEntity := newTemplateEntity(entity)
+		templateData.Entities = append(templateData.Entities, templateEntity)
 	}
 
 	t, err := template.New("html").Parse(tmpl)

@@ -243,28 +243,24 @@ func (v Version) IsCompatible() bool {
 }
 
 type Collection struct {
-	Version Version
-	Length  uint
-	Value   []Node
+	entities []Entity
+	edges    [][]uint
+	urls     map[string]uint
 }
 
 func NewCollection() *Collection {
 	return &Collection{
-		Version: ExpectedVersion,
-		Length:  0,
-		Value:   []Node{},
+		entities: []Entity{},
+		edges:    [][]uint{},
+		urls:     make(map[string]uint),
 	}
 }
 
 func (c *Collection) AddEntity(entity Entity) uint {
-	nodeID := c.Length
-	node := Node{
-		ID:     nodeID,
-		Entity: entity,
-		Edges:  []uint{},
-	}
-	c.Value = append(c.Value, node)
-	c.Length++
+	nodeID := uint(len(c.entities))
+	c.entities = append(c.entities, entity)
+	c.edges = append(c.edges, []uint{})
+	c.urls[entity.URI.String()] = nodeID
 	return nodeID
 }
 
@@ -272,17 +268,13 @@ func (c *Collection) findEntityByURI(uri *url.URL) (uint, bool) {
 	if uri == nil {
 		return 0, false
 	}
-	for _, node := range c.Value {
-		if node.Entity.URI != nil && node.Entity.URI.String() == uri.String() {
-			return node.ID, true
-		}
-	}
-	return 0, false
+	nodeID, exists := c.urls[uri.String()]
+	return nodeID, exists
 }
 
 func (c *Collection) UpsertEntity(entity Entity) uint {
 	if nodeID, exists := c.findEntityByURI(entity.URI); exists {
-		existing := &c.Value[nodeID].Entity
+		existing := &c.entities[nodeID]
 		existing.absorb(entity)
 		return nodeID
 	}
@@ -291,17 +283,17 @@ func (c *Collection) UpsertEntity(entity Entity) uint {
 }
 
 func (c *Collection) AddEdges(from, to uint) {
-	if from >= uint(len(c.Value)) || to >= uint(len(c.Value)) {
+	if from >= uint(len(c.entities)) || to >= uint(len(c.entities)) {
 		return
 	}
 
-	c.Value[from].Edges = append(c.Value[from].Edges, to)
-	c.Value[to].Edges = append(c.Value[to].Edges, from)
+	c.edges[from] = append(c.edges[from], to)
+	c.edges[to] = append(c.edges[to], from)
 }
 
 func (c *Collection) ApplyMappings(mappings map[string]string) {
-	for i := range c.Value {
-		entity := &c.Value[i].Entity
+	for i := range c.entities {
+		entity := &c.entities[i]
 
 		newLabels := make(map[Label]struct{})
 
@@ -317,6 +309,14 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 	}
 }
 
+func (c *Collection) Len() int {
+	return len(c.entities)
+}
+
+func (c *Collection) Entities() []Entity {
+	return c.entities
+}
+
 type serializedCollection struct {
 	Version string           `yaml:"version" json:"version"`
 	Length  uint             `yaml:"length"  json:"length"`
@@ -324,14 +324,21 @@ type serializedCollection struct {
 }
 
 func (c *Collection) toSerialized() serializedCollection {
-	value := make([]serializedNode, len(c.Value))
-	for i, node := range c.Value {
+	length := uint(len(c.entities))
+	value := make([]serializedNode, length)
+
+	for i := range length {
+		node := Node{
+			ID:     i,
+			Entity: c.entities[i],
+			Edges:  c.edges[i],
+		}
 		value[i] = node.toSerialized()
 	}
 
 	return serializedCollection{
-		Version: c.Version.String(),
-		Length:  c.Length,
+		Version: ExpectedVersion.String(),
+		Length:  length,
 		Value:   value,
 	}
 }
@@ -350,16 +357,19 @@ func (c *Collection) fromSerialized(s serializedCollection) error {
 		)
 	}
 
-	c.Version = version
-	c.Length = s.Length
-	c.Value = make([]Node, len(s.Value))
+	length := len(s.Value)
+	c.entities = make([]Entity, length)
+	c.edges = make([][]uint, length)
+	c.urls = make(map[string]uint)
 
 	for i, serNode := range s.Value {
 		var node Node
 		if err := node.fromSerialized(serNode); err != nil {
 			return err
 		}
-		c.Value[i] = node
+		c.entities[i] = node.Entity
+		c.edges[i] = node.Edges
+		c.urls[node.Entity.URI.String()] = uint(i)
 	}
 
 	return nil

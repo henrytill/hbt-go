@@ -153,14 +153,14 @@ func main() {
 	}
 
 	if *config.Info {
-		fmt.Printf("Collection contains %d entities\n", collection.Length)
+		fmt.Printf("Collection contains %d entities\n", collection.Len())
 		return
 	}
 
 	if *config.ListTags {
 		tags := make(map[string]bool)
-		for _, node := range collection.Value {
-			for label := range node.Entity.Labels {
+		for _, entity := range collection.Entities() {
+			for label := range entity.Labels {
 				if string(label) != "" {
 					tags[string(label)] = true
 				}
