@@ -209,10 +209,6 @@ type Version string
 const ExpectedVersion Version = "v0.1.0"
 const ExpectedVersionReq = "^0.1.0" // conceptual - semver package doesn't have requirement matching
 
-func (v Version) IsValid() bool {
-	return semver.IsValid(string(v))
-}
-
 func NewVersion(v string) (Version, error) {
 	// Add 'v' prefix if not present for semver validation
 	if len(v) > 0 && v[0] != 'v' {
@@ -231,10 +227,6 @@ func (v Version) String() string {
 		return s[1:]
 	}
 	return s
-}
-
-func (v Version) Compare(other Version) int {
-	return semver.Compare(string(v), string(other))
 }
 
 func (v Version) IsCompatible() bool {
