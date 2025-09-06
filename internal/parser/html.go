@@ -293,9 +293,7 @@ func parse(
 	}
 
 	if pendingBookmark != nil {
-		if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("unexpected pending bookmark")
 	}
 
 	return collection, nil
