@@ -1,6 +1,7 @@
 package pinboard
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -28,6 +29,10 @@ type Posts struct {
 }
 
 func (p Post) ToEntity() (types.Entity, error) {
+	if p.Href == "" {
+		return types.Entity{}, fmt.Errorf("empty URL in pinboard post")
+	}
+
 	createdAt, err := time.Parse(time.RFC3339, p.Time)
 	if err != nil {
 		return types.Entity{}, err
