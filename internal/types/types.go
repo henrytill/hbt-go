@@ -172,36 +172,10 @@ func (e *Entity) fromSerialized(s serializedEntity) error {
 	return nil
 }
 
-type Node struct {
-	ID     uint
-	Entity Entity
-	Edges  []uint
-}
-
 type serializedNode struct {
 	ID     uint             `yaml:"id"     json:"id"`
 	Entity serializedEntity `yaml:"entity" json:"entity"`
 	Edges  []uint           `yaml:"edges"  json:"edges"`
-}
-
-func (n Node) toSerialized() serializedNode {
-	return serializedNode{
-		ID:     n.ID,
-		Entity: n.Entity.toSerialized(),
-		Edges:  n.Edges,
-	}
-}
-
-func (n *Node) fromSerialized(s serializedNode) error {
-	var entity Entity
-	if err := entity.fromSerialized(s.Entity); err != nil {
-		return err
-	}
-
-	n.ID = s.ID
-	n.Entity = entity
-	n.Edges = s.Edges
-	return nil
 }
 
 type Version string
@@ -320,12 +294,11 @@ func (c *Collection) toSerialized() serializedCollection {
 	value := make([]serializedNode, length)
 
 	for i := range length {
-		node := Node{
+		value[i] = serializedNode{
 			ID:     i,
-			Entity: c.entities[i],
+			Entity: c.entities[i].toSerialized(),
 			Edges:  c.edges[i],
 		}
-		value[i] = node.toSerialized()
 	}
 
 	return serializedCollection{
@@ -355,13 +328,13 @@ func (c *Collection) fromSerialized(s serializedCollection) error {
 	c.urls = make(map[string]uint)
 
 	for i, serNode := range s.Value {
-		var node Node
-		if err := node.fromSerialized(serNode); err != nil {
+		var entity Entity
+		if err := entity.fromSerialized(serNode.Entity); err != nil {
 			return err
 		}
-		c.entities[i] = node.Entity
-		c.edges[i] = node.Edges
-		c.urls[node.Entity.URI.String()] = uint(i)
+		c.entities[i] = entity
+		c.edges[i] = serNode.Edges
+		c.urls[entity.URI.String()] = uint(i)
 	}
 
 	return nil
