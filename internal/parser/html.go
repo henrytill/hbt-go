@@ -137,15 +137,6 @@ func processPendingBookmark(
 	return nil
 }
 
-func findDirectChildElement(n *html.Node, tagName string) *html.Node {
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && strings.ToLower(c.Data) == tagName {
-			return c
-		}
-	}
-	return nil
-}
-
 func getTextContent(n *html.Node) string {
 	var result strings.Builder
 	var stack []*html.Node
@@ -169,34 +160,10 @@ func getTextContent(n *html.Node) string {
 	return result.String()
 }
 
-func handleDt(
-	dtNode *html.Node,
-	collection *types.Collection,
-	folderStack *[]string,
-	pending **pendingBookmark,
-) error {
-	if *pending != nil {
-		if err := processPendingBookmark(collection, *folderStack, **pending); err != nil {
-			return err
-		}
-		*pending = nil
-	}
-
-	aNode := findDirectChildElement(dtNode, "a")
-	if aNode == nil {
-		h3Node := findDirectChildElement(dtNode, "h3")
-		if h3Node != nil {
-			folderName := strings.TrimSpace(getTextContent(h3Node))
-			if folderName != "" {
-				*folderStack = append(*folderStack, folderName)
-			}
-		}
-		return nil
-	}
-
+func handleAnchor(aNode *html.Node) pendingBookmark {
 	title := strings.TrimSpace(getTextContent(aNode))
 
-	p := &pendingBookmark{title: title}
+	p := pendingBookmark{title: title}
 
 	for _, attr := range aNode.Attr {
 		switch strings.ToLower(attr.Key) {
@@ -219,22 +186,21 @@ func handleDt(
 		}
 	}
 
-	*pending = p
-	return nil
+	return p
 }
 
-func parse(
-	root *html.Node,
-	collection *types.Collection,
-) (*types.Collection, error) {
+func parse(root *html.Node, collection *types.Collection) (*types.Collection, error) {
 	type stackItem struct {
 		node     *html.Node
 		popGroup bool
 	}
 
-	var stack []stackItem
-	var folderStack []string
-	var pending *pendingBookmark
+	var (
+		stack       []stackItem
+		folderStack []string
+		pending     pendingBookmark
+		hasPending  bool
+	)
 
 	for c := root.LastChild; c != nil; c = c.PrevSibling {
 		if c.Type == html.ElementNode {
@@ -247,11 +213,11 @@ func parse(
 		stack = stack[:len(stack)-1]
 
 		if item.popGroup {
-			if pending != nil {
-				if err := processPendingBookmark(collection, folderStack, *pending); err != nil {
+			if hasPending {
+				if err := processPendingBookmark(collection, folderStack, pending); err != nil {
 					return nil, err
 				}
-				pending = nil
+				hasPending = false
 			}
 
 			if len(folderStack) > 0 {
@@ -265,11 +231,30 @@ func parse(
 
 		switch nodeName {
 		case "dt":
-			if err := handleDt(node, collection, &folderStack, &pending); err != nil {
-				return nil, err
+			if hasPending {
+				if err := processPendingBookmark(collection, folderStack, pending); err != nil {
+					return nil, err
+				}
+				hasPending = false
+			}
+
+			for c := node.FirstChild; c != nil; c = c.NextSibling {
+				if c.Type != html.ElementNode {
+					continue
+				}
+				switch strings.ToLower(c.Data) {
+				case "a":
+					pending = handleAnchor(c)
+					hasPending = true
+				case "h3":
+					folderName := strings.TrimSpace(getTextContent(c))
+					if folderName != "" {
+						folderStack = append(folderStack, folderName)
+					}
+				}
 			}
 		case "dd":
-			if pending != nil {
+			if hasPending {
 				description := strings.TrimSpace(getTextContent(node))
 				if description != "" {
 					pending.description = description
@@ -285,10 +270,9 @@ func parse(
 				stack = append(stack, stackItem{node: c, popGroup: false})
 			}
 		}
-
 	}
 
-	if pending != nil {
+	if hasPending {
 		return nil, fmt.Errorf("unexpected pending bookmark")
 	}
 
