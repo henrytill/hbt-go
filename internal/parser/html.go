@@ -18,31 +18,31 @@ func NewHTMLParser() *HTMLParser {
 	return &HTMLParser{}
 }
 
-type pendingBookmarkData struct {
-	href         *string
-	title        *string
-	addDate      *string
-	lastModified *string
-	tags         *string
-	private      *string
-	toread       *string
-	lastVisit    *string
-	feed         *string
-	description  *string
+type pendingBookmark struct {
+	href         string
+	title        string
+	addDate      string
+	lastModified string
+	tags         string
+	private      string
+	toread       string
+	lastVisit    string
+	feed         string
+	description  string
 }
 
 func processPendingBookmark(
 	collection *types.Collection,
 	folderStack []string,
-	bookmark pendingBookmarkData,
+	pending pendingBookmark,
 ) error {
-	if bookmark.href == nil {
+	if pending.href == "" {
 		return nil
 	}
 
-	parsedURL, err := url.Parse(*bookmark.href)
+	parsedURL, err := url.Parse(pending.href)
 	if err != nil {
-		return fmt.Errorf("failed to parse URL %s: %w", *bookmark.href, err)
+		return fmt.Errorf("failed to parse URL %s: %w", pending.href, err)
 	}
 
 	if parsedURL.Path == "" {
@@ -50,8 +50,8 @@ func processPendingBookmark(
 	}
 
 	var createdAt time.Time
-	if bookmark.addDate != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.addDate, 10, 64); err == nil {
+	if pending.addDate != "" {
+		if parsed, err := strconv.ParseInt(pending.addDate, 10, 64); err == nil {
 			createdAt = time.Unix(parsed, 0)
 		}
 	}
@@ -60,23 +60,23 @@ func processPendingBookmark(
 	}
 
 	var lastVisitedAt *time.Time
-	if bookmark.lastVisit != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.lastVisit, 10, 64); err == nil {
+	if pending.lastVisit != "" {
+		if parsed, err := strconv.ParseInt(pending.lastVisit, 10, 64); err == nil {
 			t := time.Unix(parsed, 0)
 			lastVisitedAt = &t
 		}
 	}
 
 	var updatedAt []time.Time
-	if bookmark.lastModified != nil {
-		if parsed, err := strconv.ParseInt(*bookmark.lastModified, 10, 64); err == nil {
+	if pending.lastModified != "" {
+		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
 			updatedAt = append(updatedAt, time.Unix(parsed, 0))
 		}
 	}
 
 	labels := make(map[Label]struct{})
-	if bookmark.tags != nil {
-		tagList := strings.SplitSeq(*bookmark.tags, ",")
+	if pending.tags != "" {
+		tagList := strings.SplitSeq(pending.tags, ",")
 		for tag := range tagList {
 			tag = strings.TrimSpace(tag)
 			if tag != "" && tag != "toread" {
@@ -90,27 +90,27 @@ func processPendingBookmark(
 	}
 
 	shared := true
-	if bookmark.private != nil && *bookmark.private == "1" {
+	if pending.private == "1" {
 		shared = false
 	}
 
 	toRead := false
-	if bookmark.toread != nil && *bookmark.toread == "1" {
+	if pending.toread == "1" {
 		toRead = true
 	}
 
-	if bookmark.tags != nil {
-		toRead = toRead || strings.Contains(*bookmark.tags, "toread")
+	if pending.tags != "" {
+		toRead = toRead || strings.Contains(pending.tags, "toread")
 	}
 
 	isFeed := false
-	if bookmark.feed != nil && *bookmark.feed == "true" {
+	if pending.feed == "true" {
 		isFeed = true
 	}
 
 	names := make(map[Name]struct{})
-	if bookmark.title != nil {
-		names[Name(*bookmark.title)] = struct{}{}
+	if pending.title != "" {
+		names[Name(pending.title)] = struct{}{}
 	}
 
 	entity := types.Entity{
@@ -124,8 +124,8 @@ func processPendingBookmark(
 		IsFeed:    isFeed,
 	}
 
-	if bookmark.description != nil {
-		entity.Extended = bookmark.description
+	if pending.description != "" {
+		entity.Extended = &pending.description
 	}
 
 	if lastVisitedAt != nil {
@@ -173,13 +173,13 @@ func handleDt(
 	dtNode *html.Node,
 	collection *types.Collection,
 	folderStack *[]string,
-	pendingBookmark **pendingBookmarkData,
+	pending **pendingBookmark,
 ) error {
-	if *pendingBookmark != nil {
-		if err := processPendingBookmark(collection, *folderStack, **pendingBookmark); err != nil {
+	if *pending != nil {
+		if err := processPendingBookmark(collection, *folderStack, **pending); err != nil {
 			return err
 		}
-		*pendingBookmark = nil
+		*pending = nil
 	}
 
 	aNode := findDirectChildElement(dtNode, "a")
@@ -194,36 +194,32 @@ func handleDt(
 		return nil
 	}
 
-	var maybeTitle *string
 	title := strings.TrimSpace(getTextContent(aNode))
-	if title != "" {
-		maybeTitle = &title
-	}
 
-	bookmark := &pendingBookmarkData{title: maybeTitle}
+	p := &pendingBookmark{title: title}
 
 	for _, attr := range aNode.Attr {
 		switch strings.ToLower(attr.Key) {
 		case "href":
-			bookmark.href = &attr.Val
+			p.href = attr.Val
 		case "add_date":
-			bookmark.addDate = &attr.Val
+			p.addDate = attr.Val
 		case "last_modified":
-			bookmark.lastModified = &attr.Val
+			p.lastModified = attr.Val
 		case "tags":
-			bookmark.tags = &attr.Val
+			p.tags = attr.Val
 		case "private":
-			bookmark.private = &attr.Val
+			p.private = attr.Val
 		case "toread":
-			bookmark.toread = &attr.Val
+			p.toread = attr.Val
 		case "last_visit":
-			bookmark.lastVisit = &attr.Val
+			p.lastVisit = attr.Val
 		case "feed":
-			bookmark.feed = &attr.Val
+			p.feed = attr.Val
 		}
 	}
 
-	*pendingBookmark = bookmark
+	*pending = p
 	return nil
 }
 
@@ -238,7 +234,7 @@ func parse(
 
 	var stack []stackItem
 	var folderStack []string
-	var pendingBookmark *pendingBookmarkData
+	var pending *pendingBookmark
 
 	for c := root.LastChild; c != nil; c = c.PrevSibling {
 		if c.Type == html.ElementNode {
@@ -251,11 +247,11 @@ func parse(
 		stack = stack[:len(stack)-1]
 
 		if item.popGroup {
-			if pendingBookmark != nil {
-				if err := processPendingBookmark(collection, folderStack, *pendingBookmark); err != nil {
+			if pending != nil {
+				if err := processPendingBookmark(collection, folderStack, *pending); err != nil {
 					return nil, err
 				}
-				pendingBookmark = nil
+				pending = nil
 			}
 
 			if len(folderStack) > 0 {
@@ -269,14 +265,14 @@ func parse(
 
 		switch nodeName {
 		case "dt":
-			if err := handleDt(node, collection, &folderStack, &pendingBookmark); err != nil {
+			if err := handleDt(node, collection, &folderStack, &pending); err != nil {
 				return nil, err
 			}
 		case "dd":
-			if pendingBookmark != nil {
+			if pending != nil {
 				description := strings.TrimSpace(getTextContent(node))
 				if description != "" {
-					pendingBookmark.description = &description
+					pending.description = description
 				}
 			}
 			continue
@@ -292,7 +288,7 @@ func parse(
 
 	}
 
-	if pendingBookmark != nil {
+	if pending != nil {
 		return nil, fmt.Errorf("unexpected pending bookmark")
 	}
 
