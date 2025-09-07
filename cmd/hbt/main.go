@@ -79,13 +79,13 @@ func main() {
 
 	var showVersionFlag bool
 
-	inputFormats := inputFormatsString()
-	outputFormats := outputFormatsString()
+	fromUsage := fmt.Sprintf("Input format (%s)", inputFormatsString())
+	toUsage := fmt.Sprintf("Output format (%s)", outputFormatsString())
 
-	flag.Var(&config.InputFormat, "f", fmt.Sprintf("Input format (%s)", inputFormats))
-	flag.Var(&config.InputFormat, "from", fmt.Sprintf("Input format (%s)", inputFormats))
-	flag.Var(&config.OutputFormat, "t", fmt.Sprintf("Output format (%s)", outputFormats))
-	flag.Var(&config.OutputFormat, "to", fmt.Sprintf("Output format (%s)", outputFormats))
+	flag.Var(&config.InputFormat, "f", fromUsage)
+	flag.Var(&config.InputFormat, "from", fromUsage)
+	flag.Var(&config.OutputFormat, "t", toUsage)
+	flag.Var(&config.OutputFormat, "to", toUsage)
 	flag.BoolVar(&showVersionFlag, "version", false, "Show version")
 	flag.BoolVar(&showVersionFlag, "V", false, "Show version")
 
