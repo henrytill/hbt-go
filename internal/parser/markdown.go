@@ -120,7 +120,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 	md := goldmark.New()
 	doc := md.Parser().Parse(text.NewReader(content))
 
-	state := &parserState{
+	state := parserState{
 		collection:  types.NewCollection(),
 		currentDate: time.Time{},
 		labels:      []string{},
@@ -169,7 +169,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 				linkTitle := extractText(node, content)
 
 				if linkURL != "" {
-					id, err := saveEntity(state, linkURL, linkTitle)
+					id, err := saveEntity(&state, linkURL, linkTitle)
 					if err != nil {
 						return ast.WalkStop, err
 					}
@@ -182,7 +182,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 				linkTitle := ""
 
 				if linkURL != "" {
-					id, err := saveEntity(state, linkURL, linkTitle)
+					id, err := saveEntity(&state, linkURL, linkTitle)
 					if err != nil {
 						return ast.WalkStop, err
 					}
