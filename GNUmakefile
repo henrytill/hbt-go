@@ -24,6 +24,11 @@ SOURCES += internal/parser/markdown.go
 SOURCES += internal/pinboard/types.go
 SOURCES += internal/parser/pinboard/json.go
 SOURCES += internal/parser/pinboard/xml.go
+SOURCES += internal/client/pinboard/client.go
+SOURCES += internal/client/pinboard/credentials.go
+SOURCES += internal/client/pinboard/notes.go
+SOURCES += internal/client/pinboard/posts.go
+SOURCES += internal/client/pinboard/tags.go
 
 BIN_TARGETS = $(addprefix $(BINDIR)/,$(BIN))
 
@@ -45,7 +50,7 @@ fmt:
 
 test: $(BIN_TARGETS)
 	$(GO) generate ./test
-	$(GO) test -v ./test
+	$(GO) test -v ./...
 
 clean:
 	rm -f $(BIN_TARGETS)
