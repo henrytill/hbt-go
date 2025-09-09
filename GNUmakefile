@@ -10,6 +10,7 @@ DEADCODE = $(GOPATH)/bin/deadcode
 
 BIN =
 BIN += hbt
+BIN += pinboard
 
 BINDIR = bin
 
@@ -39,8 +40,8 @@ all: $(BIN_TARGETS)
 $(BINDIR):
 	mkdir -p $@
 
-$(BINDIR)/%: cmd/%/main.go $(SOURCES) | $(BINDIR)
-	$(GO) build -o $@ $<
+$(BINDIR)/%: cmd/%/*.go $(SOURCES) | $(BINDIR)
+	$(GO) build -o $@ ./cmd/$*/
 
 lint:
 	$(GO) vet ./...
