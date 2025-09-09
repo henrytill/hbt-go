@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/henrytill/hbt-go/internal/pinboard"
 	"github.com/henrytill/hbt-go/internal/types"
 )
 
@@ -15,17 +16,17 @@ func NewPinboardXMLParser() *PinboardXMLParser {
 	return &PinboardXMLParser{}
 }
 
-func ParseXML(r io.Reader) ([]Post, error) {
+func ParseXML(r io.Reader) ([]pinboard.Post, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(content) == 0 {
-		return []Post{}, nil
+		return []pinboard.Post{}, nil
 	}
 
-	var posts Posts
+	var posts pinboard.Posts
 	err = xml.Unmarshal(content, &posts)
 	if err != nil {
 		return nil, err
@@ -48,5 +49,5 @@ func (p *PinboardXMLParser) Parse(r io.Reader) (*types.Collection, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewCollectionFromPosts(posts)
+	return pinboard.NewCollectionFromPosts(posts)
 }

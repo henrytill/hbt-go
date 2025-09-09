@@ -21,7 +21,7 @@ SOURCES += internal/formatter/yaml.go
 SOURCES += internal/parser/types.go
 SOURCES += internal/parser/html.go
 SOURCES += internal/parser/markdown.go
-SOURCES += internal/parser/pinboard/types.go
+SOURCES += internal/pinboard/types.go
 SOURCES += internal/parser/pinboard/json.go
 SOURCES += internal/parser/pinboard/xml.go
 
