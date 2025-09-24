@@ -29,7 +29,7 @@ type Config struct {
 	InputFile    string
 }
 
-func inputFormatsString() string {
+func inputFormats() string {
 	formats := internal.AllInputFormats()
 	names := make([]string, len(formats))
 	for i, f := range formats {
@@ -38,7 +38,7 @@ func inputFormatsString() string {
 	return strings.Join(names, ", ")
 }
 
-func outputFormatsString() string {
+func outputFormats() string {
 	formats := internal.AllOutputFormats()
 	names := make([]string, len(formats))
 	for i, f := range formats {
@@ -79,8 +79,8 @@ func main() {
 
 	var showVersionFlag bool
 
-	fromUsage := fmt.Sprintf("Input format (%s)", inputFormatsString())
-	toUsage := fmt.Sprintf("Output format (%s)", outputFormatsString())
+	fromUsage := fmt.Sprintf("Input format (%s)", inputFormats())
+	toUsage := fmt.Sprintf("Output format (%s)", outputFormats())
 
 	flag.Var(&config.InputFormat, "f", fromUsage)
 	flag.Var(&config.InputFormat, "from", fromUsage)
@@ -137,29 +137,29 @@ func main() {
 	}
 	defer inputFile.Close()
 
-	collection, err := internal.Parse(config.InputFormat, inputFile)
+	coll, err := internal.Parse(config.InputFormat, inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing file: %v\n", err)
 		os.Exit(1)
 	}
 
 	if *config.Mappings != "" {
-		mappings, err := internal.LoadMappingsFromFile(*config.Mappings)
+		mappings, err := internal.LoadMappings(*config.Mappings)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading mappings file: %v\n", err)
 			os.Exit(1)
 		}
-		collection.ApplyMappings(mappings)
+		coll.ApplyMappings(mappings)
 	}
 
 	if *config.Info {
-		fmt.Printf("Collection contains %d entities\n", collection.Len())
+		fmt.Printf("Collection contains %d entities\n", coll.Len())
 		return
 	}
 
 	if *config.ListTags {
 		tags := make(map[string]bool)
-		for _, entity := range collection.Entities() {
+		for _, entity := range coll.Entities() {
 			for label := range entity.Labels {
 				if string(label) != "" {
 					tags[string(label)] = true
@@ -186,7 +186,7 @@ func main() {
 			output = os.Stdout
 		}
 
-		err = internal.Unparse(config.OutputFormat, output, collection)
+		err = internal.Unparse(config.OutputFormat, output, coll)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
 			os.Exit(1)

@@ -37,15 +37,15 @@ var (
 )
 
 var parsers = map[Format]types.Parser{
-	JSON:     &pinboard.PinboardJSONParser{},
-	XML:      &pinboard.PinboardXMLParser{},
+	JSON:     &pinboard.JSONParser{},
+	XML:      &pinboard.XMLParser{},
 	Markdown: &parser.MarkdownParser{},
 	HTML:     &parser.HTMLParser{},
 }
 
 var formatters = map[Format]types.Formatter{
-	YAML: &formatter.YAMLFormatter{},
 	HTML: &formatter.HTMLFormatter{},
+	YAML: &formatter.YAMLFormatter{},
 }
 
 var allFormats = []Format{JSON, XML, Markdown, HTML, YAML}
@@ -125,7 +125,7 @@ func Parse(format Format, r io.Reader) (*types.Collection, error) {
 	return parser.Parse(r)
 }
 
-func Unparse(format Format, w io.Writer, collection *types.Collection) error {
+func Unparse(format Format, w io.Writer, coll *types.Collection) error {
 	if !format.CanOutput() {
 		return fmt.Errorf("format %s cannot be used for output", format.Name)
 	}
@@ -135,5 +135,5 @@ func Unparse(format Format, w io.Writer, collection *types.Collection) error {
 		return fmt.Errorf("no formatter available for format: %s", format.Name)
 	}
 
-	return formatter.Format(w, collection)
+	return formatter.Format(w, coll)
 }

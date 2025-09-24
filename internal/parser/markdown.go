@@ -16,7 +16,7 @@ import (
 type MarkdownParser struct{}
 
 type parserState struct {
-	collection  *types.Collection
+	coll        *types.Collection
 	currentDate time.Time
 	labels      []string
 	maybeParent *uint
@@ -58,11 +58,11 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 		}
 	}
 
-	nodeID := state.collection.UpsertEntity(entity)
+	nodeID := state.coll.Upsert(entity)
 
 	if len(state.parents) > 0 {
 		immediateParent := state.parents[len(state.parents)-1]
-		state.collection.AddEdges(nodeID, immediateParent)
+		state.coll.AddEdges(nodeID, immediateParent)
 	}
 
 	return nodeID, nil
@@ -117,7 +117,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 	doc := md.Parser().Parse(text.NewReader(content))
 
 	state := parserState{
-		collection:  types.NewCollection(),
+		coll:        types.NewCollection(),
 		currentDate: time.Time{},
 		labels:      []string{},
 		maybeParent: nil,
@@ -194,5 +194,5 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 		return nil, err
 	}
 
-	return state.collection, nil
+	return state.coll, nil
 }

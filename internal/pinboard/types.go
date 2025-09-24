@@ -79,15 +79,15 @@ func (p Post) ToEntity() (types.Entity, error) {
 }
 
 func NewCollectionFromPosts(posts []Post) (*types.Collection, error) {
-	collection := types.NewCollection()
+	coll := types.NewCollection()
 
 	for _, post := range posts {
 		entity, err := post.ToEntity()
 		if err != nil {
 			return nil, err
 		}
-		collection.UpsertEntity(entity)
+		coll.Upsert(entity)
 	}
 
-	return collection, nil
+	return coll, nil
 }

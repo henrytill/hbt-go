@@ -9,12 +9,12 @@ import (
 
 type YAMLFormatter struct{}
 
-func (f *YAMLFormatter) Format(w io.Writer, collection *types.Collection) error {
+func (f *YAMLFormatter) Format(w io.Writer, coll *types.Collection) error {
 	encoder := yaml.NewEncoder(w,
 		yaml.UseSingleQuote(true),
 		yaml.Indent(2),
 	)
 	defer encoder.Close()
 
-	return encoder.Encode(collection)
+	return encoder.Encode(coll)
 }

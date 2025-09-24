@@ -10,9 +10,9 @@ import (
 	"github.com/henrytill/hbt-go/internal/types"
 )
 
-type PinboardJSONParser struct{}
+type JSONParser struct{}
 
-func ParseJSON(r io.Reader) ([]pinboard.Post, error) {
+func parseJSON(r io.Reader) ([]pinboard.Post, error) {
 	var posts []pinboard.Post
 
 	decoder := json.NewDecoder(r)
@@ -32,8 +32,8 @@ func ParseJSON(r io.Reader) ([]pinboard.Post, error) {
 	return posts, nil
 }
 
-func (p *PinboardJSONParser) Parse(r io.Reader) (*types.Collection, error) {
-	posts, err := ParseJSON(r)
+func (p *JSONParser) Parse(r io.Reader) (*types.Collection, error) {
+	posts, err := parseJSON(r)
 	if err != nil {
 		return nil, err
 	}

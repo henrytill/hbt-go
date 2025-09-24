@@ -16,7 +16,7 @@ type Parser interface {
 }
 
 type Formatter interface {
-	Format(w io.Writer, collection *Collection) error
+	Format(w io.Writer, coll *Collection) error
 }
 
 type Name string
@@ -72,7 +72,7 @@ func (e *Entity) absorb(other Entity) {
 	}
 }
 
-type serializedEntity struct {
+type entityRepr struct {
 	URI           string   `yaml:"uri"                     json:"uri"`
 	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
 	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
@@ -97,7 +97,7 @@ func MapToSortedSlice[K ~string](m map[K]struct{}) []string {
 	return keys
 }
 
-func SliceToMap[K ~string](slice []string) map[K]struct{} {
+func sliceToMap[K ~string](slice []string) map[K]struct{} {
 	m := make(map[K]struct{})
 	for _, s := range slice {
 		if s != "" {
@@ -107,7 +107,7 @@ func SliceToMap[K ~string](slice []string) map[K]struct{} {
 	return m
 }
 
-func (e Entity) toSerialized() serializedEntity {
+func (e Entity) toRepr() entityRepr {
 	var uriString string
 	if e.URI != nil {
 		uriString = e.URI.String()
@@ -124,7 +124,7 @@ func (e Entity) toSerialized() serializedEntity {
 		lastVisitedAtUnix = &unix
 	}
 
-	return serializedEntity{
+	return entityRepr{
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
 		UpdatedAt:     updatedAtUnix,
@@ -138,7 +138,7 @@ func (e Entity) toSerialized() serializedEntity {
 	}
 }
 
-func (e *Entity) fromSerialized(s serializedEntity) error {
+func (e *Entity) fromRepr(s entityRepr) error {
 	if s.URI != "" {
 		parsedURL, err := url.Parse(s.URI)
 		if err != nil {
@@ -163,8 +163,8 @@ func (e *Entity) fromSerialized(s serializedEntity) error {
 		e.LastVisitedAt = nil
 	}
 
-	e.Names = SliceToMap[Name](s.Names)
-	e.Labels = SliceToMap[Label](s.Labels)
+	e.Names = sliceToMap[Name](s.Names)
+	e.Labels = sliceToMap[Label](s.Labels)
 	e.Shared = s.Shared
 	e.ToRead = s.ToRead
 	e.IsFeed = s.IsFeed
@@ -172,10 +172,10 @@ func (e *Entity) fromSerialized(s serializedEntity) error {
 	return nil
 }
 
-type serializedNode struct {
-	ID     uint             `yaml:"id"     json:"id"`
-	Entity serializedEntity `yaml:"entity" json:"entity"`
-	Edges  []uint           `yaml:"edges"  json:"edges"`
+type nodeRepr struct {
+	ID     uint       `yaml:"id"     json:"id"`
+	Entity entityRepr `yaml:"entity" json:"entity"`
+	Edges  []uint     `yaml:"edges"  json:"edges"`
 }
 
 type Collection struct {
@@ -192,7 +192,7 @@ func NewCollection() *Collection {
 	}
 }
 
-func (c *Collection) AddEntity(entity Entity) uint {
+func (c *Collection) Add(entity Entity) uint {
 	nodeID := uint(len(c.entities))
 	c.entities = append(c.entities, entity)
 	c.edges = append(c.edges, []uint{})
@@ -200,7 +200,7 @@ func (c *Collection) AddEntity(entity Entity) uint {
 	return nodeID
 }
 
-func (c *Collection) findEntityByURI(uri *url.URL) (uint, bool) {
+func (c *Collection) findEntity(uri *url.URL) (uint, bool) {
 	if uri == nil {
 		return 0, false
 	}
@@ -208,14 +208,14 @@ func (c *Collection) findEntityByURI(uri *url.URL) (uint, bool) {
 	return nodeID, exists
 }
 
-func (c *Collection) UpsertEntity(entity Entity) uint {
-	if nodeID, exists := c.findEntityByURI(entity.URI); exists {
+func (c *Collection) Upsert(entity Entity) uint {
+	if nodeID, exists := c.findEntity(entity.URI); exists {
 		existing := &c.entities[nodeID]
 		existing.absorb(entity)
 		return nodeID
 	}
 
-	return c.AddEntity(entity)
+	return c.Add(entity)
 }
 
 func (c *Collection) AddEdges(from, to uint) {
@@ -283,32 +283,32 @@ func (v Version) IsCompatible() bool {
 	return semver.Major(string(v)) == semver.Major(string(ExpectedVersion))
 }
 
-type serializedCollection struct {
-	Version string           `yaml:"version" json:"version"`
-	Length  uint             `yaml:"length"  json:"length"`
-	Value   []serializedNode `yaml:"value"   json:"value"`
+type collectionRepr struct {
+	Version string     `yaml:"version" json:"version"`
+	Length  uint       `yaml:"length"  json:"length"`
+	Value   []nodeRepr `yaml:"value"   json:"value"`
 }
 
-func (c *Collection) toSerialized() serializedCollection {
+func (c *Collection) toRepr() collectionRepr {
 	length := uint(len(c.entities))
-	value := make([]serializedNode, length)
+	value := make([]nodeRepr, length)
 
 	for i := range length {
-		value[i] = serializedNode{
+		value[i] = nodeRepr{
 			ID:     i,
-			Entity: c.entities[i].toSerialized(),
+			Entity: c.entities[i].toRepr(),
 			Edges:  c.edges[i],
 		}
 	}
 
-	return serializedCollection{
+	return collectionRepr{
 		Version: ExpectedVersion.String(),
 		Length:  length,
 		Value:   value,
 	}
 }
 
-func (c *Collection) fromSerialized(s serializedCollection) error {
+func (c *Collection) fromRepr(s collectionRepr) error {
 	version, err := NewVersion(s.Version)
 	if err != nil {
 		return fmt.Errorf("invalid version in serialized data: %w", err)
@@ -329,7 +329,7 @@ func (c *Collection) fromSerialized(s serializedCollection) error {
 
 	for i, serNode := range s.Value {
 		var entity Entity
-		if err := entity.fromSerialized(serNode.Entity); err != nil {
+		if err := entity.fromRepr(serNode.Entity); err != nil {
 			return err
 		}
 		c.entities[i] = entity
@@ -341,25 +341,25 @@ func (c *Collection) fromSerialized(s serializedCollection) error {
 }
 
 func (c *Collection) MarshalYAML() (any, error) {
-	return c.toSerialized(), nil
+	return c.toRepr(), nil
 }
 
 func (c *Collection) UnmarshalYAML(unmarshal func(any) error) error {
-	var aux serializedCollection
+	var aux collectionRepr
 	if err := unmarshal(&aux); err != nil {
 		return err
 	}
-	return c.fromSerialized(aux)
+	return c.fromRepr(aux)
 }
 
 func (c *Collection) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.toSerialized())
+	return json.Marshal(c.toRepr())
 }
 
 func (c *Collection) UnmarshalJSON(data []byte) error {
-	var aux serializedCollection
+	var aux collectionRepr
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	return c.fromSerialized(aux)
+	return c.fromRepr(aux)
 }

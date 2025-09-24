@@ -74,7 +74,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	return ret
 }
 
-func (f *HTMLFormatter) Format(writer io.Writer, collection *types.Collection) error {
+func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
 	const tmpl = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
@@ -92,10 +92,10 @@ func (f *HTMLFormatter) Format(writer io.Writer, collection *types.Collection) e
 	templateData := struct {
 		Entities []templateEntity
 	}{
-		Entities: make([]templateEntity, 0, collection.Len()),
+		Entities: make([]templateEntity, 0, coll.Len()),
 	}
 
-	for _, entity := range collection.Entities() {
+	for _, entity := range coll.Entities() {
 		templateEntity := newTemplateEntity(entity)
 		templateData.Entities = append(templateData.Entities, templateEntity)
 	}

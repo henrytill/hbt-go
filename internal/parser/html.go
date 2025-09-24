@@ -27,9 +27,9 @@ type pendingBookmark struct {
 	description  string
 }
 
-func processPendingBookmark(
-	collection *types.Collection,
-	folderStack []string,
+func add(
+	coll *types.Collection,
+	folders []string,
 	pending pendingBookmark,
 ) error {
 	if pending.href == "" {
@@ -81,7 +81,7 @@ func processPendingBookmark(
 		}
 	}
 
-	for _, folder := range folderStack {
+	for _, folder := range folders {
 		labels[Label(folder)] = struct{}{}
 	}
 
@@ -128,7 +128,7 @@ func processPendingBookmark(
 		entity.LastVisitedAt = lastVisitedAt
 	}
 
-	collection.UpsertEntity(entity)
+	coll.Upsert(entity)
 
 	return nil
 }
@@ -156,46 +156,46 @@ func getTextContent(n *html.Node) string {
 	return result.String()
 }
 
-func handleAnchor(aNode *html.Node) pendingBookmark {
-	title := strings.TrimSpace(getTextContent(aNode))
+func handleAnchor(anchor *html.Node) pendingBookmark {
+	title := strings.TrimSpace(getTextContent(anchor))
 
-	p := pendingBookmark{title: title}
+	ret := pendingBookmark{title: title}
 
-	for _, attr := range aNode.Attr {
+	for _, attr := range anchor.Attr {
 		switch strings.ToLower(attr.Key) {
 		case "href":
-			p.href = attr.Val
+			ret.href = attr.Val
 		case "add_date":
-			p.addDate = attr.Val
+			ret.addDate = attr.Val
 		case "last_modified":
-			p.lastModified = attr.Val
+			ret.lastModified = attr.Val
 		case "tags":
-			p.tags = attr.Val
+			ret.tags = attr.Val
 		case "private":
-			p.private = attr.Val
+			ret.private = attr.Val
 		case "toread":
-			p.toread = attr.Val
+			ret.toread = attr.Val
 		case "last_visit":
-			p.lastVisit = attr.Val
+			ret.lastVisit = attr.Val
 		case "feed":
-			p.feed = attr.Val
+			ret.feed = attr.Val
 		}
 	}
 
-	return p
+	return ret
 }
 
-func parse(root *html.Node, collection *types.Collection) (*types.Collection, error) {
+func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 	type stackItem struct {
 		node     *html.Node
 		popGroup bool
 	}
 
 	var (
-		stack       []stackItem
-		folderStack []string
-		pending     pendingBookmark
-		hasPending  bool
+		stack      []stackItem
+		folders    []string
+		pending    pendingBookmark
+		hasPending bool
 	)
 
 	for c := root.LastChild; c != nil; c = c.PrevSibling {
@@ -210,14 +210,13 @@ func parse(root *html.Node, collection *types.Collection) (*types.Collection, er
 
 		if item.popGroup {
 			if hasPending {
-				if err := processPendingBookmark(collection, folderStack, pending); err != nil {
+				if err := add(coll, folders, pending); err != nil {
 					return nil, err
 				}
 				hasPending = false
 			}
-
-			if len(folderStack) > 0 {
-				folderStack = folderStack[:len(folderStack)-1]
+			if len(folders) > 0 {
+				folders = folders[:len(folders)-1]
 			}
 			continue
 		}
@@ -228,7 +227,7 @@ func parse(root *html.Node, collection *types.Collection) (*types.Collection, er
 		switch nodeName {
 		case "dt":
 			if hasPending {
-				if err := processPendingBookmark(collection, folderStack, pending); err != nil {
+				if err := add(coll, folders, pending); err != nil {
 					return nil, err
 				}
 				hasPending = false
@@ -245,7 +244,7 @@ func parse(root *html.Node, collection *types.Collection) (*types.Collection, er
 				case "h3":
 					folderName := strings.TrimSpace(getTextContent(c))
 					if folderName != "" {
-						folderStack = append(folderStack, folderName)
+						folders = append(folders, folderName)
 					}
 				}
 			}
@@ -272,7 +271,7 @@ func parse(root *html.Node, collection *types.Collection) (*types.Collection, er
 		return nil, fmt.Errorf("unexpected pending bookmark")
 	}
 
-	return collection, nil
+	return coll, nil
 }
 
 func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
@@ -281,6 +280,6 @@ func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
-	collection := types.NewCollection()
-	return parse(doc, collection)
+	coll := types.NewCollection()
+	return parse(doc, coll)
 }
