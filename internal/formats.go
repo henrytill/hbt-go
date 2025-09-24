@@ -36,6 +36,18 @@ var (
 	YAML     = Format{"yaml", CapOutput}
 )
 
+var parsers = map[Format]types.Parser{
+	JSON:     &pinboard.PinboardJSONParser{},
+	XML:      &pinboard.PinboardXMLParser{},
+	Markdown: &parser.MarkdownParser{},
+	HTML:     &parser.HTMLParser{},
+}
+
+var formatters = map[Format]types.Formatter{
+	YAML: &formatter.YAMLFormatter{},
+	HTML: &formatter.HTMLFormatter{},
+}
+
 var allFormats = []Format{JSON, XML, Markdown, HTML, YAML}
 
 func AllInputFormats() []Format {
@@ -105,22 +117,12 @@ func Parse(format Format, r io.Reader) (*types.Collection, error) {
 		return nil, fmt.Errorf("format %s cannot be used for input", format.Name)
 	}
 
-	var p types.Parser
-
-	switch format {
-	case JSON:
-		p = pinboard.NewPinboardJSONParser()
-	case XML:
-		p = pinboard.NewPinboardXMLParser()
-	case Markdown:
-		p = parser.NewMarkdownParser()
-	case HTML:
-		p = parser.NewHTMLParser()
-	default:
+	parser, ok := parsers[format]
+	if !ok {
 		return nil, fmt.Errorf("no parser available for format: %s", format.Name)
 	}
 
-	return p.Parse(r)
+	return parser.Parse(r)
 }
 
 func Unparse(format Format, w io.Writer, collection *types.Collection) error {
@@ -128,16 +130,10 @@ func Unparse(format Format, w io.Writer, collection *types.Collection) error {
 		return fmt.Errorf("format %s cannot be used for output", format.Name)
 	}
 
-	var f types.Formatter
-
-	switch format {
-	case YAML:
-		f = formatter.NewYAMLFormatter()
-	case HTML:
-		f = formatter.NewHTMLFormatter()
-	default:
+	formatter, ok := formatters[format]
+	if !ok {
 		return fmt.Errorf("no formatter available for format: %s", format.Name)
 	}
 
-	return f.Format(w, collection)
+	return formatter.Format(w, collection)
 }

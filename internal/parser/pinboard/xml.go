@@ -12,10 +12,6 @@ import (
 
 type PinboardXMLParser struct{}
 
-func NewPinboardXMLParser() *PinboardXMLParser {
-	return &PinboardXMLParser{}
-}
-
 func ParseXML(r io.Reader) ([]pinboard.Post, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {

@@ -12,10 +12,6 @@ import (
 
 type PinboardJSONParser struct{}
 
-func NewPinboardJSONParser() *PinboardJSONParser {
-	return &PinboardJSONParser{}
-}
-
 func ParseJSON(r io.Reader) ([]pinboard.Post, error) {
 	var posts []pinboard.Post
 

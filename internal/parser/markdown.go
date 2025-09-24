@@ -15,10 +15,6 @@ import (
 
 type MarkdownParser struct{}
 
-func NewMarkdownParser() *MarkdownParser {
-	return &MarkdownParser{}
-}
-
 type parserState struct {
 	collection  *types.Collection
 	currentDate time.Time

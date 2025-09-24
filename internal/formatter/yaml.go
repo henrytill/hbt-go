@@ -9,10 +9,6 @@ import (
 
 type YAMLFormatter struct{}
 
-func NewYAMLFormatter() *YAMLFormatter {
-	return &YAMLFormatter{}
-}
-
 func (f *YAMLFormatter) Format(w io.Writer, collection *types.Collection) error {
 	encoder := yaml.NewEncoder(w,
 		yaml.UseSingleQuote(true),

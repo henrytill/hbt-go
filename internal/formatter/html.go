@@ -12,10 +12,6 @@ import (
 
 type HTMLFormatter struct{}
 
-func NewHTMLFormatter() *HTMLFormatter {
-	return &HTMLFormatter{}
-}
-
 type templateEntity struct {
 	URI           string
 	Title         string

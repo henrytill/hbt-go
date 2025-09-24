@@ -14,10 +14,6 @@ import (
 
 type HTMLParser struct{}
 
-func NewHTMLParser() *HTMLParser {
-	return &HTMLParser{}
-}
-
 type pendingBookmark struct {
 	href         string
 	title        string
