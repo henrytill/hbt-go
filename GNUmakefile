@@ -1,6 +1,8 @@
 .SUFFIXES:
 
 GO = go
+CTAGS = ctags
+ETAGS = etags
 
 GOPATH = $(shell $(GO) env GOPATH)
 STATICCHECK = $(GOPATH)/bin/staticcheck
@@ -43,6 +45,12 @@ lint:
 fmt:
 	$(GO) fmt ./...
 
+tags:
+	@printf '%s\n' $(SOURCES) | $(CTAGS) -L -
+
+TAGS:
+	@printf '%s\n' $(SOURCES) | $(ETAGS) -L -
+
 test: $(BIN_TARGETS)
 	$(GO) generate ./test
 	$(GO) test -v ./test
@@ -53,4 +61,4 @@ clean:
 distclean: clean
 	rmdir $(BINDIR)
 
-.PHONY: all lint fmt test clean distclean
+.PHONY: all lint fmt tags TAGS test clean distclean
