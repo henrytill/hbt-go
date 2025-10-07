@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func handleTagsList(args []string) {
+func handleTagsList(_ []string) {
 	client, err := createClient()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

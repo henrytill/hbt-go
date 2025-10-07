@@ -274,7 +274,7 @@ func handlePostsDates(args []string) {
 	}
 }
 
-func handlePostsUpdate(args []string) {
+func handlePostsUpdate(_ []string) {
 	client, err := createClient()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

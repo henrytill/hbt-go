@@ -48,7 +48,7 @@ func createClient() (*pinboard.Client, error) {
 	return client, nil
 }
 
-func outputJSON(v interface{}) error {
+func outputJSON(v any) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(v)

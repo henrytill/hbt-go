@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func handleUserToken(args []string) {
+func handleUserToken(_ []string) {
 	client, err := createClient()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -22,7 +22,7 @@ func handleUserToken(args []string) {
 	fmt.Println(token)
 }
 
-func handleUserSecret(args []string) {
+func handleUserSecret(_ []string) {
 	client, err := createClient()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -38,7 +38,7 @@ func handleUserSecret(args []string) {
 	fmt.Println(secret)
 }
 
-func handleNotesList(args []string) {
+func handleNotesList(_ []string) {
 	client, err := createClient()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
