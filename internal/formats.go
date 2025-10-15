@@ -112,6 +112,17 @@ func DetectInputFormat(filename string) (Format, bool) {
 	}
 }
 
+func DetectOutputFormat(filename string) (Format, bool) {
+	switch strings.ToLower(filename[strings.LastIndex(filename, "."):]) {
+	case ".html":
+		return HTML, true
+	case ".yaml":
+		return YAML, true
+	default:
+		return Format{}, false
+	}
+}
+
 func Parse(format Format, r io.Reader) (*types.Collection, error) {
 	if !format.CanInput() {
 		return nil, fmt.Errorf("format %s cannot be used for input", format.Name)
