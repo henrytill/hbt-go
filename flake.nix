@@ -56,6 +56,15 @@
       {
         packages.hbt = pkgs.hbt;
         packages.default = self.packages.${system}.hbt;
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [ pkgs.hbt ];
+          packages = with pkgs; [
+            go
+            gopls
+            gotools
+            go-tools
+          ];
+        };
       }
     );
 }
