@@ -35,7 +35,7 @@
             export HBT_BINARY_PATH="$GOPATH/bin/hbt"
           '';
 
-          checkFlags = ["-v"];
+          checkFlags = [ "-v" ];
 
           meta = with final.lib; {
             description = "Heterogeneous Bookmark Transformation";
