@@ -48,8 +48,8 @@ func TestHTMLBookmarksSimpleYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_simple.input.html", "testdata/html/bookmarks_simple.expected.yaml")
 }
 
-func TestJSONJSONSampleYAML(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "testdata/pinboard/json/json_sample.input.json", "testdata/pinboard/json/json_sample.expected.yaml")
+func TestJSONSampleYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/pinboard/json/sample.input.json", "testdata/pinboard/json/sample.expected.yaml")
 }
 
 func TestMarkdownBasicYAML(t *testing.T) {
@@ -62,6 +62,10 @@ func TestMarkdownDescendingDatesYAML(t *testing.T) {
 
 func TestMarkdownEmptyLinkYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/markdown/empty_link.input.md", "testdata/markdown/empty_link.expected.yaml")
+}
+
+func TestMarkdownEmptyYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/markdown/empty.input.md", "testdata/markdown/empty.expected.yaml")
 }
 
 func TestMarkdownIndentedDoubleYAML(t *testing.T) {
@@ -148,8 +152,8 @@ func TestXMLEmptyYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/pinboard/xml/empty.input.xml", "testdata/pinboard/xml/empty.expected.yaml")
 }
 
-func TestXMLXMLSampleYAML(t *testing.T) {
-	RunHbtAndCompare(t, "yaml", "testdata/pinboard/xml/xml_sample.input.xml", "testdata/pinboard/xml/xml_sample.expected.yaml")
+func TestXMLSampleYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/pinboard/xml/sample.input.xml", "testdata/pinboard/xml/sample.expected.yaml")
 }
 
 // End

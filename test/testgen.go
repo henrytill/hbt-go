@@ -56,16 +56,23 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 		}
 
 		fileName := d.Name()
+		relPath, err := filepath.Rel(testDataDir, path)
+		if err != nil {
+			return err
+		}
+		relDir := filepath.Dir(relPath)
 
-		if stem, found := stripInputSuffix(fileName); found {
-			inputFiles[stem] = path
+		if fileStem, found := stripInputSuffix(fileName); found {
+			fullStem := filepath.Join(relDir, fileStem)
+			inputFiles[fullStem] = path
 		}
 
-		if stem, format, found := stripExpectedSuffix(fileName); found {
-			if expectedFiles[stem] == nil {
-				expectedFiles[stem] = make(map[string]string)
+		if fileStem, format, found := stripExpectedSuffix(fileName); found {
+			fullStem := filepath.Join(relDir, fileStem)
+			if expectedFiles[fullStem] == nil {
+				expectedFiles[fullStem] = make(map[string]string)
 			}
-			expectedFiles[stem][format] = path
+			expectedFiles[fullStem][format] = path
 		}
 
 		return nil
@@ -75,11 +82,12 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 		return nil, err
 	}
 
-	for stem, inputPath := range inputFiles {
-		if outputs, exists := expectedFiles[stem]; exists {
+	for fullStem, inputPath := range inputFiles {
+		if outputs, exists := expectedFiles[fullStem]; exists {
 			for format, expectedPath := range outputs {
-				category := filepath.Base(filepath.Dir(inputPath))
-				testName := generateTestName(category, stem, format)
+				category := filepath.Base(filepath.Dir(fullStem))
+				fileStem := filepath.Base(fullStem)
+				testName := generateTestName(category, fileStem, format)
 
 				testCases = append(testCases, TestCase{
 					Name:       testName,
