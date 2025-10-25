@@ -123,24 +123,42 @@ func stripExpectedSuffix(fileName string) (string, string, bool) {
 	return "", "", false
 }
 
+func titleCase(s string) string {
+	lower := strings.ToLower(s)
+	switch lower {
+	case "html":
+		return "HTML"
+	case "xml":
+		return "XML"
+	case "json":
+		return "JSON"
+	case "yaml":
+		return "YAML"
+	case "url":
+		return "URL"
+	default:
+		caser := cases.Title(language.AmericanEnglish)
+		return caser.String(s)
+	}
+}
+
 func generateTestName(category, stem, format string) string {
 	parts := []string{"Test"}
-	caser := cases.Title(language.AmericanEnglish)
 
 	if category != "" {
-		parts = append(parts, caser.String(category))
+		parts = append(parts, titleCase(category))
 	}
 
 	if stem != "" {
 		stemParts := splitIntoAlphanumericParts(stem)
 		for _, part := range stemParts {
 			if part != "" {
-				parts = append(parts, caser.String(part))
+				parts = append(parts, titleCase(part))
 			}
 		}
 	}
 
-	parts = append(parts, formatTestSuffix(format, caser))
+	parts = append(parts, titleCase(format))
 
 	return strings.Join(parts, "")
 }
@@ -149,13 +167,6 @@ func splitIntoAlphanumericParts(s string) []string {
 	return strings.FieldsFunc(s, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
-}
-
-func formatTestSuffix(format string, caser cases.Caser) string {
-	if format == "html" {
-		return "Html"
-	}
-	return caser.String(format)
 }
 
 func generateTestFile(outputFile string, testCases []TestCase) error {
