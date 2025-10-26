@@ -56,6 +56,15 @@ func detectInputFormat(filename string) (Format, error) {
 	return format, nil
 }
 
+func detectOutputFormat(filename string) (Format, error) {
+	format, ok := internal.DetectOutputFormat(filename)
+	if !ok {
+		ext := filepath.Ext(filename)
+		return Format{}, fmt.Errorf("no formatter for extension: %s", ext)
+	}
+	return format, nil
+}
+
 func showVersion() {
 	fmt.Printf("hbt %s\n", Version)
 }
@@ -118,6 +127,16 @@ func main() {
 			os.Exit(1)
 		}
 		config.InputFormat = format
+	}
+
+	// If no output format was specified, detect it from the output filename
+	if config.OutputFormat.Name == "" && *config.OutputFile != "" {
+		format, err := detectOutputFormat(*config.OutputFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		config.OutputFormat = format
 	}
 
 	if !*config.Info && !*config.ListTags && config.OutputFormat.Name == "" {
