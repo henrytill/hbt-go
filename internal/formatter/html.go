@@ -17,8 +17,7 @@ type templateEntity struct {
 	Title         string
 	CreatedAt     int64
 	LastModified  *int64
-	Labels        []string
-	TagsString    string
+	Tags          string
 	Shared        bool
 	ToRead        bool
 	IsFeed        bool
@@ -50,15 +49,14 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		lastVisitedAtUnix = &unix
 	}
 
-	labels := types.MapToSortedSlice(entity.Labels)
-	sort.Strings(labels)
+	tags := types.MapToSortedSlice(entity.Labels)
+	sort.Strings(tags)
 
 	ret := templateEntity{
 		URI:           uriString,
 		Title:         getFirstName(entity.Names, uriString),
 		CreatedAt:     entity.CreatedAt.Unix(),
-		Labels:        labels,
-		TagsString:    strings.Join(labels, ","),
+		Tags:          strings.Join(tags, ","),
 		Shared:        entity.Shared,
 		ToRead:        entity.ToRead,
 		IsFeed:        entity.IsFeed,
@@ -81,7 +79,7 @@ func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
 <H1>Bookmarks</H1>
 <DL><p>
 {{- range .Entities}}
-    <DT><A HREF="{{.URI}}"{{if .CreatedAt}} ADD_DATE="{{.CreatedAt}}"{{end}}{{if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}{{if .Labels}} TAGS="{{.TagsString}}"{{end}}{{if not .Shared}} PRIVATE="1"{{end}}{{if .LastVisitedAt}} LAST_VISIT="{{.LastVisitedAt}}"{{end}}{{if .ToRead}} TOREAD="1"{{end}}{{if .IsFeed}} FEED="true"{{end}}>{{.Title}}</A>
+    <DT><A HREF="{{.URI}}"{{if .CreatedAt}} ADD_DATE="{{.CreatedAt}}"{{end}}{{if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}{{if .Tags}} TAGS="{{.Tags}}"{{end}}{{if not .Shared}} PRIVATE="1"{{end}}{{if .LastVisitedAt}} LAST_VISIT="{{.LastVisitedAt}}"{{end}}{{if .ToRead}} TOREAD="1"{{end}}{{if .IsFeed}} FEED="true"{{end}}>{{.Title}}</A>
 {{- if .Extended}}
     <DD>{{.Extended}}
 {{- end}}
