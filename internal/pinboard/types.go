@@ -18,6 +18,7 @@ type Post struct {
 	Description string `xml:"description,attr" json:"description"`
 	Extended    string `xml:"extended,attr"    json:"extended"`
 	Tags        string `xml:"tag,attr"         json:"tags"`
+	Meta        string `xml:"meta,attr"        json:"meta"`
 	Hash        string `xml:"hash,attr"        json:"hash"`
 	Shared      string `xml:"shared,attr"      json:"shared"`
 	ToRead      string `xml:"toread,attr"      json:"toread"`
