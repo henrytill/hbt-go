@@ -4,9 +4,8 @@ GO = go
 CTAGS = ctags
 ETAGS = etags
 
-GOPATH = $(shell $(GO) env GOPATH)
-STATICCHECK = $(GOPATH)/bin/staticcheck
-DEADCODE = $(GOPATH)/bin/deadcode
+STATICCHECK = staticcheck
+DEADCODE = deadcode
 
 BIN =
 BIN += hbt
