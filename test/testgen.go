@@ -24,20 +24,33 @@ type TestCase struct {
 	Format     string
 }
 
-func main() {
-	testDataDir := "testdata"
-	outputFile := "cli_test.go"
+var caser = cases.Title(language.AmericanEnglish)
 
-	testCases, err := findTestCases(testDataDir)
-	if err != nil {
-		log.Fatalf("Error finding test cases: %v", err)
+func stripInputSuffix(fileName string) (string, bool) {
+	suffixes := []string{".input.html", ".input.md", ".input.json", ".input.xml"}
+
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(fileName, suffix) {
+			stem := strings.TrimSuffix(fileName, suffix)
+			return stem, true
+		}
+	}
+	return "", false
+}
+
+func stripExpectedSuffix(fileName string) (string, string, bool) {
+	suffixes := map[string]string{
+		".expected.yaml": "yaml",
+		".expected.html": "html",
 	}
 
-	if err := generateTestFile(outputFile, testCases); err != nil {
-		log.Fatalf("Error generating test file: %v", err)
+	for suffix, format := range suffixes {
+		if strings.HasSuffix(fileName, suffix) {
+			stem := strings.TrimSuffix(fileName, suffix)
+			return stem, format, true
+		}
 	}
-
-	fmt.Printf("Generated %d test cases in %s\n", len(testCases), outputFile)
+	return "", "", false
 }
 
 func findTestCases(testDataDir string) ([]TestCase, error) {
@@ -106,31 +119,6 @@ func findTestCases(testDataDir string) ([]TestCase, error) {
 	return testCases, nil
 }
 
-func stripInputSuffix(fileName string) (string, bool) {
-	suffixes := []string{".input.html", ".input.md", ".input.json", ".input.xml"}
-	for _, suffix := range suffixes {
-		if strings.HasSuffix(fileName, suffix) {
-			return strings.TrimSuffix(fileName, suffix), true
-		}
-	}
-	return "", false
-}
-
-func stripExpectedSuffix(fileName string) (string, string, bool) {
-	suffixes := map[string]string{
-		".expected.yaml": "yaml",
-		".expected.html": "html",
-	}
-
-	for suffix, format := range suffixes {
-		if strings.HasSuffix(fileName, suffix) {
-			stem := strings.TrimSuffix(fileName, suffix)
-			return stem, format, true
-		}
-	}
-	return "", "", false
-}
-
 func titleCase(s string) string {
 	lower := strings.ToLower(s)
 	switch lower {
@@ -145,9 +133,14 @@ func titleCase(s string) string {
 	case "url":
 		return "URL"
 	default:
-		caser := cases.Title(language.AmericanEnglish)
 		return caser.String(s)
 	}
+}
+
+func splitIntoAlphanumericParts(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
 }
 
 func generateTestName(category, stem, format string) string {
@@ -169,12 +162,6 @@ func generateTestName(category, stem, format string) string {
 	parts = append(parts, titleCase(format))
 
 	return strings.Join(parts, "")
-}
-
-func splitIntoAlphanumericParts(s string) []string {
-	return strings.FieldsFunc(s, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
-	})
 }
 
 func generateTestFile(outputFile string, testCases []TestCase) error {
@@ -213,4 +200,20 @@ func {{.Name}}(t *testing.T) {
 	defer f.Close()
 
 	return tmpl.Execute(f, templateData)
+}
+
+func main() {
+	testDataDir := "testdata"
+	outputFile := "cli_test.go"
+
+	testCases, err := findTestCases(testDataDir)
+	if err != nil {
+		log.Fatalf("Error finding test cases: %v", err)
+	}
+
+	if err := generateTestFile(outputFile, testCases); err != nil {
+		log.Fatalf("Error generating test file: %v", err)
+	}
+
+	fmt.Printf("Generated %d test cases in %s\n", len(testCases), outputFile)
 }
