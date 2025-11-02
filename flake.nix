@@ -27,7 +27,7 @@
               name = "hbt-src";
             };
 
-            vendorHash = "sha256-M4SWV8N9gpc4CaQMFlI86uyPqprFI8eoe6TWrvdSfks=";
+            vendorHash = "sha256-TR9DhZNiDEGcVXoBzilgiJU41CsTLoI7uQd58ilfFnY=";
 
             ldflags = [
               "-X main.Version=${version}"
