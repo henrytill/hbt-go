@@ -66,6 +66,7 @@
             gopls
             gotools
             go-tools
+            yaml-language-server
           ];
         };
       }
