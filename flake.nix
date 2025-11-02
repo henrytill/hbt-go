@@ -17,15 +17,11 @@
         hbt =
           let
             version = "0.1.0-${self.shortRev or self.dirtyShortRev}";
+            src = self;
           in
           final.buildGoModule {
             pname = "hbt";
-            inherit version;
-
-            src = builtins.path {
-              path = ./.;
-              name = "hbt-src";
-            };
+            inherit version src;
 
             vendorHash = "sha256-TR9DhZNiDEGcVXoBzilgiJU41CsTLoI7uQd58ilfFnY=";
 
