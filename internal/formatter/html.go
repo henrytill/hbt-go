@@ -79,7 +79,14 @@ func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
 <H1>Bookmarks</H1>
 <DL><p>
 {{- range .Entities}}
-    <DT><A HREF="{{.URI}}"{{if .CreatedAt}} ADD_DATE="{{.CreatedAt}}"{{end}}{{if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}{{if .Tags}} TAGS="{{.Tags}}"{{end}}{{if not .Shared}} PRIVATE="1"{{end}}{{if .LastVisitedAt}} LAST_VISIT="{{.LastVisitedAt}}"{{end}}{{if .ToRead}} TOREAD="1"{{end}}{{if .IsFeed}} FEED="true"{{end}}>{{.Title}}</A>
+    <DT><A HREF="{{.URI}}"
+        {{- if .CreatedAt}} ADD_DATE="{{.CreatedAt}}"{{end}}
+        {{- if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}
+        {{- if .Tags}} TAGS="{{.Tags}}"{{end}}
+        {{- if not .Shared}} PRIVATE="1"{{end}}
+        {{- if .LastVisitedAt}} LAST_VISIT="{{.LastVisitedAt}}"{{end}}
+        {{- if .ToRead}} TOREAD="1"{{end}}
+        {{- if .IsFeed}} FEED="true"{{end}}>{{.Title}}</A>
 {{- if .Extended}}
     <DD>{{.Extended}}
 {{- end}}
