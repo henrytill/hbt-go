@@ -39,6 +39,7 @@ all: $(BIN_TARGETS)
 $(BINDIR):
 	mkdir -p $@
 
+$(BINDIR)/%: export CGO_ENABLED = 0
 $(BINDIR)/%: cmd/%/*.go $(SOURCES) | $(BINDIR)
 	$(GO) build -o $@ ./cmd/$*/
 
