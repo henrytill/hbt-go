@@ -47,6 +47,17 @@ func outputFormats() string {
 	return strings.Join(names, ", ")
 }
 
+func showUsage() {
+	fmt.Printf("Usage: %s [OPTIONS] FILE\n\n", os.Args[0])
+	fmt.Println("Process bookmark files in various formats")
+	fmt.Println("\nOptions:")
+	flag.PrintDefaults()
+}
+
+func showVersion() {
+	fmt.Printf("hbt %s\n", Version)
+}
+
 func detectInputFormat(filename string) (Format, error) {
 	format, ok := internal.DetectInputFormat(filename)
 	if !ok {
@@ -63,17 +74,6 @@ func detectOutputFormat(filename string) (Format, error) {
 		return Format{}, fmt.Errorf("no formatter for extension: %s", ext)
 	}
 	return format, nil
-}
-
-func showVersion() {
-	fmt.Printf("hbt %s\n", Version)
-}
-
-func showUsage() {
-	fmt.Printf("Usage: %s [OPTIONS] FILE\n\n", os.Args[0])
-	fmt.Println("Process bookmark files in various formats")
-	fmt.Println("\nOptions:")
-	flag.PrintDefaults()
 }
 
 func main() {
