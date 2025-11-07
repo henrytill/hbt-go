@@ -21,6 +21,7 @@ type Formatter interface {
 
 type Name string
 type Label string
+type Extended string
 
 type Entity struct {
 	URI           *url.URL
@@ -31,7 +32,7 @@ type Entity struct {
 	Shared        bool
 	ToRead        bool
 	IsFeed        bool
-	Extended      *string
+	Extended      *Extended
 	LastVisitedAt *time.Time
 }
 
@@ -124,6 +125,12 @@ func (e Entity) toRepr() entityRepr {
 		lastVisitedAtUnix = &unix
 	}
 
+	var extended *string
+	if e.Extended != nil {
+		s := string(*e.Extended)
+		extended = &s
+	}
+
 	return entityRepr{
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
@@ -133,7 +140,7 @@ func (e Entity) toRepr() entityRepr {
 		Shared:        e.Shared,
 		ToRead:        e.ToRead,
 		IsFeed:        e.IsFeed,
-		Extended:      e.Extended,
+		Extended:      extended,
 		LastVisitedAt: lastVisitedAtUnix,
 	}
 }
@@ -168,7 +175,14 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	e.Shared = s.Shared
 	e.ToRead = s.ToRead
 	e.IsFeed = s.IsFeed
-	e.Extended = s.Extended
+
+	if s.Extended != nil {
+		ext := Extended(*s.Extended)
+		e.Extended = &ext
+	} else {
+		e.Extended = nil
+	}
+
 	return nil
 }
 

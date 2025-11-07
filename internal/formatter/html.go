@@ -52,6 +52,12 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	tags := types.MapToSortedSlice(entity.Labels)
 	sort.Strings(tags)
 
+	var extended *string
+	if entity.Extended != nil {
+		s := string(*entity.Extended)
+		extended = &s
+	}
+
 	ret := templateEntity{
 		URI:           uriString,
 		Title:         getFirstName(entity.Names, uriString),
@@ -61,7 +67,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		ToRead:        entity.ToRead,
 		IsFeed:        entity.IsFeed,
 		LastVisitedAt: lastVisitedAtUnix,
-		Extended:      entity.Extended,
+		Extended:      extended,
 	}
 
 	if len(entity.UpdatedAt) > 0 {

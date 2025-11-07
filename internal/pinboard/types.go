@@ -59,9 +59,10 @@ func (p Post) ToEntity() (types.Entity, error) {
 	shared := p.Shared == "yes"
 	toRead := p.ToRead == "yes"
 
-	var extended *string
+	var extended *types.Extended
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
-		extended = &trimmedExt
+		ext := types.Extended(trimmedExt)
+		extended = &ext
 	}
 
 	entity := types.Entity{
