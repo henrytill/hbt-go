@@ -54,36 +54,6 @@ func outputJSON(v any) error {
 	return encoder.Encode(v)
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		showUsage()
-		os.Exit(1)
-	}
-
-	subcommand := os.Args[1]
-
-	switch subcommand {
-	case "version", "--version", "-V":
-		showVersion()
-		return
-	case "help", "--help", "-h":
-		showUsage()
-		return
-	case "posts":
-		handlePosts(os.Args[2:])
-	case "tags":
-		handleTags(os.Args[2:])
-	case "user":
-		handleUser(os.Args[2:])
-	case "notes":
-		handleNotes(os.Args[2:])
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n\n", subcommand)
-		showUsage()
-		os.Exit(1)
-	}
-}
-
 func handlePosts(args []string) {
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Posts subcommand requires an operation\n")
@@ -174,6 +144,36 @@ func handleNotes(args []string) {
 		handleNotesGet(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown notes operation: %s\n", operation)
+		os.Exit(1)
+	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		showUsage()
+		os.Exit(1)
+	}
+
+	subcommand := os.Args[1]
+
+	switch subcommand {
+	case "version", "--version", "-V":
+		showVersion()
+		return
+	case "help", "--help", "-h":
+		showUsage()
+		return
+	case "posts":
+		handlePosts(os.Args[2:])
+	case "tags":
+		handleTags(os.Args[2:])
+	case "user":
+		handleUser(os.Args[2:])
+	case "notes":
+		handleNotes(os.Args[2:])
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n\n", subcommand)
+		showUsage()
 		os.Exit(1)
 	}
 }
