@@ -4,17 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/henrytill/hbt-go/internal/pinboard"
 )
 
-type Note struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	Text      string `json:"text"`
-	Hash      string `json:"hash"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-	Length    int    `json:"length"`
-}
+type Note = pinboard.Note
 
 func (c *Client) ListNotes(ctx context.Context) ([]Note, error) {
 	resp, err := c.makeRequest(ctx, "notes/list", nil)
