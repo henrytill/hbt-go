@@ -15,6 +15,8 @@ BINDIR = bin
 
 SOURCES =
 SOURCES += internal/formats.go
+SOURCES += internal/types/collection.go
+SOURCES += internal/types/entity.go
 SOURCES += internal/types/types.go
 SOURCES += internal/mappings.go
 SOURCES += internal/formatter/types.go
@@ -25,6 +27,7 @@ SOURCES += internal/parser/html.go
 SOURCES += internal/parser/markdown.go
 SOURCES += internal/pinboard/note.go
 SOURCES += internal/pinboard/post.go
+SOURCES += internal/parser/pinboard/common.go
 SOURCES += internal/parser/pinboard/json.go
 SOURCES += internal/parser/pinboard/xml.go
 SOURCES += internal/client/pinboard/client.go
