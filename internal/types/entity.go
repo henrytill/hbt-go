@@ -1,9 +1,13 @@
 package types
 
 import (
+	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/henrytill/hbt-go/internal/pinboard"
 )
 
 type Name string
@@ -171,4 +175,55 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 
 	return nil
+}
+
+func NewEntityFromPost(p pinboard.Post) (Entity, error) {
+	if p.Href == "" {
+		return Entity{}, fmt.Errorf("empty URL in pinboard post")
+	}
+
+	createdAt, err := time.Parse(time.RFC3339, p.Time)
+	if err != nil {
+		return Entity{}, err
+	}
+
+	parsedURL, err := url.Parse(p.Href)
+	if err != nil {
+		return Entity{}, err
+	}
+
+	names := make(map[Name]struct{})
+	if trimmedDesc := strings.TrimSpace(p.Description); trimmedDesc != "" {
+		names[Name(trimmedDesc)] = struct{}{}
+	}
+
+	labels := make(map[Label]struct{})
+	if trimmedTags := strings.TrimSpace(p.Tags); trimmedTags != "" {
+		for tag := range strings.FieldsSeq(trimmedTags) {
+			labels[Label(tag)] = struct{}{}
+		}
+	}
+
+	shared := p.Shared == "yes"
+	toRead := p.ToRead == "yes"
+
+	var extended *Extended
+	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
+		ext := Extended(trimmedExt)
+		extended = &ext
+	}
+
+	entity := Entity{
+		URI:       parsedURL,
+		CreatedAt: createdAt,
+		UpdatedAt: []time.Time{},
+		Names:     names,
+		Labels:    labels,
+		Shared:    shared,
+		ToRead:    toRead,
+		IsFeed:    false,
+		Extended:  extended,
+	}
+
+	return entity, nil
 }

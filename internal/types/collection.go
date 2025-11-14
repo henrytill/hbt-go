@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/henrytill/hbt-go/internal/pinboard"
 	"golang.org/x/mod/semver"
 )
 
@@ -20,6 +21,20 @@ func NewCollection() *Collection {
 		edges:    [][]uint{},
 		urls:     make(map[string]uint),
 	}
+}
+
+func NewCollectionFromPosts(posts []pinboard.Post) (*Collection, error) {
+	coll := NewCollection()
+
+	for _, post := range posts {
+		entity, err := NewEntityFromPost(post)
+		if err != nil {
+			return nil, err
+		}
+		coll.Upsert(entity)
+	}
+
+	return coll, nil
 }
 
 func (c *Collection) Add(entity Entity) uint {

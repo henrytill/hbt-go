@@ -45,5 +45,5 @@ func (p *XMLParser) Parse(r io.Reader) (*types.Collection, error) {
 	if err != nil {
 		return nil, err
 	}
-	return pinboard.NewCollectionFromPosts(posts)
+	return types.NewCollectionFromPosts(posts)
 }
