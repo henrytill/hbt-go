@@ -3,8 +3,6 @@ package pinboard
 import (
 	"encoding/xml"
 	"io"
-	"sort"
-	"time"
 
 	"github.com/henrytill/hbt-go/internal/pinboard"
 	"github.com/henrytill/hbt-go/internal/types"
@@ -28,14 +26,7 @@ func parseXML(r io.Reader) ([]pinboard.Post, error) {
 		return nil, err
 	}
 
-	sort.Slice(posts.Posts, func(i, j int) bool {
-		timeI, errI := time.Parse(time.RFC3339, posts.Posts[i].Time)
-		timeJ, errJ := time.Parse(time.RFC3339, posts.Posts[j].Time)
-		if errI != nil || errJ != nil {
-			return false
-		}
-		return timeI.Before(timeJ)
-	})
+	sortPostsByTime(posts.Posts)
 
 	return posts.Posts, nil
 }
