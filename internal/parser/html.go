@@ -21,7 +21,7 @@ type pendingBookmark struct {
 	lastModified string
 	tags         string
 	private      string
-	toread       string
+	toRead       string
 	lastVisit    string
 	feed         string
 	description  string
@@ -91,7 +91,7 @@ func add(
 	}
 
 	toRead := false
-	if pending.toread == "1" {
+	if pending.toRead == "1" {
 		toRead = true
 	}
 
@@ -175,7 +175,7 @@ func handleAnchor(anchor *html.Node) pendingBookmark {
 		case "private":
 			ret.private = attr.Val
 		case "toread":
-			ret.toread = attr.Val
+			ret.toRead = attr.Val
 		case "last_visit":
 			ret.lastVisit = attr.Val
 		case "feed":
