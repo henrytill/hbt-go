@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	BaseURL      = "https://api.pinboard.in/v1"
-	RateLimit    = 3 * time.Second
-	PostsAllRate = 5 * time.Minute
-	PostsRecent  = 1 * time.Minute
+	BaseURL         = "https://api.pinboard.in/v1"
+	RateLimit       = 3 * time.Second
+	PostsAllRate    = 5 * time.Minute
+	PostsRecentRate = 1 * time.Minute
 )
 
 type AuthMethod interface {
@@ -86,8 +86,8 @@ func (c *Client) rateLimit(endpoint string) {
 		}
 		c.postsAllLast = now
 	case "posts/recent":
-		if elapsed := now.Sub(c.postsRecentLast); elapsed < PostsRecent {
-			time.Sleep(PostsRecent - elapsed)
+		if elapsed := now.Sub(c.postsRecentLast); elapsed < PostsRecentRate {
+			time.Sleep(PostsRecentRate - elapsed)
 		}
 		c.postsRecentLast = now
 	}
