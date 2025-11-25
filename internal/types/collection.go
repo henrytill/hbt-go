@@ -37,20 +37,20 @@ func NewCollectionFromPosts(posts []pinboard.Post) (*Collection, error) {
 	return coll, nil
 }
 
-func (c *Collection) Add(entity Entity) uint {
-	nodeID := uint(len(c.entities))
-	c.entities = append(c.entities, entity)
-	c.edges = append(c.edges, []uint{})
-	c.urls[entity.URI.String()] = nodeID
-	return nodeID
-}
-
 func (c *Collection) findEntity(uri *url.URL) (uint, bool) {
 	if uri == nil {
 		return 0, false
 	}
 	nodeID, exists := c.urls[uri.String()]
 	return nodeID, exists
+}
+
+func (c *Collection) insert(entity Entity) uint {
+	nodeID := uint(len(c.entities))
+	c.entities = append(c.entities, entity)
+	c.edges = append(c.edges, []uint{})
+	c.urls[entity.URI.String()] = nodeID
+	return nodeID
 }
 
 func (c *Collection) Upsert(entity Entity) uint {
@@ -60,7 +60,7 @@ func (c *Collection) Upsert(entity Entity) uint {
 		return nodeID
 	}
 
-	return c.Add(entity)
+	return c.insert(entity)
 }
 
 func (c *Collection) AddEdges(from, to uint) {
