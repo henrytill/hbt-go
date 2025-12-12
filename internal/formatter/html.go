@@ -25,22 +25,20 @@ type templateEntity struct {
 	Extended     *string
 }
 
-func getText(names map[Name]struct{}, def string) string {
-	if len(names) == 0 {
-		return def
-	}
-	keys := make([]string, 0, len(names))
-	for k := range names {
-		keys = append(keys, string(k))
-	}
-	sort.Strings(keys)
-	return keys[0]
-}
-
 func newTemplateEntity(entity types.Entity) templateEntity {
 	var href string
 	if entity.URI != nil {
 		href = entity.URI.String()
+	}
+
+	var text string
+	{
+		names := types.MapToSortedSlice(entity.Names)
+		if len(names) == 0 {
+			text = href
+		} else {
+			text = names[0]
+		}
 	}
 
 	var lastVisit *int64
@@ -60,7 +58,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 
 	ret := templateEntity{
 		Href:      href,
-		Text:      getText(entity.Names, href),
+		Text:      text,
 		AddDate:   entity.CreatedAt.Unix(),
 		Tags:      strings.Join(tags, ","),
 		Private:   !entity.Shared,
