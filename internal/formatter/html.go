@@ -13,19 +13,19 @@ import (
 type HTMLFormatter struct{}
 
 type templateEntity struct {
-	URI           string
-	Title         string
-	CreatedAt     int64
-	LastModified  *int64
-	Tags          string
-	Shared        bool
-	ToRead        bool
-	IsFeed        bool
-	LastVisitedAt *int64
-	Extended      *string
+	Href         string
+	Text         string
+	AddDate      int64
+	LastModified *int64
+	Tags         string
+	Private      bool
+	ToRead       bool
+	Feed         bool
+	LastVisit    *int64
+	Extended     *string
 }
 
-func getFirstName(names map[Name]struct{}, def string) string {
+func getText(names map[Name]struct{}, def string) string {
 	if len(names) == 0 {
 		return def
 	}
@@ -38,15 +38,15 @@ func getFirstName(names map[Name]struct{}, def string) string {
 }
 
 func newTemplateEntity(entity types.Entity) templateEntity {
-	var uriString string
+	var href string
 	if entity.URI != nil {
-		uriString = entity.URI.String()
+		href = entity.URI.String()
 	}
 
-	var lastVisitedAtUnix *int64
+	var lastVisit *int64
 	if entity.LastVisitedAt != nil {
 		unix := entity.LastVisitedAt.Unix()
-		lastVisitedAtUnix = &unix
+		lastVisit = &unix
 	}
 
 	tags := types.MapToSortedSlice(entity.Labels)
@@ -59,15 +59,15 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	}
 
 	ret := templateEntity{
-		URI:           uriString,
-		Title:         getFirstName(entity.Names, uriString),
-		CreatedAt:     entity.CreatedAt.Unix(),
-		Tags:          strings.Join(tags, ","),
-		Shared:        entity.Shared,
-		ToRead:        entity.ToRead,
-		IsFeed:        entity.IsFeed,
-		LastVisitedAt: lastVisitedAtUnix,
-		Extended:      extended,
+		Href:      href,
+		Text:      getText(entity.Names, href),
+		AddDate:   entity.CreatedAt.Unix(),
+		Tags:      strings.Join(tags, ","),
+		Private:   !entity.Shared,
+		ToRead:    entity.ToRead,
+		Feed:      entity.IsFeed,
+		LastVisit: lastVisit,
+		Extended:  extended,
 	}
 
 	if len(entity.UpdatedAt) > 0 {
@@ -85,14 +85,14 @@ func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
 <H1>Bookmarks</H1>
 <DL><p>
 {{- range .Entities}}
-    <DT><A HREF="{{.URI}}"
-        {{- if .CreatedAt}} ADD_DATE="{{.CreatedAt}}"{{end}}
+    <DT><A HREF="{{.Href}}"
+        {{- if .AddDate}} ADD_DATE="{{.AddDate}}"{{end}}
         {{- if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}
         {{- if .Tags}} TAGS="{{.Tags}}"{{end}}
-        {{- if not .Shared}} PRIVATE="1"{{end}}
-        {{- if .LastVisitedAt}} LAST_VISIT="{{.LastVisitedAt}}"{{end}}
+        {{- if .Private}} PRIVATE="1"{{end}}
+        {{- if .LastVisit}} LAST_VISIT="{{.LastVisit}}"{{end}}
         {{- if .ToRead}} TOREAD="1"{{end}}
-        {{- if .IsFeed}} FEED="true"{{end}}>{{.Title}}</A>
+        {{- if .Feed}} FEED="true"{{end}}>{{.Text}}</A>
 {{- if .Extended}}
     <DD>{{.Extended}}
 {{- end}}
