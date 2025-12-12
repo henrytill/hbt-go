@@ -3,7 +3,6 @@ package formatter
 import (
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -48,7 +47,6 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	}
 
 	tags := types.MapToSortedSlice(entity.Labels)
-	sort.Strings(tags)
 
 	var extended *string
 	if entity.Extended != nil {
