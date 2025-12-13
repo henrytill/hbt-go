@@ -2,7 +2,7 @@
 
 GO = go
 CTAGS = ctags
-ETAGS = etags
+ETAGS = ctags -e
 
 STATICCHECK = staticcheck
 DEADCODE = deadcode

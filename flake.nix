@@ -62,6 +62,7 @@
             gopls
             gotools
             go-tools
+            universal-ctags
             yaml-language-server
           ];
         };
