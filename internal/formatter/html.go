@@ -30,14 +30,10 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		href = entity.URI.String()
 	}
 
-	var text string
-	{
-		names := types.MapToSortedSlice(entity.Names)
-		if len(names) == 0 {
-			text = href
-		} else {
-			text = names[0]
-		}
+	names := types.MapToSortedSlice(entity.Names)
+	text := href
+	if len(names) > 0 {
+		text = names[0]
 	}
 
 	var lastVisit *int64
