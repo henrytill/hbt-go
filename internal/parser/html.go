@@ -55,11 +55,10 @@ func add(
 		createdAt = time.Now()
 	}
 
-	var lastVisitedAt *types.LastVisitedAt
+	var lastVisitedAt types.LastVisitedAt
 	if pending.lastVisit != "" {
 		if parsed, err := strconv.ParseInt(pending.lastVisit, 10, 64); err == nil {
-			t := types.LastVisitedAt(time.Unix(parsed, 0))
-			lastVisitedAt = &t
+			lastVisitedAt = types.NewLastVisitedAt(time.Unix(parsed, 0))
 		}
 	}
 
@@ -124,9 +123,7 @@ func add(
 		entity.Extended = []types.Extended{types.Extended(pending.description)}
 	}
 
-	if lastVisitedAt != nil {
-		entity.LastVisitedAt = lastVisitedAt
-	}
+	entity.LastVisitedAt = lastVisitedAt
 
 	coll.Upsert(entity)
 

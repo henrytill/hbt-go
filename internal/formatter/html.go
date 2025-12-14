@@ -37,8 +37,8 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	}
 
 	var lastVisit *int64
-	if entity.LastVisitedAt != nil {
-		unix := entity.LastVisitedAt.Unix()
+	if t, ok := entity.LastVisitedAt.Time(); ok {
+		unix := t.Unix()
 		lastVisit = &unix
 	}
 

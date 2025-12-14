@@ -42,10 +42,30 @@ func (u UpdatedAt) Before(other UpdatedAt) bool {
 	return time.Time(u).Before(time.Time(other))
 }
 
-type LastVisitedAt time.Time
+type LastVisitedAt struct{ t *time.Time }
 
-func (l LastVisitedAt) Unix() int64 {
-	return time.Time(l).Unix()
+func NewLastVisitedAt(t time.Time) LastVisitedAt {
+	return LastVisitedAt{t: &t}
+}
+
+func (l LastVisitedAt) Time() (time.Time, bool) {
+	if l.t == nil {
+		return time.Time{}, false
+	}
+	return *l.t, true
+}
+
+func (l LastVisitedAt) Concat(r LastVisitedAt) LastVisitedAt {
+	if l.t == nil {
+		return r
+	}
+	if r.t == nil {
+		return l
+	}
+	if l.t.Before(*r.t) {
+		return r
+	}
+	return l
 }
 
 type Entity struct {
@@ -58,7 +78,7 @@ type Entity struct {
 	ToRead        ToRead
 	IsFeed        IsFeed
 	Extended      []Extended
-	LastVisitedAt *LastVisitedAt
+	LastVisitedAt LastVisitedAt
 }
 
 func (e *Entity) absorb(other Entity) {
@@ -92,9 +112,7 @@ func (e *Entity) absorb(other Entity) {
 
 	e.Extended = append(e.Extended, other.Extended...)
 
-	if other.LastVisitedAt != nil {
-		e.LastVisitedAt = other.LastVisitedAt
-	}
+	e.LastVisitedAt = e.LastVisitedAt.Concat(other.LastVisitedAt)
 }
 
 type entityRepr struct {
@@ -144,8 +162,8 @@ func (e Entity) toRepr() entityRepr {
 	}
 
 	var lastVisitedAtUnix *int64
-	if e.LastVisitedAt != nil {
-		unix := e.LastVisitedAt.Unix()
+	if t, ok := e.LastVisitedAt.Time(); ok {
+		unix := t.Unix()
 		lastVisitedAtUnix = &unix
 	}
 
@@ -190,10 +208,9 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 
 	if s.LastVisitedAt != nil {
-		t := LastVisitedAt(time.Unix(*s.LastVisitedAt, 0))
-		e.LastVisitedAt = &t
+		e.LastVisitedAt = NewLastVisitedAt(time.Unix(*s.LastVisitedAt, 0))
 	} else {
-		e.LastVisitedAt = nil
+		e.LastVisitedAt = LastVisitedAt{}
 	}
 
 	e.Names = sliceToMap[Name](s.Names)
