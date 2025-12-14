@@ -23,7 +23,7 @@ type Entity struct {
 	Shared        bool
 	ToRead        bool
 	IsFeed        bool
-	Extended      *Extended
+	Extended      []Extended
 	LastVisitedAt *time.Time
 }
 
@@ -56,9 +56,8 @@ func (e *Entity) absorb(other Entity) {
 	e.ToRead = e.ToRead || other.ToRead
 	e.IsFeed = e.IsFeed || other.IsFeed
 
-	if other.Extended != nil && *other.Extended != "" {
-		e.Extended = other.Extended
-	}
+	e.Extended = append(e.Extended, other.Extended...)
+
 	if other.LastVisitedAt != nil {
 		e.LastVisitedAt = other.LastVisitedAt
 	}
@@ -73,7 +72,7 @@ type entityRepr struct {
 	Shared        bool     `yaml:"shared"                  json:"shared"`
 	ToRead        bool     `yaml:"toRead"                  json:"toRead"`
 	IsFeed        bool     `yaml:"isFeed"                  json:"isFeed"`
-	Extended      *string  `yaml:"extended,omitempty"      json:"extended,omitempty"`
+	Extended      []string `yaml:"extended,omitempty"      json:"extended,omitempty"`
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
@@ -116,10 +115,12 @@ func (e Entity) toRepr() entityRepr {
 		lastVisitedAtUnix = &unix
 	}
 
-	var extended *string
-	if e.Extended != nil {
-		s := string(*e.Extended)
-		extended = &s
+	var extended []string
+	if len(e.Extended) > 0 {
+		extended = make([]string, len(e.Extended))
+		for i, ext := range e.Extended {
+			extended[i] = string(ext)
+		}
 	}
 
 	return entityRepr{
@@ -167,9 +168,11 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	e.ToRead = s.ToRead
 	e.IsFeed = s.IsFeed
 
-	if s.Extended != nil {
-		ext := Extended(*s.Extended)
-		e.Extended = &ext
+	if len(s.Extended) > 0 {
+		e.Extended = make([]Extended, len(s.Extended))
+		for i, ext := range s.Extended {
+			e.Extended[i] = Extended(ext)
+		}
 	} else {
 		e.Extended = nil
 	}
@@ -207,10 +210,9 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 	shared := p.Shared == "yes"
 	toRead := p.ToRead == "yes"
 
-	var extended *Extended
+	var extended []Extended
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
-		ext := Extended(trimmedExt)
-		extended = &ext
+		extended = []Extended{Extended(trimmedExt)}
 	}
 
 	entity := Entity{

@@ -121,8 +121,7 @@ func add(
 	}
 
 	if pending.description != "" {
-		ext := types.Extended(pending.description)
-		entity.Extended = &ext
+		entity.Extended = []types.Extended{types.Extended(pending.description)}
 	}
 
 	if lastVisitedAt != nil {

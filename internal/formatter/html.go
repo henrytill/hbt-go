@@ -45,8 +45,8 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	tags := types.MapToSortedSlice(entity.Labels)
 
 	var extended *string
-	if entity.Extended != nil {
-		s := string(*entity.Extended)
+	if len(entity.Extended) > 0 {
+		s := string(entity.Extended[0])
 		extended = &s
 	}
 
