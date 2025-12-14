@@ -55,9 +55,9 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		Text:      text,
 		AddDate:   entity.CreatedAt.Unix(),
 		Tags:      strings.Join(tags, ","),
-		Private:   !entity.Shared,
-		ToRead:    entity.ToRead,
-		Feed:      entity.IsFeed,
+		Private:   !bool(entity.Shared),
+		ToRead:    bool(entity.ToRead),
+		Feed:      bool(entity.IsFeed),
 		LastVisit: lastVisit,
 		Extended:  extended,
 	}

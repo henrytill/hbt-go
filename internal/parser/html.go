@@ -55,18 +55,18 @@ func add(
 		createdAt = time.Now()
 	}
 
-	var lastVisitedAt *time.Time
+	var lastVisitedAt *types.LastVisitedAt
 	if pending.lastVisit != "" {
 		if parsed, err := strconv.ParseInt(pending.lastVisit, 10, 64); err == nil {
-			t := time.Unix(parsed, 0)
+			t := types.LastVisitedAt(time.Unix(parsed, 0))
 			lastVisitedAt = &t
 		}
 	}
 
-	var updatedAt []time.Time
+	var updatedAt []types.UpdatedAt
 	if pending.lastModified != "" {
 		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
-			updatedAt = append(updatedAt, time.Unix(parsed, 0))
+			updatedAt = append(updatedAt, types.UpdatedAt(time.Unix(parsed, 0)))
 		}
 	}
 
@@ -111,13 +111,13 @@ func add(
 
 	entity := types.Entity{
 		URI:       parsedURL,
-		CreatedAt: createdAt,
+		CreatedAt: types.CreatedAt(createdAt),
 		UpdatedAt: updatedAt,
 		Names:     names,
 		Labels:    labels,
-		Shared:    shared,
-		ToRead:    toRead,
-		IsFeed:    isFeed,
+		Shared:    types.Shared(shared),
+		ToRead:    types.ToRead(toRead),
+		IsFeed:    types.IsFeed(isFeed),
 	}
 
 	if pending.description != "" {

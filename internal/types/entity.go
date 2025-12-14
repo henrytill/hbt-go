@@ -14,25 +14,59 @@ type Name string
 type Label string
 type Extended string
 
+type Shared bool
+type ToRead bool
+type IsFeed bool
+
+type CreatedAt time.Time
+
+func (c CreatedAt) Unix() int64 {
+	return time.Time(c).Unix()
+}
+
+func (c CreatedAt) Before(other CreatedAt) bool {
+	return time.Time(c).Before(time.Time(other))
+}
+
+func (c CreatedAt) After(other CreatedAt) bool {
+	return time.Time(c).After(time.Time(other))
+}
+
+type UpdatedAt time.Time
+
+func (u UpdatedAt) Unix() int64 {
+	return time.Time(u).Unix()
+}
+
+func (u UpdatedAt) Before(other UpdatedAt) bool {
+	return time.Time(u).Before(time.Time(other))
+}
+
+type LastVisitedAt time.Time
+
+func (l LastVisitedAt) Unix() int64 {
+	return time.Time(l).Unix()
+}
+
 type Entity struct {
 	URI           *url.URL
-	CreatedAt     time.Time
-	UpdatedAt     []time.Time
+	CreatedAt     CreatedAt
+	UpdatedAt     []UpdatedAt
 	Names         map[Name]struct{}
 	Labels        map[Label]struct{}
-	Shared        bool
-	ToRead        bool
-	IsFeed        bool
+	Shared        Shared
+	ToRead        ToRead
+	IsFeed        IsFeed
 	Extended      []Extended
-	LastVisitedAt *time.Time
+	LastVisitedAt *LastVisitedAt
 }
 
 func (e *Entity) absorb(other Entity) {
 	if other.CreatedAt.Before(e.CreatedAt) {
-		e.UpdatedAt = append(e.UpdatedAt, e.CreatedAt)
+		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
 	} else if other.CreatedAt.After(e.CreatedAt) {
-		e.UpdatedAt = append(e.UpdatedAt, other.CreatedAt)
+		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(other.CreatedAt))
 	}
 
 	sort.Slice(e.UpdatedAt, func(i, j int) bool {
@@ -129,9 +163,9 @@ func (e Entity) toRepr() entityRepr {
 		UpdatedAt:     updatedAtUnix,
 		Names:         MapToSortedSlice(e.Names),
 		Labels:        MapToSortedSlice(e.Labels),
-		Shared:        e.Shared,
-		ToRead:        e.ToRead,
-		IsFeed:        e.IsFeed,
+		Shared:        bool(e.Shared),
+		ToRead:        bool(e.ToRead),
+		IsFeed:        bool(e.IsFeed),
 		Extended:      extended,
 		LastVisitedAt: lastVisitedAtUnix,
 	}
@@ -148,15 +182,15 @@ func (e *Entity) fromRepr(s entityRepr) error {
 		e.URI = nil
 	}
 
-	e.CreatedAt = time.Unix(s.CreatedAt, 0)
+	e.CreatedAt = CreatedAt(time.Unix(s.CreatedAt, 0))
 
-	e.UpdatedAt = make([]time.Time, len(s.UpdatedAt))
+	e.UpdatedAt = make([]UpdatedAt, len(s.UpdatedAt))
 	for i, unix := range s.UpdatedAt {
-		e.UpdatedAt[i] = time.Unix(unix, 0)
+		e.UpdatedAt[i] = UpdatedAt(time.Unix(unix, 0))
 	}
 
 	if s.LastVisitedAt != nil {
-		t := time.Unix(*s.LastVisitedAt, 0)
+		t := LastVisitedAt(time.Unix(*s.LastVisitedAt, 0))
 		e.LastVisitedAt = &t
 	} else {
 		e.LastVisitedAt = nil
@@ -164,9 +198,9 @@ func (e *Entity) fromRepr(s entityRepr) error {
 
 	e.Names = sliceToMap[Name](s.Names)
 	e.Labels = sliceToMap[Label](s.Labels)
-	e.Shared = s.Shared
-	e.ToRead = s.ToRead
-	e.IsFeed = s.IsFeed
+	e.Shared = Shared(s.Shared)
+	e.ToRead = ToRead(s.ToRead)
+	e.IsFeed = IsFeed(s.IsFeed)
 
 	if len(s.Extended) > 0 {
 		e.Extended = make([]Extended, len(s.Extended))
@@ -207,8 +241,8 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 		}
 	}
 
-	shared := p.Shared == "yes"
-	toRead := p.ToRead == "yes"
+	shared := Shared(p.Shared == "yes")
+	toRead := ToRead(p.ToRead == "yes")
 
 	var extended []Extended
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
@@ -217,13 +251,13 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 
 	entity := Entity{
 		URI:       parsedURL,
-		CreatedAt: createdAt,
-		UpdatedAt: []time.Time{},
+		CreatedAt: CreatedAt(createdAt),
+		UpdatedAt: []UpdatedAt{},
 		Names:     names,
 		Labels:    labels,
 		Shared:    shared,
 		ToRead:    toRead,
-		IsFeed:    false,
+		IsFeed:    IsFeed(false),
 		Extended:  extended,
 	}
 

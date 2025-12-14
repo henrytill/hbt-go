@@ -34,13 +34,13 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 
 	entity := types.Entity{
 		URI:       parsedURL,
-		CreatedAt: state.currentDate,
-		UpdatedAt: []time.Time{},
+		CreatedAt: types.CreatedAt(state.currentDate),
+		UpdatedAt: []types.UpdatedAt{},
 		Names:     make(map[Name]struct{}),
 		Labels:    make(map[Label]struct{}),
-		Shared:    false,
-		ToRead:    false,
-		IsFeed:    false,
+		Shared:    types.Shared(false),
+		ToRead:    types.ToRead(false),
+		IsFeed:    types.IsFeed(false),
 	}
 
 	if linkTitle != "" {
