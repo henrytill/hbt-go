@@ -1,8 +1,8 @@
 .SUFFIXES:
 
 GO = go
-CTAGS = ctags
-ETAGS = ctags -e
+CTAGS = universal-ctags
+ETAGS = universal-ctags -e
 
 STATICCHECK = staticcheck
 DEADCODE = deadcode
