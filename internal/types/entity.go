@@ -24,12 +24,12 @@ func (c CreatedAt) Unix() int64 {
 	return time.Time(c).Unix()
 }
 
-func (c CreatedAt) Before(other CreatedAt) bool {
-	return time.Time(c).Before(time.Time(other))
+func (c CreatedAt) Before(d CreatedAt) bool {
+	return time.Time(c).Before(time.Time(d))
 }
 
-func (c CreatedAt) After(other CreatedAt) bool {
-	return time.Time(c).After(time.Time(other))
+func (c CreatedAt) After(d CreatedAt) bool {
+	return time.Time(c).After(time.Time(d))
 }
 
 type UpdatedAt time.Time
@@ -38,8 +38,8 @@ func (u UpdatedAt) Unix() int64 {
 	return time.Time(u).Unix()
 }
 
-func (u UpdatedAt) Before(other UpdatedAt) bool {
-	return time.Time(u).Before(time.Time(other))
+func (u UpdatedAt) Before(v UpdatedAt) bool {
+	return time.Time(u).Before(time.Time(v))
 }
 
 type LastVisitedAt struct{ t *time.Time }
@@ -55,15 +55,15 @@ func (l LastVisitedAt) Time() (time.Time, bool) {
 	return *l.t, true
 }
 
-func (l LastVisitedAt) Concat(r LastVisitedAt) LastVisitedAt {
+func (l LastVisitedAt) Concat(m LastVisitedAt) LastVisitedAt {
 	if l.t == nil {
-		return r
+		return m
 	}
-	if r.t == nil {
+	if m.t == nil {
 		return l
 	}
-	if l.t.Before(*r.t) {
-		return r
+	if l.t.Before(*m.t) {
+		return m
 	}
 	return l
 }
@@ -161,18 +161,18 @@ func (e Entity) toRepr() entityRepr {
 		updatedAtUnix[i] = t.Unix()
 	}
 
-	var lastVisitedAtUnix *int64
-	if t, ok := e.LastVisitedAt.Time(); ok {
-		unix := t.Unix()
-		lastVisitedAtUnix = &unix
-	}
-
 	var extended []string
 	if len(e.Extended) > 0 {
 		extended = make([]string, len(e.Extended))
 		for i, ext := range e.Extended {
 			extended[i] = string(ext)
 		}
+	}
+
+	var lastVisitedAt *int64
+	if t, ok := e.LastVisitedAt.Time(); ok {
+		unix := t.Unix()
+		lastVisitedAt = &unix
 	}
 
 	return entityRepr{
@@ -185,7 +185,7 @@ func (e Entity) toRepr() entityRepr {
 		ToRead:        bool(e.ToRead),
 		IsFeed:        bool(e.IsFeed),
 		Extended:      extended,
-		LastVisitedAt: lastVisitedAtUnix,
+		LastVisitedAt: lastVisitedAt,
 	}
 }
 
