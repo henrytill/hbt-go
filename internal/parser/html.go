@@ -84,23 +84,21 @@ func add(
 		labels[Label(folder)] = struct{}{}
 	}
 
-	shared := true
-	if pending.private == "1" {
-		shared = false
+	var shared types.Shared
+	if pending.private != "" {
+		shared = types.NewShared(pending.private != "1")
 	}
 
-	toRead := false
+	var toRead types.ToRead
 	if pending.toRead == "1" {
-		toRead = true
+		toRead = types.NewToRead(true)
+	} else if pending.tags != "" && strings.Contains(pending.tags, "toread") {
+		toRead = types.NewToRead(true)
 	}
 
-	if pending.tags != "" {
-		toRead = toRead || strings.Contains(pending.tags, "toread")
-	}
-
-	isFeed := false
+	var isFeed types.IsFeed
 	if pending.feed == "true" {
-		isFeed = true
+		isFeed = types.NewIsFeed(true)
 	}
 
 	names := make(map[Name]struct{})
@@ -114,9 +112,9 @@ func add(
 		UpdatedAt: updatedAt,
 		Names:     names,
 		Labels:    labels,
-		Shared:    types.Shared(shared),
-		ToRead:    types.ToRead(toRead),
-		IsFeed:    types.IsFeed(isFeed),
+		Shared:    shared,
+		ToRead:    toRead,
+		IsFeed:    isFeed,
 	}
 
 	if pending.description != "" {

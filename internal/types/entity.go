@@ -14,9 +14,74 @@ type Name string
 type Label string
 type Extended string
 
-type Shared bool
-type ToRead bool
-type IsFeed bool
+type Shared struct {
+	Bool  bool
+	Valid bool
+}
+
+func NewShared(b bool) Shared {
+	return Shared{Bool: b, Valid: true}
+}
+
+func (s Shared) Get() (bool, bool) {
+	return s.Bool, s.Valid
+}
+
+func (s Shared) Concat(t Shared) Shared {
+	if !s.Valid {
+		return t
+	}
+	if !t.Valid {
+		return s
+	}
+	return Shared{Bool: s.Bool || t.Bool, Valid: true}
+}
+
+type ToRead struct {
+	Bool  bool
+	Valid bool
+}
+
+func NewToRead(b bool) ToRead {
+	return ToRead{Bool: b, Valid: true}
+}
+
+func (r ToRead) Get() (bool, bool) {
+	return r.Bool, r.Valid
+}
+
+func (r ToRead) Concat(s ToRead) ToRead {
+	if !r.Valid {
+		return s
+	}
+	if !s.Valid {
+		return r
+	}
+	return ToRead{Bool: r.Bool || s.Bool, Valid: true}
+}
+
+type IsFeed struct {
+	Bool  bool
+	Valid bool
+}
+
+func NewIsFeed(b bool) IsFeed {
+	return IsFeed{Bool: b, Valid: true}
+}
+
+func (f IsFeed) Get() (bool, bool) {
+	return f.Bool, f.Valid
+}
+
+func (f IsFeed) Concat(g IsFeed) IsFeed {
+	if !f.Valid {
+		return g
+	}
+	if !g.Valid {
+		return f
+	}
+	return IsFeed{Bool: f.Bool || g.Bool, Valid: true}
+}
 
 type CreatedAt time.Time
 
@@ -106,9 +171,9 @@ func (e *Entity) absorb(other Entity) {
 		e.Labels[k] = struct{}{}
 	}
 
-	e.Shared = e.Shared || other.Shared
-	e.ToRead = e.ToRead || other.ToRead
-	e.IsFeed = e.IsFeed || other.IsFeed
+	e.Shared = e.Shared.Concat(other.Shared)
+	e.ToRead = e.ToRead.Concat(other.ToRead)
+	e.IsFeed = e.IsFeed.Concat(other.IsFeed)
 
 	e.Extended = append(e.Extended, other.Extended...)
 
@@ -121,9 +186,9 @@ type entityRepr struct {
 	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
 	Names         []string `yaml:"names"                   json:"names"`
 	Labels        []string `yaml:"labels"                  json:"labels"`
-	Shared        bool     `yaml:"shared"                  json:"shared"`
-	ToRead        bool     `yaml:"toRead"                  json:"toRead"`
-	IsFeed        bool     `yaml:"isFeed"                  json:"isFeed"`
+	Shared        *bool    `yaml:"shared,omitempty"        json:"shared,omitempty"`
+	ToRead        *bool    `yaml:"toRead,omitempty"        json:"toRead,omitempty"`
+	IsFeed        *bool    `yaml:"isFeed,omitempty"        json:"isFeed,omitempty"`
 	Extended      []string `yaml:"extended,omitempty"      json:"extended,omitempty"`
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
@@ -175,15 +240,30 @@ func (e Entity) toRepr() entityRepr {
 		lastVisitedAt = &unix
 	}
 
+	var shared *bool
+	if e.Shared.Valid {
+		shared = &e.Shared.Bool
+	}
+
+	var toRead *bool
+	if e.ToRead.Valid {
+		toRead = &e.ToRead.Bool
+	}
+
+	var isFeed *bool
+	if e.IsFeed.Valid {
+		isFeed = &e.IsFeed.Bool
+	}
+
 	return entityRepr{
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
 		UpdatedAt:     updatedAtUnix,
 		Names:         MapToSortedSlice(e.Names),
 		Labels:        MapToSortedSlice(e.Labels),
-		Shared:        bool(e.Shared),
-		ToRead:        bool(e.ToRead),
-		IsFeed:        bool(e.IsFeed),
+		Shared:        shared,
+		ToRead:        toRead,
+		IsFeed:        isFeed,
 		Extended:      extended,
 		LastVisitedAt: lastVisitedAt,
 	}
@@ -215,9 +295,24 @@ func (e *Entity) fromRepr(s entityRepr) error {
 
 	e.Names = sliceToMap[Name](s.Names)
 	e.Labels = sliceToMap[Label](s.Labels)
-	e.Shared = Shared(s.Shared)
-	e.ToRead = ToRead(s.ToRead)
-	e.IsFeed = IsFeed(s.IsFeed)
+
+	if s.Shared != nil {
+		e.Shared = NewShared(*s.Shared)
+	} else {
+		e.Shared = Shared{}
+	}
+
+	if s.ToRead != nil {
+		e.ToRead = NewToRead(*s.ToRead)
+	} else {
+		e.ToRead = ToRead{}
+	}
+
+	if s.IsFeed != nil {
+		e.IsFeed = NewIsFeed(*s.IsFeed)
+	} else {
+		e.IsFeed = IsFeed{}
+	}
 
 	if len(s.Extended) > 0 {
 		e.Extended = make([]Extended, len(s.Extended))
@@ -258,9 +353,6 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 		}
 	}
 
-	shared := Shared(p.Shared == "yes")
-	toRead := ToRead(p.ToRead == "yes")
-
 	var extended []Extended
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
 		extended = []Extended{Extended(trimmedExt)}
@@ -272,9 +364,9 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 		UpdatedAt: []UpdatedAt{},
 		Names:     names,
 		Labels:    labels,
-		Shared:    shared,
-		ToRead:    toRead,
-		IsFeed:    IsFeed(false),
+		Shared:    NewShared(p.Shared == "yes"),
+		ToRead:    NewToRead(p.ToRead == "yes"),
+		IsFeed:    NewIsFeed(false),
 		Extended:  extended,
 	}
 

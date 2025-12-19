@@ -38,9 +38,6 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 		UpdatedAt: []types.UpdatedAt{},
 		Names:     make(map[Name]struct{}),
 		Labels:    make(map[Label]struct{}),
-		Shared:    types.Shared(false),
-		ToRead:    types.ToRead(false),
-		IsFeed:    types.IsFeed(false),
 	}
 
 	if linkTitle != "" {

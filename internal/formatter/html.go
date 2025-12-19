@@ -50,14 +50,29 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		extended = &s
 	}
 
+	var private bool
+	if shared, ok := entity.Shared.Get(); ok {
+		private = !shared
+	}
+
+	var toRead bool
+	if tr, ok := entity.ToRead.Get(); ok {
+		toRead = tr
+	}
+
+	var feed bool
+	if f, ok := entity.IsFeed.Get(); ok {
+		feed = f
+	}
+
 	ret := templateEntity{
 		Href:      href,
 		Text:      text,
 		AddDate:   entity.CreatedAt.Unix(),
 		Tags:      strings.Join(tags, ","),
-		Private:   !bool(entity.Shared),
-		ToRead:    bool(entity.ToRead),
-		Feed:      bool(entity.IsFeed),
+		Private:   private,
+		ToRead:    toRead,
+		Feed:      feed,
 		LastVisit: lastVisit,
 		Extended:  extended,
 	}
