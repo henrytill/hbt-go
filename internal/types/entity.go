@@ -107,27 +107,27 @@ func (u UpdatedAt) Before(v UpdatedAt) bool {
 	return time.Time(u).Before(time.Time(v))
 }
 
-type LastVisitedAt struct{ t *time.Time }
-
-func NewLastVisitedAt(t time.Time) LastVisitedAt {
-	return LastVisitedAt{t: &t}
+type LastVisitedAt struct {
+	Time  time.Time
+	Valid bool
 }
 
-func (l LastVisitedAt) Time() (time.Time, bool) {
-	if l.t == nil {
-		return time.Time{}, false
-	}
-	return *l.t, true
+func NewLastVisitedAt(t time.Time) LastVisitedAt {
+	return LastVisitedAt{Time: t, Valid: true}
+}
+
+func (l LastVisitedAt) Get() (time.Time, bool) {
+	return l.Time, l.Valid
 }
 
 func (l LastVisitedAt) Concat(m LastVisitedAt) LastVisitedAt {
-	if l.t == nil {
+	if !l.Valid {
 		return m
 	}
-	if m.t == nil {
+	if !m.Valid {
 		return l
 	}
-	if l.t.Before(*m.t) {
+	if l.Time.Before(m.Time) {
 		return m
 	}
 	return l
@@ -235,7 +235,7 @@ func (e Entity) toRepr() entityRepr {
 	}
 
 	var lastVisitedAt *int64
-	if t, ok := e.LastVisitedAt.Time(); ok {
+	if t, ok := e.LastVisitedAt.Get(); ok {
 		unix := t.Unix()
 		lastVisitedAt = &unix
 	}
