@@ -241,18 +241,18 @@ func (e Entity) toRepr() entityRepr {
 	}
 
 	var shared *bool
-	if e.Shared.Valid {
-		shared = &e.Shared.Bool
+	if s, ok := e.Shared.Get(); ok {
+		shared = &s
 	}
 
 	var toRead *bool
-	if e.ToRead.Valid {
-		toRead = &e.ToRead.Bool
+	if tr, ok := e.ToRead.Get(); ok {
+		toRead = &tr
 	}
 
 	var isFeed *bool
-	if e.IsFeed.Valid {
-		isFeed = &e.IsFeed.Bool
+	if f, ok := e.IsFeed.Get(); ok {
+		isFeed = &f
 	}
 
 	return entityRepr{
