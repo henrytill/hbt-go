@@ -3,6 +3,7 @@ package formatter
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -17,11 +18,18 @@ type templateEntity struct {
 	AddDate      int64
 	LastModified *int64
 	Tags         string
-	Private      bool
-	ToRead       bool
-	Feed         bool
+	Private      string
+	ToRead       string
+	Feed         string
 	LastVisit    *int64
 	Extended     *string
+}
+
+func stringOfBool(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
 }
 
 func newTemplateEntity(entity types.Entity) templateEntity {
@@ -50,19 +58,19 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		extended = &s
 	}
 
-	var private bool
+	var private string
 	if shared, ok := entity.Shared.Get(); ok {
-		private = !shared
+		private = stringOfBool(!shared)
 	}
 
-	var toRead bool
+	var toRead string
 	if tr, ok := entity.ToRead.Get(); ok {
-		toRead = tr
+		toRead = stringOfBool(tr)
 	}
 
-	var feed bool
+	var feed string
 	if f, ok := entity.IsFeed.Get(); ok {
-		feed = f
+		feed = strconv.FormatBool(f)
 	}
 
 	ret := templateEntity{
@@ -96,10 +104,10 @@ func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
         {{- if .AddDate}} ADD_DATE="{{.AddDate}}"{{end}}
         {{- if .LastModified}} LAST_MODIFIED="{{.LastModified}}"{{end}}
         {{- if .Tags}} TAGS="{{.Tags}}"{{end}}
-        {{- if .Private}} PRIVATE="1"{{end}}
+        {{- if .Private}} PRIVATE="{{.Private}}"{{end}}
         {{- if .LastVisit}} LAST_VISIT="{{.LastVisit}}"{{end}}
-        {{- if .ToRead}} TOREAD="1"{{end}}
-        {{- if .Feed}} FEED="true"{{end}}>{{.Text}}</A>
+        {{- if .ToRead}} TOREAD="{{.ToRead}}"{{end}}
+        {{- if .Feed}} FEED="{{.Feed}}"{{end}}>{{.Text}}</A>
 {{- if .Extended}}
     <DD>{{.Extended}}
 {{- end}}

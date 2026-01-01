@@ -90,8 +90,8 @@ func add(
 	}
 
 	var toRead types.ToRead
-	if pending.toRead == "1" {
-		toRead = types.NewToRead(true)
+	if pending.toRead != "" {
+		toRead = types.NewToRead(pending.toRead == "1")
 	} else if pending.tags != "" && strings.Contains(pending.tags, "toread") {
 		toRead = types.NewToRead(true)
 	}
