@@ -147,7 +147,7 @@ func newFilled(width int, fill Kleene) *Vec {
 		fillKnown = ^uint64(0)
 		fillValue = ^uint64(0)
 	}
-	for i := 0; i < nw; i++ {
+	for i := range nw {
 		words[2*i] = fillKnown
 		words[2*i+1] = fillValue
 	}
