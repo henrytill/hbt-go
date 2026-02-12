@@ -15,6 +15,7 @@ BINDIR = bin
 
 SOURCES =
 SOURCES += internal/formats.go
+SOURCES += internal/attic/kleene.go
 SOURCES += internal/types/collection.go
 SOURCES += internal/types/entity.go
 SOURCES += internal/types/intf.go
