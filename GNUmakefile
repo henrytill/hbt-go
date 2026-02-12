@@ -53,6 +53,9 @@ lint:
 	$(STATICCHECK) ./...
 	$(DEADCODE) -test ./...
 
+fix:
+	$(GO) fix ./...
+
 fmt:
 	$(GO) fmt ./...
 
@@ -72,4 +75,4 @@ clean:
 distclean: clean
 	rmdir $(BINDIR)
 
-.PHONY: all lint fmt tags TAGS test clean distclean
+.PHONY: all lint fix fmt tags TAGS test clean distclean
