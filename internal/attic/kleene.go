@@ -1,173 +1,60 @@
-// Package kleene implements Kleene's three-valued logic: a scalar type and a packed bitvector.
-package kleene
+package attic
 
-import (
-	"errors"
-	"math/bits"
-)
+import "math/bits"
 
-// Kleene represents a single Kleene truth value.
+// KleeneVec is a packed bitvector using an interleaved two-bitplane layout:
+// [pos_0, neg_0, pos_1, neg_1, ...].
 //
-// Encoding: (known_bit << 1) | value_bit
-//
-//	Unknown = 0b00 (known=0, value=0)
-//	False   = 0b10 (known=1, value=0)
-//	True    = 0b11 (known=1, value=1)
-type Kleene uint8
-
-const (
-	Unknown Kleene = 0b00
-	False   Kleene = 0b10
-	True    Kleene = 0b11
-)
-
-// fromBits maps a 2-bit pair (known_bit<<1 | value_bit) to a Kleene value.
-// Index 0b01 (known=0, value=1) is impossible by construction; it maps to
-// Unknown as a safe fallback.
-var fromBits = [4]Kleene{
-	Unknown, // 0b00
-	Unknown, // 0b01: impossible, safe fallback
-	False,   // 0b10
-	True,    // 0b11
-}
-
-// IsKnown reports whether the value is True or False (not Unknown).
-func (k Kleene) IsKnown() bool {
-	return k&0b10 != 0
-}
-
-// ToBool returns the boolean value and whether it is known.
-// If !ok, the val return is meaningless.
-func (k Kleene) ToBool() (val bool, ok bool) {
-	if k.IsKnown() {
-		return k&1 != 0, true
-	}
-	return false, false
-}
-
-// Not returns the Kleene negation.
-func (k Kleene) Not() Kleene {
-	switch k {
-	case True:
-		return False
-	case False:
-		return True
-	default:
-		return Unknown
-	}
-}
-
-// And returns the Kleene conjunction.
-func (k Kleene) And(other Kleene) Kleene {
-	switch {
-	case k == True:
-		return other
-	case k == False || (k == Unknown && other == False):
-		return False
-	default:
-		return Unknown
-	}
-}
-
-// Or returns the Kleene disjunction.
-func (k Kleene) Or(other Kleene) Kleene {
-	switch {
-	case k == False:
-		return other
-	case k == True || (k == Unknown && other == True):
-		return True
-	default:
-		return Unknown
-	}
-}
-
-// Implies returns the Kleene material implication (¬k ∨ other).
-func (k Kleene) Implies(other Kleene) Kleene {
-	return k.Not().Or(other)
-}
-
-func (k Kleene) String() string {
-	switch k {
-	case True:
-		return "True"
-	case False:
-		return "False"
-	default:
-		return "Unknown"
-	}
-}
-
-// ErrOutOfBounds is returned when an index exceeds the vector width.
-var ErrOutOfBounds = errors.New("index out of bounds")
-
-const (
-	bitsLog2 = 6
-	bitsMask = (1 << bitsLog2) - 1
-)
-
-func wordsNeeded(n int) int {
-	return (n + bitsMask) >> bitsLog2
-}
-
-func tailMask(n int) uint64 {
-	r := n & bitsMask
-	if r == 0 {
-		return ^uint64(0)
-	}
-	return (1 << r) - 1
-}
-
-// Vec is a packed Kleene bitvector using an interleaved two-bitplane layout:
-// [known_0, value_0, known_1, value_1, ...].
-//
-// Invariant: value bits are a subset of known bits within every pair.
+// Invariant: pos & neg == 0 within every word pair (no position is Both).
 // Unused high bits in the last word pair are always zero.
-type Vec struct {
+type KleeneVec struct {
 	width int
 	words []uint64
 }
 
-// NewVec creates a vector of width elements, all Unknown.
-func NewVec(width int) *Vec {
+func NewKleeneVec(width int) *KleeneVec {
 	nw := wordsNeeded(width)
-	return &Vec{
+	return &KleeneVec{
 		width: width,
 		words: make([]uint64, 2*nw),
 	}
 }
 
-func newFilled(width int, fill Kleene) *Vec {
+func newKleeneFilled(width int, fill Value) *KleeneVec {
 	nw := wordsNeeded(width)
 	words := make([]uint64, 2*nw)
-	var fillKnown, fillValue uint64
+	var fillPos, fillNeg uint64
 	switch fill {
-	case False:
-		fillKnown = ^uint64(0)
 	case True:
-		fillKnown = ^uint64(0)
-		fillValue = ^uint64(0)
+		fillPos = ^uint64(0)
+	case False:
+		fillNeg = ^uint64(0)
 	}
 	for i := range nw {
-		words[2*i] = fillKnown
-		words[2*i+1] = fillValue
+		words[2*i] = fillPos
+		words[2*i+1] = fillNeg
 	}
-	v := &Vec{width: width, words: words}
+	v := &KleeneVec{width: width, words: words}
 	v.maskTail()
 	return v
 }
 
-// AllTrue creates a vector of width elements, all True.
-func AllTrue(width int) *Vec { return newFilled(width, True) }
+func KleeneAllTrue(width int) *KleeneVec  { return newKleeneFilled(width, True) }
+func KleeneAllFalse(width int) *KleeneVec { return newKleeneFilled(width, False) }
 
-// AllFalse creates a vector of width elements, all False.
-func AllFalse(width int) *Vec { return newFilled(width, False) }
-
-// Width returns the number of elements.
-func (v *Vec) Width() int {
+func (v *KleeneVec) Width() int {
 	return v.width
 }
 
-func (v *Vec) maskTail() {
+func (v *KleeneVec) wordsRaw() []uint64 {
+	return v.words
+}
+
+func kleeneVecFromRawParts(width int, words []uint64) *KleeneVec {
+	return &KleeneVec{width: width, words: words}
+}
+
+func (v *KleeneVec) maskTail() {
 	nw := wordsNeeded(v.width)
 	if nw > 0 {
 		m := tailMask(v.width)
@@ -177,8 +64,7 @@ func (v *Vec) maskTail() {
 	}
 }
 
-// Truncate reduces the width. No-op if newWidth >= current width.
-func (v *Vec) Truncate(newWidth int) {
+func (v *KleeneVec) Truncate(newWidth int) {
 	if newWidth >= v.width {
 		return
 	}
@@ -188,9 +74,10 @@ func (v *Vec) Truncate(newWidth int) {
 	v.maskTail()
 }
 
-// Resize changes the width, filling new positions with fill.
-// Shrinking delegates to Truncate.
-func (v *Vec) Resize(newWidth int, fill Kleene) {
+func (v *KleeneVec) Resize(newWidth int, fill Value) {
+	if fill == Both {
+		panic("attic: KleeneVec.Resize called with Both")
+	}
 	if newWidth <= v.width {
 		v.Truncate(newWidth)
 		return
@@ -199,55 +86,52 @@ func (v *Vec) Resize(newWidth int, fill Kleene) {
 	oldNw := wordsNeeded(oldWidth)
 	newNw := wordsNeeded(newWidth)
 
-	var fillKnown, fillValue uint64
+	var fillPos, fillNeg uint64
 	switch fill {
-	case False:
-		fillKnown = ^uint64(0)
 	case True:
-		fillKnown = ^uint64(0)
-		fillValue = ^uint64(0)
+		fillPos = ^uint64(0)
+	case False:
+		fillNeg = ^uint64(0)
 	}
 
-	// Fill remaining bits in the current last word pair.
 	if oldNw > 0 && oldWidth&bitsMask != 0 {
 		highMask := ^tailMask(oldWidth)
 		base := 2 * (oldNw - 1)
-		v.words[base] |= fillKnown & highMask
-		v.words[base+1] |= fillValue & highMask
+		v.words[base] |= fillPos & highMask
+		v.words[base+1] |= fillNeg & highMask
 	}
 
-	// Grow by appending interleaved pairs.
 	for i := oldNw; i < newNw; i++ {
-		v.words = append(v.words, fillKnown, fillValue)
+		v.words = append(v.words, fillPos, fillNeg)
 	}
 	v.width = newWidth
-	if fill.IsKnown() {
+	if fill.HasInfo() {
 		v.maskTail()
 	}
 }
 
-// Get returns the value at index i, or ErrOutOfBounds.
-func (v *Vec) Get(i int) (Kleene, error) {
+func (v *KleeneVec) Get(i int) (Value, error) {
 	if i < 0 || i >= v.width {
 		return Unknown, ErrOutOfBounds
 	}
 	return v.getUnchecked(i), nil
 }
 
-func (v *Vec) getUnchecked(i int) Kleene {
+func (v *KleeneVec) getUnchecked(i int) Value {
 	w := i >> bitsLog2
 	b := uint(i & bitsMask)
 	base := 2 * w
-	knownBit := (v.words[base] >> b) & 1
-	valueBit := (v.words[base+1] >> b) & 1
-	return fromBits[knownBit<<1|valueBit]
+	posBit := (v.words[base] >> b) & 1
+	negBit := (v.words[base+1] >> b) & 1
+	return fromBits[negBit<<1|posBit]
 }
 
-// Set sets the value at index i, auto-growing the vector if necessary.
-// Panics if i is negative.
-func (v *Vec) Set(i int, val Kleene) {
+func (v *KleeneVec) Set(i int, val Value) {
 	if i < 0 {
-		panic("kleene: negative index")
+		panic("attic: negative index")
+	}
+	if val == Both {
+		panic("attic: KleeneVec.Set called with Both")
 	}
 	if i >= v.width {
 		newWidth := i + 1
@@ -261,177 +145,139 @@ func (v *Vec) Set(i int, val Kleene) {
 	v.setUnchecked(i, val)
 }
 
-func (v *Vec) setUnchecked(i int, val Kleene) {
+func (v *KleeneVec) setUnchecked(i int, val Value) {
 	w := i >> bitsLog2
 	b := uint(i & bitsMask)
 	base := 2 * w
 	switch val {
 	case True:
 		v.words[base] |= 1 << b
-		v.words[base+1] |= 1 << b
-	case False:
-		v.words[base] |= 1 << b
 		v.words[base+1] &^= 1 << b
+	case False:
+		v.words[base] &^= 1 << b
+		v.words[base+1] |= 1 << b
 	default: // Unknown
 		v.words[base] &^= 1 << b
 		v.words[base+1] &^= 1 << b
 	}
 }
 
-// Not returns a new vector with each element negated.
-func (v *Vec) Not() *Vec {
+func (v *KleeneVec) Not() *KleeneVec {
 	out := make([]uint64, len(v.words))
 	for i := 0; i < len(v.words); i += 2 {
-		k := v.words[i]
-		val := v.words[i+1]
-		out[i] = k
-		out[i+1] = k &^ val
+		pos := v.words[i]
+		neg := v.words[i+1]
+		out[i] = neg
+		out[i+1] = pos
 	}
-	r := &Vec{width: v.width, words: out}
+	r := &KleeneVec{width: v.width, words: out}
 	r.maskTail()
 	return r
 }
 
-// Bulk And/Or operate on the interleaved bitplane layout, where each group
-// of 64 elements is stored as two uint64 words: known (k) and value (v).
-// Per-bit encoding: Unknown=(0,0), False=(1,0), True=(1,1).
-//
-// Each function computes two intermediate masks:
-//
-//   resultTrue  — positions where the result is definitively True
-//   resultFalse — positions where the result is definitively False
-//
-// These are combined into the output word pair:
-//
-//   out[known] = resultTrue | resultFalse   (known wherever result is decided)
-//   out[value] = resultTrue                 (value set only for True)
-//
-// Positions in neither mask stay (0,0) = Unknown, which is correct: e.g.
-// True AND Unknown = Unknown, since the position appears in neither set.
-//
-// The formulas mirror the Kleene truth tables:
-//
-//   And: resultTrue  = (ak & av) & (bk & bv)    both True
-//        resultFalse = (ak &^ av) | (bk &^ bv)  either False (False dominates)
-//
-//   Or:  resultTrue  = (ak & av) | (bk & bv)    either True (True dominates)
-//        resultFalse = (ak &^ av) & (bk &^ bv)  both False
-
-// And returns the element-wise Kleene conjunction.
-// If the vectors have different widths, the shorter one is implicitly extended with Unknown.
-func (v *Vec) And(other *Vec) *Vec {
+func (v *KleeneVec) And(other *KleeneVec) *KleeneVec {
 	width := max(v.width, other.width)
 	nw := wordsNeeded(width)
 	out := make([]uint64, 2*nw)
 	for i := range nw {
 		base := 2 * i
-		var ak, av, bk, bv uint64
+		var aPos, aNeg, bPos, bNeg uint64
 		if base+1 < len(v.words) {
-			ak, av = v.words[base], v.words[base+1]
+			aPos, aNeg = v.words[base], v.words[base+1]
 		}
 		if base+1 < len(other.words) {
-			bk, bv = other.words[base], other.words[base+1]
+			bPos, bNeg = other.words[base], other.words[base+1]
 		}
-		resultTrue := (ak & av) & (bk & bv)
-		resultFalse := (ak &^ av) | (bk &^ bv)
-		out[base] = resultTrue | resultFalse
-		out[base+1] = resultTrue
+		out[base], out[base+1] = andWord(aPos, aNeg, bPos, bNeg)
 	}
-	return &Vec{width: width, words: out}
+	return &KleeneVec{width: width, words: out}
 }
 
-// Or returns the element-wise Kleene disjunction.
-// If the vectors have different widths, the shorter one is implicitly extended with Unknown.
-func (v *Vec) Or(other *Vec) *Vec {
+func (v *KleeneVec) Or(other *KleeneVec) *KleeneVec {
 	width := max(v.width, other.width)
 	nw := wordsNeeded(width)
 	out := make([]uint64, 2*nw)
 	for i := range nw {
 		base := 2 * i
-		var ak, av, bk, bv uint64
+		var aPos, aNeg, bPos, bNeg uint64
 		if base+1 < len(v.words) {
-			ak, av = v.words[base], v.words[base+1]
+			aPos, aNeg = v.words[base], v.words[base+1]
 		}
 		if base+1 < len(other.words) {
-			bk, bv = other.words[base], other.words[base+1]
+			bPos, bNeg = other.words[base], other.words[base+1]
 		}
-		resultTrue := (ak & av) | (bk & bv)
-		resultFalse := (ak &^ av) & (bk &^ bv)
-		out[base] = resultTrue | resultFalse
-		out[base+1] = resultTrue
+		out[base], out[base+1] = orWord(aPos, aNeg, bPos, bNeg)
 	}
-	return &Vec{width: width, words: out}
+	return &KleeneVec{width: width, words: out}
 }
 
-// Implies returns the element-wise Kleene material implication.
-func (v *Vec) Implies(other *Vec) *Vec {
+func (v *KleeneVec) Implies(other *KleeneVec) *KleeneVec {
 	return v.Not().Or(other)
 }
 
-// IsAllKnown reports whether every element is True or False.
-func (v *Vec) IsAllKnown() bool {
+func (v *KleeneVec) IsAllKnown() bool {
 	nw := wordsNeeded(v.width)
 	if nw == 0 {
 		return true
 	}
 	m := tailMask(v.width)
 	for i := 0; i < nw-1; i++ {
-		if v.words[2*i] != ^uint64(0) {
-			return false
-		}
-	}
-	return v.words[2*(nw-1)] == m
-}
-
-// IsAllTrue reports whether every element is True.
-func (v *Vec) IsAllTrue() bool {
-	nw := wordsNeeded(v.width)
-	if nw == 0 {
-		return true
-	}
-	m := tailMask(v.width)
-	for i := 0; i < nw-1; i++ {
-		base := 2 * i
-		if v.words[base] != ^uint64(0) || v.words[base+1] != ^uint64(0) {
+		if v.words[2*i]|v.words[2*i+1] != ^uint64(0) {
 			return false
 		}
 	}
 	base := 2 * (nw - 1)
-	return v.words[base] == m && v.words[base+1] == m
+	return v.words[base]|v.words[base+1] == m
 }
 
-// IsAllFalse reports whether every element is False.
-func (v *Vec) IsAllFalse() bool {
-	if !v.IsAllKnown() {
-		return false
+func (v *KleeneVec) IsAllTrue() bool {
+	nw := wordsNeeded(v.width)
+	if nw == 0 {
+		return true
 	}
-	for i := 0; i < len(v.words); i += 2 {
-		if v.words[i+1] != 0 {
+	m := tailMask(v.width)
+	for i := 0; i < nw-1; i++ {
+		base := 2 * i
+		if v.words[base] != ^uint64(0) || v.words[base+1] != 0 {
 			return false
 		}
 	}
-	return true
+	base := 2 * (nw - 1)
+	return v.words[base] == m && v.words[base+1] == 0
 }
 
-// CountTrue returns the number of True elements.
-func (v *Vec) CountTrue() int {
+func (v *KleeneVec) IsAllFalse() bool {
+	nw := wordsNeeded(v.width)
+	if nw == 0 {
+		return true
+	}
+	m := tailMask(v.width)
+	for i := 0; i < nw-1; i++ {
+		base := 2 * i
+		if v.words[base] != 0 || v.words[base+1] != ^uint64(0) {
+			return false
+		}
+	}
+	base := 2 * (nw - 1)
+	return v.words[base] == 0 && v.words[base+1] == m
+}
+
+func (v *KleeneVec) CountTrue() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
-		n += bits.OnesCount64(v.words[i] & v.words[i+1])
+		n += bits.OnesCount64(v.words[i])
 	}
 	return n
 }
 
-// CountFalse returns the number of False elements.
-func (v *Vec) CountFalse() int {
+func (v *KleeneVec) CountFalse() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
-		n += bits.OnesCount64(v.words[i] &^ v.words[i+1])
+		n += bits.OnesCount64(v.words[i+1])
 	}
 	return n
 }
 
-// CountUnknown returns the number of Unknown elements.
-func (v *Vec) CountUnknown() int {
+func (v *KleeneVec) CountUnknown() int {
 	return v.width - v.CountTrue() - v.CountFalse()
 }
