@@ -278,12 +278,6 @@ func (v *Vec) setUnchecked(i int, val Kleene) {
 	}
 }
 
-func (v *Vec) checkWidth(other *Vec) {
-	if v.width != other.width {
-		panic("kleene: Vec width mismatch")
-	}
-}
-
 // Not returns a new vector with each element negated.
 func (v *Vec) Not() *Vec {
 	out := make([]uint64, len(v.words))
@@ -298,34 +292,75 @@ func (v *Vec) Not() *Vec {
 	return r
 }
 
+// Bulk And/Or operate on the interleaved bitplane layout, where each group
+// of 64 elements is stored as two uint64 words: known (k) and value (v).
+// Per-bit encoding: Unknown=(0,0), False=(1,0), True=(1,1).
+//
+// Each function computes two intermediate masks:
+//
+//   resultTrue  — positions where the result is definitively True
+//   resultFalse — positions where the result is definitively False
+//
+// These are combined into the output word pair:
+//
+//   out[known] = resultTrue | resultFalse   (known wherever result is decided)
+//   out[value] = resultTrue                 (value set only for True)
+//
+// Positions in neither mask stay (0,0) = Unknown, which is correct: e.g.
+// True AND Unknown = Unknown, since the position appears in neither set.
+//
+// The formulas mirror the Kleene truth tables:
+//
+//   And: resultTrue  = (ak & av) & (bk & bv)    both True
+//        resultFalse = (ak &^ av) | (bk &^ bv)  either False (False dominates)
+//
+//   Or:  resultTrue  = (ak & av) | (bk & bv)    either True (True dominates)
+//        resultFalse = (ak &^ av) & (bk &^ bv)  both False
+
 // And returns the element-wise Kleene conjunction.
+// If the vectors have different widths, the shorter one is implicitly extended with Unknown.
 func (v *Vec) And(other *Vec) *Vec {
-	v.checkWidth(other)
-	out := make([]uint64, len(v.words))
-	for i := 0; i < len(v.words); i += 2 {
-		ak, av := v.words[i], v.words[i+1]
-		bk, bv := other.words[i], other.words[i+1]
+	width := max(v.width, other.width)
+	nw := wordsNeeded(width)
+	out := make([]uint64, 2*nw)
+	for i := range nw {
+		base := 2 * i
+		var ak, av, bk, bv uint64
+		if base+1 < len(v.words) {
+			ak, av = v.words[base], v.words[base+1]
+		}
+		if base+1 < len(other.words) {
+			bk, bv = other.words[base], other.words[base+1]
+		}
 		resultTrue := (ak & av) & (bk & bv)
 		resultFalse := (ak &^ av) | (bk &^ bv)
-		out[i] = resultTrue | resultFalse
-		out[i+1] = resultTrue
+		out[base] = resultTrue | resultFalse
+		out[base+1] = resultTrue
 	}
-	return &Vec{width: v.width, words: out}
+	return &Vec{width: width, words: out}
 }
 
 // Or returns the element-wise Kleene disjunction.
+// If the vectors have different widths, the shorter one is implicitly extended with Unknown.
 func (v *Vec) Or(other *Vec) *Vec {
-	v.checkWidth(other)
-	out := make([]uint64, len(v.words))
-	for i := 0; i < len(v.words); i += 2 {
-		ak, av := v.words[i], v.words[i+1]
-		bk, bv := other.words[i], other.words[i+1]
+	width := max(v.width, other.width)
+	nw := wordsNeeded(width)
+	out := make([]uint64, 2*nw)
+	for i := range nw {
+		base := 2 * i
+		var ak, av, bk, bv uint64
+		if base+1 < len(v.words) {
+			ak, av = v.words[base], v.words[base+1]
+		}
+		if base+1 < len(other.words) {
+			bk, bv = other.words[base], other.words[base+1]
+		}
 		resultTrue := (ak & av) | (bk & bv)
 		resultFalse := (ak &^ av) & (bk &^ bv)
-		out[i] = resultTrue | resultFalse
-		out[i+1] = resultTrue
+		out[base] = resultTrue | resultFalse
+		out[base+1] = resultTrue
 	}
-	return &Vec{width: v.width, words: out}
+	return &Vec{width: width, words: out}
 }
 
 // Implies returns the element-wise Kleene material implication.

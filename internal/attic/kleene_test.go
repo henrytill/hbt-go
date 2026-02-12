@@ -232,6 +232,88 @@ func TestVecImplies(t *testing.T) {
 	}
 }
 
+// TestVecBinopMismatchedWidths verifies that And, Or, and Implies work with different-width vectors.
+func TestVecBinopMismatchedWidths(t *testing.T) {
+	// short And long: short positions use both operands, extended positions treat short as Unknown.
+	short := AllTrue(10)
+	long := AllFalse(100)
+
+	// True AND False = False for [0,10); Unknown AND False = False for [10,100)
+	c := short.And(long)
+	if c.Width() != 100 {
+		t.Errorf("And width: got %d, want 100", c.Width())
+	}
+	if !c.IsAllFalse() {
+		t.Error("True AND False / Unknown AND False should all be False")
+	}
+
+	// True OR False = True for [0,10); Unknown OR False = Unknown for [10,100)
+	c = short.Or(long)
+	if c.Width() != 100 {
+		t.Errorf("Or width: got %d, want 100", c.Width())
+	}
+	if c.CountTrue() != 10 {
+		t.Errorf("Or true count: got %d, want 10", c.CountTrue())
+	}
+	if c.CountUnknown() != 90 {
+		t.Errorf("Or unknown count: got %d, want 90", c.CountUnknown())
+	}
+
+	// Commutative check: long op short == short op long
+	c1 := long.And(short)
+	c2 := short.And(long)
+	for i := range c1.Width() {
+		g1, _ := c1.Get(i)
+		g2, _ := c2.Get(i)
+		if g1 != g2 {
+			t.Errorf("And not commutative at index %d: %v vs %v", i, g1, g2)
+		}
+	}
+
+	// Implies across widths
+	c = short.Implies(long)
+	if c.Width() != 100 {
+		t.Errorf("Implies width: got %d, want 100", c.Width())
+	}
+	// True -> False = False for [0,10)
+	for i := range 10 {
+		got, _ := c.Get(i)
+		if got != False {
+			t.Errorf("Implies index %d: got %v, want False", i, got)
+		}
+	}
+	// Unknown -> False = Unknown for [10,100)
+	for i := 10; i < 100; i++ {
+		got, _ := c.Get(i)
+		if got != Unknown {
+			t.Errorf("Implies index %d: got %v, want Unknown", i, got)
+		}
+	}
+}
+
+// TestVecBinopMismatchedWidthsCrossWord verifies mismatched-width ops across word boundaries.
+func TestVecBinopMismatchedWidthsCrossWord(t *testing.T) {
+	short := AllTrue(30)
+	long := AllTrue(200)
+
+	c := short.And(long)
+	if c.Width() != 200 {
+		t.Errorf("width: got %d, want 200", c.Width())
+	}
+	if c.CountTrue() != 30 {
+		t.Errorf("true count: got %d, want 30", c.CountTrue())
+	}
+	// Unknown AND True = Unknown for [30,200)
+	if c.CountUnknown() != 170 {
+		t.Errorf("unknown count: got %d, want 170", c.CountUnknown())
+	}
+
+	c = short.Or(long)
+	if !c.IsAllTrue() {
+		t.Error("True OR True / Unknown OR True should all be True")
+	}
+}
+
 // TestCounts verifies CountTrue, CountFalse, and CountUnknown on a mixed vector.
 func TestCounts(t *testing.T) {
 	v := NewVec(10)
