@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestScalarOps verifies the full truth tables for Not, And, Or, and Implies.
 func TestScalarOps(t *testing.T) {
 	check := func(got, want Kleene) {
 		t.Helper()
@@ -27,8 +28,52 @@ func TestScalarOps(t *testing.T) {
 	check(False.Or(Unknown), Unknown)
 	check(True.Or(Unknown), True)
 	check(Unknown.Or(Unknown), Unknown)
+
+	check(True.Implies(True), True)
+	check(True.Implies(False), False)
+	check(True.Implies(Unknown), Unknown)
+	check(False.Implies(False), True)
+	check(False.Implies(True), True)
+	check(False.Implies(Unknown), True)
+	check(Unknown.Implies(True), True)
+	check(Unknown.Implies(False), Unknown)
+	check(Unknown.Implies(Unknown), Unknown)
 }
 
+// TestToBool verifies the Kleene to (bool, bool) conversion for all three values.
+func TestToBool(t *testing.T) {
+	val, ok := True.ToBool()
+	if !ok || !val {
+		t.Errorf("True.ToBool() = (%v, %v), want (true, true)", val, ok)
+	}
+	val, ok = False.ToBool()
+	if !ok || val {
+		t.Errorf("False.ToBool() = (%v, %v), want (false, true)", val, ok)
+	}
+	val, ok = Unknown.ToBool()
+	if ok {
+		t.Errorf("Unknown.ToBool() = (%v, %v), want (_, false)", val, ok)
+	}
+}
+
+// TestString verifies the string representations of all three Kleene values.
+func TestString(t *testing.T) {
+	tests := []struct {
+		k    Kleene
+		want string
+	}{
+		{True, "True"},
+		{False, "False"},
+		{Unknown, "Unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.k.String(); got != tt.want {
+			t.Errorf("%d.String() = %q, want %q", tt.k, got, tt.want)
+		}
+	}
+}
+
+// TestVecGetSet verifies basic Get/Set round-trips on a 100-element vector.
 func TestVecGetSet(t *testing.T) {
 	v := NewVec(100)
 	if got, _ := v.Get(0); got != Unknown {
@@ -51,6 +96,43 @@ func TestVecGetSet(t *testing.T) {
 	}
 }
 
+// TestVecGetSetWordBoundary verifies Get/Set at the 64-bit word boundary (indices 63, 64, 65).
+func TestVecGetSetWordBoundary(t *testing.T) {
+	v := NewVec(128)
+	v.Set(63, True)
+	v.Set(64, False)
+	v.Set(65, True)
+	if got, _ := v.Get(63); got != True {
+		t.Errorf("index 63: expected True, got %v", got)
+	}
+	if got, _ := v.Get(64); got != False {
+		t.Errorf("index 64: expected False, got %v", got)
+	}
+	if got, _ := v.Get(65); got != True {
+		t.Errorf("index 65: expected True, got %v", got)
+	}
+}
+
+// TestSetNegativeIndex verifies that Set panics on a negative index.
+func TestSetNegativeIndex(t *testing.T) {
+	v := NewVec(10)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for negative index")
+		}
+	}()
+	v.Set(-1, True)
+}
+
+// TestGetNegativeIndex verifies that Get returns ErrOutOfBounds for a negative index.
+func TestGetNegativeIndex(t *testing.T) {
+	v := NewVec(10)
+	if _, err := v.Get(-1); err != ErrOutOfBounds {
+		t.Errorf("expected ErrOutOfBounds, got %v", err)
+	}
+}
+
+// TestVecAnd verifies element-wise And with True and False vectors.
 func TestVecAnd(t *testing.T) {
 	a := AllTrue(64)
 	b := AllFalse(64)
@@ -60,6 +142,7 @@ func TestVecAnd(t *testing.T) {
 	}
 }
 
+// TestVecOr verifies element-wise Or with False and True vectors.
 func TestVecOr(t *testing.T) {
 	a := AllFalse(64)
 	b := AllTrue(64)
@@ -69,6 +152,7 @@ func TestVecOr(t *testing.T) {
 	}
 }
 
+// TestVecNot verifies element-wise Not with double negation.
 func TestVecNot(t *testing.T) {
 	a := AllTrue(100)
 	b := a.Not()
@@ -81,6 +165,7 @@ func TestVecNot(t *testing.T) {
 	}
 }
 
+// TestVecUnknownAnd verifies Unknown propagation in element-wise And.
 func TestVecUnknownAnd(t *testing.T) {
 	a := NewVec(64) // all unknown
 	b := AllTrue(64)
@@ -96,6 +181,58 @@ func TestVecUnknownAnd(t *testing.T) {
 	}
 }
 
+// TestVecUnknownOr verifies Unknown propagation in element-wise Or.
+func TestVecUnknownOr(t *testing.T) {
+	a := NewVec(64) // all unknown
+	b := AllFalse(64)
+	c := a.Or(b)
+	if c.CountUnknown() != 64 {
+		t.Errorf("expected 64 unknown, got %d", c.CountUnknown())
+	}
+
+	d := AllTrue(64)
+	e := a.Or(d)
+	if !e.IsAllTrue() {
+		t.Error("expected all true")
+	}
+}
+
+// TestVecImplies verifies element-wise Implies with all value combinations.
+func TestVecImplies(t *testing.T) {
+	a := AllFalse(64)
+	b := AllTrue(64)
+
+	// False -> anything = True
+	c := a.Implies(b)
+	if !c.IsAllTrue() {
+		t.Error("False implies True should be all True")
+	}
+	c = a.Implies(a)
+	if !c.IsAllTrue() {
+		t.Error("False implies False should be all True")
+	}
+
+	// True -> False = False
+	c = b.Implies(a)
+	if !c.IsAllFalse() {
+		t.Error("True implies False should be all False")
+	}
+
+	// Unknown -> True = True
+	u := NewVec(64)
+	c = u.Implies(b)
+	if !c.IsAllTrue() {
+		t.Error("Unknown implies True should be all True")
+	}
+
+	// Unknown -> False = Unknown
+	c = u.Implies(a)
+	if c.CountUnknown() != 64 {
+		t.Errorf("Unknown implies False: expected 64 unknown, got %d", c.CountUnknown())
+	}
+}
+
+// TestCounts verifies CountTrue, CountFalse, and CountUnknown on a mixed vector.
 func TestCounts(t *testing.T) {
 	v := NewVec(10)
 	v.Set(0, True)
@@ -112,6 +249,7 @@ func TestCounts(t *testing.T) {
 	}
 }
 
+// TestGetOutOfBounds verifies that Get returns ErrOutOfBounds for indices past the width.
 func TestGetOutOfBounds(t *testing.T) {
 	v := NewVec(10)
 	if _, err := v.Get(10); err != ErrOutOfBounds {
@@ -122,6 +260,7 @@ func TestGetOutOfBounds(t *testing.T) {
 	}
 }
 
+// TestSetAutoGrows verifies that Set auto-grows the vector when the index exceeds the width.
 func TestSetAutoGrows(t *testing.T) {
 	v := NewVec(10)
 	v.Set(100, True)
@@ -139,6 +278,7 @@ func TestSetAutoGrows(t *testing.T) {
 	}
 }
 
+// TestTruncate verifies width reduction including partial words, no-op cases, and zero width.
 func TestTruncate(t *testing.T) {
 	// no-op when new_width >= width
 	v := AllTrue(100)
@@ -173,6 +313,7 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+// TestResize verifies grow and shrink with all fill values, including cross-word-boundary growth and growth from empty.
 func TestResize(t *testing.T) {
 	// grow with Unknown fill
 	v := AllTrue(10)

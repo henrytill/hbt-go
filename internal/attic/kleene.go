@@ -21,9 +21,12 @@ const (
 	True    Kleene = 0b11
 )
 
+// fromBits maps a 2-bit pair (known_bit<<1 | value_bit) to a Kleene value.
+// Index 0b01 (known=0, value=1) is impossible by construction; it maps to
+// Unknown as a safe fallback.
 var fromBits = [4]Kleene{
 	Unknown, // 0b00
-	Unknown, // 0b01: impossible by invariant
+	Unknown, // 0b01: impossible, safe fallback
 	False,   // 0b10
 	True,    // 0b11
 }
@@ -133,30 +136,31 @@ func NewVec(width int) *Vec {
 	}
 }
 
-// AllTrue creates a vector of width elements, all True.
-func AllTrue(width int) *Vec {
+func newFilled(width int, fill Kleene) *Vec {
 	nw := wordsNeeded(width)
 	words := make([]uint64, 2*nw)
-	for i := range words {
-		words[i] = ^uint64(0)
+	var fillKnown, fillValue uint64
+	switch fill {
+	case False:
+		fillKnown = ^uint64(0)
+	case True:
+		fillKnown = ^uint64(0)
+		fillValue = ^uint64(0)
+	}
+	for i := 0; i < nw; i++ {
+		words[2*i] = fillKnown
+		words[2*i+1] = fillValue
 	}
 	v := &Vec{width: width, words: words}
 	v.maskTail()
 	return v
 }
 
+// AllTrue creates a vector of width elements, all True.
+func AllTrue(width int) *Vec { return newFilled(width, True) }
+
 // AllFalse creates a vector of width elements, all False.
-func AllFalse(width int) *Vec {
-	nw := wordsNeeded(width)
-	words := make([]uint64, 2*nw)
-	for i := 0; i < nw; i++ {
-		words[2*i] = ^uint64(0) // known
-		words[2*i+1] = 0        // value
-	}
-	v := &Vec{width: width, words: words}
-	v.maskTail()
-	return v
-}
+func AllFalse(width int) *Vec { return newFilled(width, False) }
 
 // Width returns the number of elements.
 func (v *Vec) Width() int {
@@ -240,7 +244,11 @@ func (v *Vec) getUnchecked(i int) Kleene {
 }
 
 // Set sets the value at index i, auto-growing the vector if necessary.
+// Panics if i is negative.
 func (v *Vec) Set(i int, val Kleene) {
+	if i < 0 {
+		panic("kleene: negative index")
+	}
 	if i >= v.width {
 		newWidth := i + 1
 		newNw := wordsNeeded(newWidth)
@@ -285,7 +293,9 @@ func (v *Vec) Not() *Vec {
 		out[i] = k
 		out[i+1] = k &^ val
 	}
-	return &Vec{width: v.width, words: out}
+	r := &Vec{width: v.width, words: out}
+	r.maskTail()
+	return r
 }
 
 // And returns the element-wise Kleene conjunction.
@@ -371,8 +381,8 @@ func (v *Vec) IsAllFalse() bool {
 // CountTrue returns the number of True elements.
 func (v *Vec) CountTrue() int {
 	n := 0
-	for i := 1; i < len(v.words); i += 2 {
-		n += bits.OnesCount64(v.words[i])
+	for i := 0; i < len(v.words); i += 2 {
+		n += bits.OnesCount64(v.words[i] & v.words[i+1])
 	}
 	return n
 }
