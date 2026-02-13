@@ -130,49 +130,6 @@ func TestBelnapVecCounts(t *testing.T) {
 	}
 }
 
-func TestBelnapVecToKleene(t *testing.T) {
-	v := NewBelnapVec(10)
-	v.Set(0, True)
-	v.Set(1, False)
-	k := v.ToKleeneVec()
-	if k == nil {
-		t.Fatal("expected non-nil KleeneVec")
-	}
-	if got, _ := k.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
-	if got, _ := k.Get(1); got != False {
-		t.Errorf("index 1: got %v, want False", got)
-	}
-	if got, _ := k.Get(2); got != Unknown {
-		t.Errorf("index 2: got %v, want Unknown", got)
-	}
-
-	v.Set(2, Both)
-	if k2 := v.ToKleeneVec(); k2 != nil {
-		t.Error("expected nil KleeneVec for inconsistent BelnapVec")
-	}
-}
-
-func TestBelnapVecFromKleene(t *testing.T) {
-	k := NewKleeneVec(10)
-	k.Set(0, True)
-	k.Set(1, False)
-	b := BelnapVecFromKleeneVec(k)
-	if got, _ := b.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
-	if got, _ := b.Get(1); got != False {
-		t.Errorf("index 1: got %v, want False", got)
-	}
-	if got, _ := b.Get(2); got != Unknown {
-		t.Errorf("index 2: got %v, want Unknown", got)
-	}
-	if !b.IsConsistent() {
-		t.Error("BelnapVec from KleeneVec should be consistent")
-	}
-}
-
 func TestBelnapVecAutoGrow(t *testing.T) {
 	v := NewBelnapVec(10)
 	v.Set(100, Both)

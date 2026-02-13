@@ -3,7 +3,6 @@ package attic
 import "errors"
 
 // Value represents a single truth value in Belnap's four-valued logic.
-// Kleene's three-valued logic uses the subset {Unknown, True, False}.
 //
 // Encoding: (neg_bit << 1) | pos_bit
 //

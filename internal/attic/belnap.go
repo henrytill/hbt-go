@@ -5,8 +5,7 @@ import "math/bits"
 // BelnapVec is a packed bitvector using an interleaved two-bitplane layout:
 // [pos_0, neg_0, pos_1, neg_1, ...].
 //
-// Unlike KleeneVec, there is no invariant on pos & neg — all four
-// Value states (Unknown, True, False, Both) are valid at every position.
+// All four Value states (Unknown, True, False, Both) are valid at every position.
 type BelnapVec struct {
 	width int
 	words []uint64
@@ -291,17 +290,3 @@ func (v *BelnapVec) CountUnknown() int {
 	return v.width - v.CountTrue() - v.CountFalse() - v.CountBoth()
 }
 
-func BelnapVecFromKleeneVec(kv *KleeneVec) *BelnapVec {
-	words := make([]uint64, len(kv.words))
-	copy(words, kv.words)
-	return &BelnapVec{width: kv.width, words: words}
-}
-
-func (v *BelnapVec) ToKleeneVec() *KleeneVec {
-	if !v.IsConsistent() {
-		return nil
-	}
-	words := make([]uint64, len(v.words))
-	copy(words, v.words)
-	return kleeneVecFromRawParts(v.width, words)
-}

@@ -16,7 +16,6 @@ BINDIR = bin
 SOURCES =
 SOURCES += internal/attic/belnap.go
 SOURCES += internal/attic/bitplane.go
-SOURCES += internal/attic/kleene.go
 SOURCES += internal/attic/value.go
 SOURCES += internal/client/pinboard/client.go
 SOURCES += internal/client/pinboard/credentials.go
