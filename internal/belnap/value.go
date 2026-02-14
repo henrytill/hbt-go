@@ -1,4 +1,4 @@
-package attic
+package belnap
 
 import "errors"
 

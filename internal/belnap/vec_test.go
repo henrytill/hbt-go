@@ -1,9 +1,9 @@
-package attic
+package belnap
 
 import "testing"
 
-func TestBelnapVecGetSetAllFour(t *testing.T) {
-	v := NewBelnapVec(4)
+func TestVecGetSetAllFour(t *testing.T) {
+	v := NewVec(4)
 	v.Set(0, Unknown)
 	v.Set(1, True)
 	v.Set(2, False)
@@ -22,26 +22,26 @@ func TestBelnapVecGetSetAllFour(t *testing.T) {
 	}
 }
 
-func TestBelnapVecBulkAnd(t *testing.T) {
-	a := BelnapAllTrue(64)
-	b := BelnapAllFalse(64)
+func TestVecBulkAnd(t *testing.T) {
+	a := AllTrue(64)
+	b := AllFalse(64)
 	c := a.And(b)
 	if !c.IsAllFalse() {
 		t.Error("expected all false")
 	}
 }
 
-func TestBelnapVecBulkOr(t *testing.T) {
-	a := BelnapAllFalse(64)
-	b := BelnapAllTrue(64)
+func TestVecBulkOr(t *testing.T) {
+	a := AllFalse(64)
+	b := AllTrue(64)
 	c := a.Or(b)
 	if !c.IsAllTrue() {
 		t.Error("expected all true")
 	}
 }
 
-func TestBelnapVecBulkNot(t *testing.T) {
-	a := BelnapAllTrue(100)
+func TestVecBulkNot(t *testing.T) {
+	a := AllTrue(100)
 	b := a.Not()
 	if !b.IsAllFalse() {
 		t.Error("expected all false")
@@ -52,9 +52,9 @@ func TestBelnapVecBulkNot(t *testing.T) {
 	}
 }
 
-func TestBelnapVecBulkMerge(t *testing.T) {
-	a := BelnapAllTrue(64)
-	b := BelnapAllFalse(64)
+func TestVecBulkMerge(t *testing.T) {
+	a := AllTrue(64)
+	b := AllFalse(64)
 	c := a.Merge(b)
 	if c.CountBoth() != 64 {
 		t.Errorf("expected 64 both, got %d", c.CountBoth())
@@ -70,13 +70,13 @@ func TestBelnapVecBulkMerge(t *testing.T) {
 	}
 }
 
-func TestBelnapVecIsConsistent(t *testing.T) {
-	a := BelnapAllTrue(64)
+func TestVecIsConsistent(t *testing.T) {
+	a := AllTrue(64)
 	if !a.IsConsistent() {
 		t.Error("all-true should be consistent")
 	}
 
-	b := NewBelnapVec(10)
+	b := NewVec(10)
 	b.Set(0, True)
 	b.Set(1, False)
 	if !b.IsConsistent() {
@@ -89,8 +89,8 @@ func TestBelnapVecIsConsistent(t *testing.T) {
 	}
 }
 
-func TestBelnapVecIsAllDetermined(t *testing.T) {
-	v := NewBelnapVec(4)
+func TestVecIsAllDetermined(t *testing.T) {
+	v := NewVec(4)
 	v.Set(0, True)
 	v.Set(1, False)
 	v.Set(2, True)
@@ -110,8 +110,8 @@ func TestBelnapVecIsAllDetermined(t *testing.T) {
 	}
 }
 
-func TestBelnapVecCounts(t *testing.T) {
-	v := NewBelnapVec(10)
+func TestVecCounts(t *testing.T) {
+	v := NewVec(10)
 	v.Set(0, True)
 	v.Set(1, True)
 	v.Set(2, False)
@@ -130,8 +130,8 @@ func TestBelnapVecCounts(t *testing.T) {
 	}
 }
 
-func TestBelnapVecAutoGrow(t *testing.T) {
-	v := NewBelnapVec(10)
+func TestVecAutoGrow(t *testing.T) {
+	v := NewVec(10)
 	v.Set(100, Both)
 	if v.Width() != 101 {
 		t.Errorf("expected width 101, got %d", v.Width())
@@ -147,84 +147,84 @@ func TestBelnapVecAutoGrow(t *testing.T) {
 	}
 }
 
-func TestBelnapVecResize(t *testing.T) {
+func TestVecResize(t *testing.T) {
 	// grow with Unknown fill
-	v := BelnapAllTrue(10)
+	v := AllTrue(10)
 	v.Resize(100, Unknown)
 	if v.Width() != 100 || v.CountTrue() != 10 || v.CountUnknown() != 90 {
 		t.Error("resize with Unknown fill failed")
 	}
 
 	// grow with Both fill
-	v = BelnapAllTrue(10)
+	v = AllTrue(10)
 	v.Resize(100, Both)
 	if v.Width() != 100 || v.CountTrue() != 10 || v.CountBoth() != 90 {
 		t.Error("resize with Both fill failed")
 	}
 
 	// grow with False fill
-	v = BelnapAllTrue(10)
+	v = AllTrue(10)
 	v.Resize(100, False)
 	if v.Width() != 100 || v.CountTrue() != 10 || v.CountFalse() != 90 {
 		t.Error("resize with False fill failed")
 	}
 
 	// grow with True fill
-	v = NewBelnapVec(10)
+	v = NewVec(10)
 	v.Resize(100, True)
 	if v.Width() != 100 || v.CountUnknown() != 10 || v.CountTrue() != 90 {
 		t.Error("resize with True fill failed")
 	}
 
 	// grow across word boundary
-	v = BelnapAllFalse(60)
+	v = AllFalse(60)
 	v.Resize(200, True)
 	if v.Width() != 200 || v.CountFalse() != 60 || v.CountTrue() != 140 {
 		t.Errorf("resize across boundary failed: width=%d false=%d true=%d", v.Width(), v.CountFalse(), v.CountTrue())
 	}
 
 	// shrink
-	v = BelnapAllTrue(100)
+	v = AllTrue(100)
 	v.Resize(10, False)
 	if v.Width() != 10 || !v.IsAllTrue() {
 		t.Error("resize shrink failed")
 	}
 
 	// grow from empty
-	v = NewBelnapVec(0)
+	v = NewVec(0)
 	v.Resize(64, True)
 	if v.Width() != 64 || !v.IsAllTrue() {
 		t.Error("resize from empty (True) failed")
 	}
 
-	v = NewBelnapVec(0)
+	v = NewVec(0)
 	v.Resize(100, False)
 	if v.Width() != 100 || !v.IsAllFalse() {
 		t.Error("resize from empty (False) failed")
 	}
 }
 
-func TestBelnapVecTruncate(t *testing.T) {
-	v := BelnapAllTrue(100)
+func TestVecTruncate(t *testing.T) {
+	v := AllTrue(100)
 	v.Truncate(100)
 	if v.Width() != 100 || !v.IsAllTrue() {
 		t.Error("truncate(100) should be no-op")
 	}
 
-	v = BelnapAllTrue(200)
+	v = AllTrue(200)
 	v.Truncate(65)
 	if v.Width() != 65 || !v.IsAllTrue() || v.CountTrue() != 65 {
 		t.Error("truncate(65) failed")
 	}
 }
 
-func TestBelnapVecAndDifferentWidths(t *testing.T) {
-	short := NewBelnapVec(10)
+func TestVecAndDifferentWidths(t *testing.T) {
+	short := NewVec(10)
 	short.Set(0, True)
 	short.Set(1, False)
 	short.Set(2, Both)
 
-	long := NewBelnapVec(100)
+	long := NewVec(100)
 	long.Set(0, True)
 	long.Set(1, True)
 	long.Set(2, True)
@@ -267,13 +267,13 @@ func TestBelnapVecAndDifferentWidths(t *testing.T) {
 	}
 }
 
-func TestBelnapVecOrDifferentWidths(t *testing.T) {
-	short := NewBelnapVec(10)
+func TestVecOrDifferentWidths(t *testing.T) {
+	short := NewVec(10)
 	short.Set(0, True)
 	short.Set(1, False)
 	short.Set(2, Both)
 
-	long := NewBelnapVec(100)
+	long := NewVec(100)
 	long.Set(0, False)
 	long.Set(1, True)
 	long.Set(2, False)
@@ -316,12 +316,12 @@ func TestBelnapVecOrDifferentWidths(t *testing.T) {
 	}
 }
 
-func TestBelnapVecMergeDifferentWidths(t *testing.T) {
-	short := NewBelnapVec(10)
+func TestVecMergeDifferentWidths(t *testing.T) {
+	short := NewVec(10)
 	short.Set(0, True)
 	short.Set(1, False)
 
-	long := NewBelnapVec(100)
+	long := NewVec(100)
 	long.Set(0, False)
 	long.Set(1, True)
 	long.Set(99, True)
@@ -359,9 +359,9 @@ func TestBelnapVecMergeDifferentWidths(t *testing.T) {
 	}
 }
 
-func TestBelnapVecImpliesDifferentWidths(t *testing.T) {
-	short := BelnapAllTrue(10)
-	long := BelnapAllTrue(100)
+func TestVecImpliesDifferentWidths(t *testing.T) {
+	short := AllTrue(10)
+	long := AllTrue(100)
 	result := short.Implies(long)
 	if result.Width() != 100 {
 		t.Errorf("width: got %d, want 100", result.Width())
