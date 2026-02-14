@@ -27,7 +27,7 @@ func (s Shared) Get() (bool, bool) {
 	return s.Bool, s.Valid
 }
 
-func (s Shared) Concat(t Shared) Shared {
+func (s Shared) Merge(t Shared) Shared {
 	if !s.Valid {
 		return t
 	}
@@ -50,7 +50,7 @@ func (r ToRead) Get() (bool, bool) {
 	return r.Bool, r.Valid
 }
 
-func (r ToRead) Concat(s ToRead) ToRead {
+func (r ToRead) Merge(s ToRead) ToRead {
 	if !r.Valid {
 		return s
 	}
@@ -73,7 +73,7 @@ func (f IsFeed) Get() (bool, bool) {
 	return f.Bool, f.Valid
 }
 
-func (f IsFeed) Concat(g IsFeed) IsFeed {
+func (f IsFeed) Merge(g IsFeed) IsFeed {
 	if !f.Valid {
 		return g
 	}
@@ -120,7 +120,7 @@ func (l LastVisitedAt) Get() (time.Time, bool) {
 	return l.Time, l.Valid
 }
 
-func (l LastVisitedAt) Concat(m LastVisitedAt) LastVisitedAt {
+func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
 	if !l.Valid {
 		return m
 	}
@@ -171,13 +171,13 @@ func (e *Entity) absorb(other Entity) {
 		e.Labels[k] = struct{}{}
 	}
 
-	e.Shared = e.Shared.Concat(other.Shared)
-	e.ToRead = e.ToRead.Concat(other.ToRead)
-	e.IsFeed = e.IsFeed.Concat(other.IsFeed)
+	e.Shared = e.Shared.Merge(other.Shared)
+	e.ToRead = e.ToRead.Merge(other.ToRead)
+	e.IsFeed = e.IsFeed.Merge(other.IsFeed)
 
 	e.Extended = append(e.Extended, other.Extended...)
 
-	e.LastVisitedAt = e.LastVisitedAt.Concat(other.LastVisitedAt)
+	e.LastVisitedAt = e.LastVisitedAt.Merge(other.LastVisitedAt)
 }
 
 type entityRepr struct {
