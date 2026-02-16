@@ -131,17 +131,17 @@ func TestScalarMerge(t *testing.T) {
 }
 
 func TestScalarQueries(t *testing.T) {
-	if Unknown.HasInfo() {
-		t.Error("Unknown.HasInfo() should be false")
+	if Unknown.IsKnown() {
+		t.Error("Unknown.IsKnown() should be false")
 	}
-	if !True.HasInfo() {
-		t.Error("True.HasInfo() should be true")
+	if !True.IsKnown() {
+		t.Error("True.IsKnown() should be true")
 	}
-	if !False.HasInfo() {
-		t.Error("False.HasInfo() should be true")
+	if !False.IsKnown() {
+		t.Error("False.IsKnown() should be true")
 	}
-	if !Both.HasInfo() {
-		t.Error("Both.HasInfo() should be true")
+	if !Both.IsKnown() {
+		t.Error("Both.IsKnown() should be true")
 	}
 
 	if Unknown.IsDetermined() {

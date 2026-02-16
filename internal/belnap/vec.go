@@ -83,7 +83,7 @@ func (v *Vec) Resize(newWidth int, fill Value) {
 		v.words = append(v.words, fillPos, fillNeg)
 	}
 	v.width = newWidth
-	if fill.HasInfo() {
+	if fill.IsKnown() {
 		v.maskTail()
 	}
 }

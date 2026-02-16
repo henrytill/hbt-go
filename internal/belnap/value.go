@@ -27,10 +27,6 @@ func (v Value) IsKnown() bool {
 	return v != Unknown
 }
 
-func (v Value) HasInfo() bool {
-	return v != Unknown
-}
-
 func (v Value) IsDetermined() bool {
 	return (v&1)^(v>>1) != 0
 }
