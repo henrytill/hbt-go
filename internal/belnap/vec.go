@@ -2,6 +2,11 @@ package belnap
 
 import "math/bits"
 
+const (
+	bitsLog2 = 6
+	bitsMask = (1 << bitsLog2) - 1
+)
+
 // Vec is a packed bitvector using an interleaved two-bitplane layout:
 // [pos_0, neg_0, pos_1, neg_1, ...].
 //
@@ -9,6 +14,10 @@ import "math/bits"
 type Vec struct {
 	width int
 	words []uint64
+}
+
+func wordsNeeded(n int) int {
+	return (n + bitsMask) >> bitsLog2
 }
 
 func NewVec(width int) *Vec {
@@ -38,6 +47,14 @@ func AllFalse(width int) *Vec { return newFilled(width, False) }
 
 func (v *Vec) Width() int {
 	return v.width
+}
+
+func tailMask(n int) uint64 {
+	r := n & bitsMask
+	if r == 0 {
+		return ^uint64(0)
+	}
+	return (1 << r) - 1
 }
 
 func (v *Vec) maskTail() {
@@ -88,13 +105,6 @@ func (v *Vec) Resize(newWidth int, fill Value) {
 	}
 }
 
-func (v *Vec) Get(i int) (Value, error) {
-	if i < 0 || i >= v.width {
-		return Unknown, ErrOutOfBounds
-	}
-	return v.getUnchecked(i), nil
-}
-
 func (v *Vec) getUnchecked(i int) Value {
 	w := i >> bitsLog2
 	b := uint(i & bitsMask)
@@ -104,20 +114,11 @@ func (v *Vec) getUnchecked(i int) Value {
 	return fromBits[negBit<<1|posBit]
 }
 
-func (v *Vec) Set(i int, val Value) {
-	if i < 0 {
-		panic("belnap: negative index")
+func (v *Vec) Get(i int) (Value, error) {
+	if i < 0 || i >= v.width {
+		return Unknown, ErrOutOfBounds
 	}
-	if i >= v.width {
-		newWidth := i + 1
-		newNw := wordsNeeded(newWidth)
-		oldNw := wordsNeeded(v.width)
-		for j := oldNw; j < newNw; j++ {
-			v.words = append(v.words, 0, 0)
-		}
-		v.width = newWidth
-	}
-	v.setUnchecked(i, val)
+	return v.getUnchecked(i), nil
 }
 
 func (v *Vec) setUnchecked(i int, val Value) {
@@ -137,10 +138,26 @@ func (v *Vec) setUnchecked(i int, val Value) {
 	}
 }
 
+func (v *Vec) Set(i int, val Value) {
+	if i < 0 {
+		panic("belnap: negative index")
+	}
+	if i >= v.width {
+		newWidth := i + 1
+		newNw := wordsNeeded(newWidth)
+		oldNw := wordsNeeded(v.width)
+		for j := oldNw; j < newNw; j++ {
+			v.words = append(v.words, 0, 0)
+		}
+		v.width = newWidth
+	}
+	v.setUnchecked(i, val)
+}
+
 func (v *Vec) Not() *Vec {
 	out := make([]uint64, len(v.words))
 	for i := 0; i < len(v.words); i += 2 {
-		out[i], out[i+1] = notWord(v.words[i], v.words[i+1])
+		out[i], out[i+1] = v.words[i+1], v.words[i]
 	}
 	r := &Vec{width: v.width, words: out}
 	r.maskTail()
@@ -160,7 +177,7 @@ func (v *Vec) And(other *Vec) *Vec {
 		if base+1 < len(other.words) {
 			bPos, bNeg = other.words[base], other.words[base+1]
 		}
-		out[base], out[base+1] = andWord(aPos, aNeg, bPos, bNeg)
+		out[base], out[base+1] = aPos&bPos, aNeg|bNeg
 	}
 	return &Vec{width: width, words: out}
 }
@@ -178,7 +195,7 @@ func (v *Vec) Or(other *Vec) *Vec {
 		if base+1 < len(other.words) {
 			bPos, bNeg = other.words[base], other.words[base+1]
 		}
-		out[base], out[base+1] = orWord(aPos, aNeg, bPos, bNeg)
+		out[base], out[base+1] = aPos|bPos, aNeg&bNeg
 	}
 	return &Vec{width: width, words: out}
 }
@@ -200,7 +217,7 @@ func (v *Vec) Merge(other *Vec) *Vec {
 		if base+1 < len(other.words) {
 			bPos, bNeg = other.words[base], other.words[base+1]
 		}
-		out[base], out[base+1] = mergeWord(aPos, aNeg, bPos, bNeg)
+		out[base], out[base+1] = aPos|bPos, aNeg|bNeg
 	}
 	return &Vec{width: width, words: out}
 }
@@ -288,37 +305,4 @@ func (v *Vec) CountBoth() int {
 
 func (v *Vec) CountUnknown() int {
 	return v.width - v.CountTrue() - v.CountFalse() - v.CountBoth()
-}
-
-const (
-	bitsLog2 = 6
-	bitsMask = (1 << bitsLog2) - 1
-)
-
-func wordsNeeded(n int) int {
-	return (n + bitsMask) >> bitsLog2
-}
-
-func tailMask(n int) uint64 {
-	r := n & bitsMask
-	if r == 0 {
-		return ^uint64(0)
-	}
-	return (1 << r) - 1
-}
-
-func andWord(aPos, aNeg, bPos, bNeg uint64) (uint64, uint64) {
-	return aPos & bPos, aNeg | bNeg
-}
-
-func orWord(aPos, aNeg, bPos, bNeg uint64) (uint64, uint64) {
-	return aPos | bPos, aNeg & bNeg
-}
-
-func notWord(pos, neg uint64) (uint64, uint64) {
-	return neg, pos
-}
-
-func mergeWord(aPos, aNeg, bPos, bNeg uint64) (uint64, uint64) {
-	return aPos | bPos, aNeg | bNeg
 }
