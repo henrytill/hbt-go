@@ -14,8 +14,8 @@ BIN += pinboard
 BINDIR = bin
 
 SOURCES =
-SOURCES += internal/belnap/vec.go
 SOURCES += internal/belnap/value.go
+SOURCES += internal/belnap/vec.go
 SOURCES += internal/client/pinboard/client.go
 SOURCES += internal/client/pinboard/credentials.go
 SOURCES += internal/client/pinboard/notes.go
