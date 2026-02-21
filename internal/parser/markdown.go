@@ -68,17 +68,17 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 func extractText(node ast.Node, content []byte) string {
 	var buf bytes.Buffer
 
-	type stackItem struct {
+	type workItem struct {
 		node        ast.Node
 		postProcess string
 	}
 
-	var stack []stackItem
-	stack = append(stack, stackItem{node: node})
+	var worklist []workItem
+	worklist = append(worklist, workItem{node: node})
 
-	for len(stack) > 0 {
-		item := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
+	for len(worklist) > 0 {
+		item := worklist[len(worklist)-1]
+		worklist = worklist[:len(worklist)-1]
 
 		if item.postProcess != "" {
 			buf.WriteString(item.postProcess)
@@ -90,13 +90,13 @@ func extractText(node ast.Node, content []byte) string {
 			buf.Write(currentNode.Segment.Value(content))
 		case *ast.CodeSpan:
 			buf.WriteByte('`')
-			stack = append(stack, stackItem{postProcess: "`"})
+			worklist = append(worklist, workItem{postProcess: "`"})
 			for child := item.node.LastChild(); child != nil; child = child.PreviousSibling() {
-				stack = append(stack, stackItem{node: child})
+				worklist = append(worklist, workItem{node: child})
 			}
 		default:
 			for child := item.node.LastChild(); child != nil; child = child.PreviousSibling() {
-				stack = append(stack, stackItem{node: child})
+				worklist = append(worklist, workItem{node: child})
 			}
 		}
 	}

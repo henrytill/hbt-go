@@ -130,13 +130,13 @@ func add(
 
 func getTextContent(n *html.Node) string {
 	var result strings.Builder
-	var stack []*html.Node
+	var worklist []*html.Node
 
-	stack = append(stack, n)
+	worklist = append(worklist, n)
 
-	for len(stack) > 0 {
-		current := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
+	for len(worklist) > 0 {
+		current := worklist[len(worklist)-1]
+		worklist = worklist[:len(worklist)-1]
 
 		if current.Type == html.TextNode {
 			result.WriteString(current.Data)
@@ -144,7 +144,7 @@ func getTextContent(n *html.Node) string {
 		}
 
 		for c := current.LastChild; c != nil; c = c.PrevSibling {
-			stack = append(stack, c)
+			worklist = append(worklist, c)
 		}
 	}
 
@@ -181,13 +181,13 @@ func handleAnchor(anchor *html.Node) pendingBookmark {
 }
 
 func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
-	type stackItem struct {
+	type workItem struct {
 		node     *html.Node
 		popGroup bool
 	}
 
 	var (
-		stack      []stackItem
+		worklist   []workItem
 		folders    []string
 		pending    pendingBookmark
 		hasPending bool
@@ -195,13 +195,13 @@ func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 
 	for c := root.LastChild; c != nil; c = c.PrevSibling {
 		if c.Type == html.ElementNode {
-			stack = append(stack, stackItem{node: c, popGroup: false})
+			worklist = append(worklist, workItem{node: c, popGroup: false})
 		}
 	}
 
-	for len(stack) > 0 {
-		item := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
+	for len(worklist) > 0 {
+		item := worklist[len(worklist)-1]
+		worklist = worklist[:len(worklist)-1]
 
 		if item.popGroup {
 			if hasPending {
@@ -252,12 +252,12 @@ func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 			}
 			continue
 		case "dl":
-			stack = append(stack, stackItem{popGroup: true})
+			worklist = append(worklist, workItem{popGroup: true})
 		}
 
 		for c := node.LastChild; c != nil; c = c.PrevSibling {
 			if c.Type == html.ElementNode {
-				stack = append(stack, stackItem{node: c, popGroup: false})
+				worklist = append(worklist, workItem{node: c, popGroup: false})
 			}
 		}
 	}
