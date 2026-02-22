@@ -69,19 +69,19 @@ func add(
 		}
 	}
 
-	labels := make(map[Label]struct{})
+	labels := make(map[types.Label]struct{})
 	if pending.tags != "" {
 		tagList := strings.SplitSeq(pending.tags, ",")
 		for tag := range tagList {
 			tag = strings.TrimSpace(tag)
 			if tag != "" && tag != "toread" {
-				labels[Label(tag)] = struct{}{}
+				labels[types.Label(tag)] = struct{}{}
 			}
 		}
 	}
 
 	for _, folder := range folders {
-		labels[Label(folder)] = struct{}{}
+		labels[types.Label(folder)] = struct{}{}
 	}
 
 	var shared types.Shared
@@ -101,9 +101,9 @@ func add(
 		isFeed = types.NewIsFeed(true)
 	}
 
-	names := make(map[Name]struct{})
+	names := make(map[types.Name]struct{})
 	if pending.title != "" {
-		names[Name(pending.title)] = struct{}{}
+		names[types.Name(pending.title)] = struct{}{}
 	}
 
 	entity := types.Entity{

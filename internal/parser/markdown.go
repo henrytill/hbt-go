@@ -36,21 +36,21 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
 		URI:       parsedURL,
 		CreatedAt: types.CreatedAt(state.currentDate),
 		UpdatedAt: []types.UpdatedAt{},
-		Names:     make(map[Name]struct{}),
-		Labels:    make(map[Label]struct{}),
+		Names:     make(map[types.Name]struct{}),
+		Labels:    make(map[types.Label]struct{}),
 	}
 
 	if linkTitle != "" {
-		entity.Names = map[Name]struct{}{Name(linkTitle): {}}
+		entity.Names = map[types.Name]struct{}{types.Name(linkTitle): {}}
 	} else {
-		entity.Names = make(map[Name]struct{})
+		entity.Names = make(map[types.Name]struct{})
 	}
 
-	entity.Labels = make(map[Label]struct{})
+	entity.Labels = make(map[types.Label]struct{})
 	if len(state.labels) > 0 {
 		for _, label := range state.labels {
 			if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
-				entity.Labels[Label(trimmedLabel)] = struct{}{}
+				entity.Labels[types.Label(trimmedLabel)] = struct{}{}
 			}
 		}
 	}
