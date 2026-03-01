@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/yuin/goldmark v1.7.16
-	golang.org/x/mod v0.32.0
-	golang.org/x/net v0.49.0
-	golang.org/x/text v0.33.0
+	golang.org/x/mod v0.33.0
+	golang.org/x/net v0.50.0
+	golang.org/x/text v0.34.0
 )
