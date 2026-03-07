@@ -16,7 +16,7 @@ import (
 type MarkdownParser struct{}
 
 type parserState struct {
-	coll        *types.Collection
+	coll        types.Collection
 	currentDate time.Time
 	labels      []string
 	maybeParent *types.Id
@@ -104,10 +104,10 @@ func extractText(node ast.Node, content []byte) string {
 	return strings.TrimSpace(buf.String())
 }
 
-func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
+func (p *MarkdownParser) Parse(r io.Reader) (types.Collection, error) {
 	content, err := io.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return types.Collection{}, err
 	}
 
 	md := goldmark.New()
@@ -188,7 +188,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return types.Collection{}, err
 	}
 
 	return state.coll, nil

@@ -5,7 +5,7 @@ import (
 )
 
 type Parser interface {
-	Parse(r io.Reader) (*Collection, error)
+	Parse(r io.Reader) (Collection, error)
 }
 
 type Formatter interface {

@@ -205,7 +205,7 @@ func main() {
 			output = os.Stdout
 		}
 
-		err = internal.Unparse(config.OutputFormat, output, coll)
+		err = internal.Unparse(config.OutputFormat, output, &coll)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
 			os.Exit(1)

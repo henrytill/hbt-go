@@ -23,10 +23,10 @@ func parseJSON(r io.Reader) ([]pinboard.Post, error) {
 	return posts, nil
 }
 
-func (p *JSONParser) Parse(r io.Reader) (*types.Collection, error) {
+func (p *JSONParser) Parse(r io.Reader) (types.Collection, error) {
 	posts, err := parseJSON(r)
 	if err != nil {
-		return nil, err
+		return types.Collection{}, err
 	}
 	return types.NewCollectionFromPosts(posts)
 }

@@ -180,7 +180,7 @@ func handleAnchor(anchor *html.Node) pendingBookmark {
 	return ret
 }
 
-func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
+func parse(root *html.Node, coll *types.Collection) error {
 	type workItem struct {
 		node     *html.Node
 		popGroup bool
@@ -206,7 +206,7 @@ func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 		if item.popGroup {
 			if hasPending {
 				if err := add(coll, folders, pending); err != nil {
-					return nil, err
+					return err
 				}
 				hasPending = false
 			}
@@ -223,7 +223,7 @@ func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 		case "dt":
 			if hasPending {
 				if err := add(coll, folders, pending); err != nil {
-					return nil, err
+					return err
 				}
 				hasPending = false
 			}
@@ -263,18 +263,21 @@ func parse(root *html.Node, coll *types.Collection) (*types.Collection, error) {
 	}
 
 	if hasPending {
-		return nil, fmt.Errorf("unexpected pending bookmark")
+		return fmt.Errorf("unexpected pending bookmark")
 	}
 
-	return coll, nil
+	return nil
 }
 
-func (p *HTMLParser) Parse(reader io.Reader) (*types.Collection, error) {
+func (p *HTMLParser) Parse(reader io.Reader) (types.Collection, error) {
 	doc, err := html.Parse(reader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse HTML: %w", err)
+		return types.Collection{}, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
 	coll := types.NewCollection()
-	return parse(doc, coll)
+	if err := parse(doc, &coll); err != nil {
+		return types.Collection{}, err
+	}
+	return coll, nil
 }

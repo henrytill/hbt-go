@@ -31,10 +31,10 @@ func parseXML(r io.Reader) ([]pinboard.Post, error) {
 	return posts.Posts, nil
 }
 
-func (p *XMLParser) Parse(r io.Reader) (*types.Collection, error) {
+func (p *XMLParser) Parse(r io.Reader) (types.Collection, error) {
 	posts, err := parseXML(r)
 	if err != nil {
-		return nil, err
+		return types.Collection{}, err
 	}
 	return types.NewCollectionFromPosts(posts)
 }

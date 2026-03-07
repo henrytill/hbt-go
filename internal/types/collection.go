@@ -20,8 +20,8 @@ type Id struct {
 	index uint
 }
 
-func NewCollection() *Collection {
-	return &Collection{
+func NewCollection() Collection {
+	return Collection{
 		entities: []Entity{},
 		edges:    [][]uint{},
 		urls:     make(map[string]uint),
@@ -34,13 +34,13 @@ func (c *Collection) checkTag(id Id) {
 	}
 }
 
-func NewCollectionFromPosts(posts []pinboard.Post) (*Collection, error) {
+func NewCollectionFromPosts(posts []pinboard.Post) (Collection, error) {
 	coll := NewCollection()
 
 	for _, post := range posts {
 		entity, err := NewEntityFromPost(post)
 		if err != nil {
-			return nil, err
+			return Collection{}, err
 		}
 		coll.Upsert(entity)
 	}

@@ -123,14 +123,14 @@ func DetectOutputFormat(filename string) (Format, bool) {
 	}
 }
 
-func Parse(format Format, r io.Reader) (*types.Collection, error) {
+func Parse(format Format, r io.Reader) (types.Collection, error) {
 	if !format.CanInput() {
-		return nil, fmt.Errorf("format %s cannot be used for input", format.Name)
+		return types.Collection{}, fmt.Errorf("format %s cannot be used for input", format.Name)
 	}
 
 	parser, ok := parsers[format]
 	if !ok {
-		return nil, fmt.Errorf("no parser available for format: %s", format.Name)
+		return types.Collection{}, fmt.Errorf("no parser available for format: %s", format.Name)
 	}
 
 	return parser.Parse(r)
