@@ -9,15 +9,15 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-type Id struct {
-	owner *Collection
-	index uint
-}
-
 type Collection struct {
 	entities []Entity
 	edges    [][]uint
 	urls     map[string]uint
+}
+
+type Id struct {
+	owner *Collection
+	index uint
 }
 
 func NewCollection() *Collection {
@@ -113,7 +113,6 @@ func (c *Collection) Entities() []Entity {
 type Version string
 
 const ExpectedVersion Version = "v0.1.0"
-const ExpectedVersionReq = "^0.1.0"
 
 func NewVersion(v string) (Version, error) {
 	if len(v) > 0 && v[0] != 'v' {
@@ -134,7 +133,7 @@ func (v Version) String() string {
 }
 
 func (v Version) IsCompatible() bool {
-	return semver.Major(string(v)) == semver.Major(string(ExpectedVersion))
+	return semver.MajorMinor(string(v)) == semver.MajorMinor(string(ExpectedVersion))
 }
 
 type nodeRepr struct {
@@ -193,7 +192,11 @@ func (c *Collection) fromRepr(s collectionRepr) error {
 			return err
 		}
 		c.entities[i] = entity
-		c.edges[i] = serNode.Edges
+		if serNode.Edges != nil {
+			c.edges[i] = serNode.Edges
+		} else {
+			c.edges[i] = []uint{}
+		}
 		c.urls[entity.URI.String()] = uint(i)
 	}
 
