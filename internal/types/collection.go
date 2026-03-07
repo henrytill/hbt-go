@@ -28,7 +28,7 @@ func NewCollection() Collection {
 	}
 }
 
-func (c *Collection) checkTag(id Id) {
+func (c *Collection) checkId(id Id) {
 	if id.owner != c {
 		panic("collection: foreign id")
 	}
@@ -77,8 +77,8 @@ func (c *Collection) Upsert(entity Entity) Id {
 }
 
 func (c *Collection) AddEdges(from, to Id) {
-	c.checkTag(from)
-	c.checkTag(to)
+	c.checkId(from)
+	c.checkId(to)
 
 	c.edges[from.index] = append(c.edges[from.index], to.index)
 	c.edges[to.index] = append(c.edges[to.index], from.index)
