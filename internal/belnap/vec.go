@@ -20,15 +20,15 @@ func wordsNeeded(n int) int {
 	return (n + bitsMask) >> bitsLog2
 }
 
-func NewVec(width int) *Vec {
+func NewVec(width int) Vec {
 	nw := wordsNeeded(width)
-	return &Vec{
+	return Vec{
 		width: width,
 		words: make([]uint64, 2*nw),
 	}
 }
 
-func newFilled(width int, fill Value) *Vec {
+func newFilled(width int, fill Value) Vec {
 	nw := wordsNeeded(width)
 	words := make([]uint64, 2*nw)
 	fillPos := ^uint64(0) * uint64(fill&1)
@@ -37,13 +37,13 @@ func newFilled(width int, fill Value) *Vec {
 		words[2*i] = fillPos
 		words[2*i+1] = fillNeg
 	}
-	v := &Vec{width: width, words: words}
+	v := Vec{width: width, words: words}
 	v.maskTail()
 	return v
 }
 
-func AllTrue(width int) *Vec  { return newFilled(width, True) }
-func AllFalse(width int) *Vec { return newFilled(width, False) }
+func AllTrue(width int) Vec  { return newFilled(width, True) }
+func AllFalse(width int) Vec { return newFilled(width, False) }
 
 func (v *Vec) Width() int {
 	return v.width
@@ -154,17 +154,17 @@ func (v *Vec) Set(i int, val Value) {
 	v.setUnchecked(i, val)
 }
 
-func (v *Vec) Not() *Vec {
+func (v Vec) Not() Vec {
 	out := make([]uint64, len(v.words))
 	for i := 0; i < len(v.words); i += 2 {
 		out[i], out[i+1] = v.words[i+1], v.words[i]
 	}
-	r := &Vec{width: v.width, words: out}
+	r := Vec{width: v.width, words: out}
 	r.maskTail()
 	return r
 }
 
-func (v *Vec) And(other *Vec) *Vec {
+func (v Vec) And(other Vec) Vec {
 	width := max(v.width, other.width)
 	nw := wordsNeeded(width)
 	out := make([]uint64, 2*nw)
@@ -179,10 +179,10 @@ func (v *Vec) And(other *Vec) *Vec {
 		}
 		out[base], out[base+1] = aPos&bPos, aNeg|bNeg
 	}
-	return &Vec{width: width, words: out}
+	return Vec{width: width, words: out}
 }
 
-func (v *Vec) Or(other *Vec) *Vec {
+func (v Vec) Or(other Vec) Vec {
 	width := max(v.width, other.width)
 	nw := wordsNeeded(width)
 	out := make([]uint64, 2*nw)
@@ -197,14 +197,14 @@ func (v *Vec) Or(other *Vec) *Vec {
 		}
 		out[base], out[base+1] = aPos|bPos, aNeg&bNeg
 	}
-	return &Vec{width: width, words: out}
+	return Vec{width: width, words: out}
 }
 
-func (v *Vec) Implies(other *Vec) *Vec {
+func (v Vec) Implies(other Vec) Vec {
 	return v.Not().Or(other)
 }
 
-func (v *Vec) Merge(other *Vec) *Vec {
+func (v Vec) Merge(other Vec) Vec {
 	width := max(v.width, other.width)
 	nw := wordsNeeded(width)
 	out := make([]uint64, 2*nw)
@@ -219,7 +219,7 @@ func (v *Vec) Merge(other *Vec) *Vec {
 		}
 		out[base], out[base+1] = aPos|bPos, aNeg|bNeg
 	}
-	return &Vec{width: width, words: out}
+	return Vec{width: width, words: out}
 }
 
 func (v *Vec) IsConsistent() bool {
