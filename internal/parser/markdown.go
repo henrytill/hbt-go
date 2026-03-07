@@ -19,14 +19,14 @@ type parserState struct {
 	coll        *types.Collection
 	currentDate time.Time
 	labels      []string
-	maybeParent *uint
-	parents     []uint
+	maybeParent *types.Id
+	parents     []types.Id
 }
 
-func saveEntity(state *parserState, linkURL, linkTitle string) (uint, error) {
+func saveEntity(state *parserState, linkURL, linkTitle string) (types.Id, error) {
 	parsedURL, err := url.Parse(linkURL)
 	if err != nil {
-		return 0, err
+		return types.Id{}, err
 	}
 	if parsedURL.Path == "" {
 		parsedURL.Path = "/"
@@ -118,7 +118,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 		currentDate: time.Time{},
 		labels:      []string{},
 		maybeParent: nil,
-		parents:     []uint{},
+		parents:     []types.Id{},
 	}
 
 	err = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -131,7 +131,7 @@ func (p *MarkdownParser) Parse(r io.Reader) (*types.Collection, error) {
 				}
 				state.maybeParent = nil
 				state.labels = []string{}
-				state.parents = []uint{}
+				state.parents = []types.Id{}
 			} else if entering && node.Level > 1 {
 				headingText := extractText(node, content)
 				level := int(node.Level) - 2

@@ -9,6 +9,11 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+type Id struct {
+	owner *Collection
+	index uint
+}
+
 type Collection struct {
 	entities []Entity
 	edges    [][]uint
@@ -20,6 +25,12 @@ func NewCollection() *Collection {
 		entities: []Entity{},
 		edges:    [][]uint{},
 		urls:     make(map[string]uint),
+	}
+}
+
+func (c *Collection) checkTag(id Id) {
+	if id.owner != c {
+		panic("collection: foreign id")
 	}
 }
 
@@ -37,39 +48,40 @@ func NewCollectionFromPosts(posts []pinboard.Post) (*Collection, error) {
 	return coll, nil
 }
 
-func (c *Collection) findEntity(uri *url.URL) (uint, bool) {
+func (c *Collection) findEntity(uri *url.URL) (Id, bool) {
 	if uri == nil {
-		return 0, false
+		return Id{}, false
 	}
-	nodeID, exists := c.urls[uri.String()]
-	return nodeID, exists
+	index, exists := c.urls[uri.String()]
+	if !exists {
+		return Id{}, false
+	}
+	return Id{owner: c, index: index}, true
 }
 
-func (c *Collection) insert(entity Entity) uint {
-	nodeID := uint(len(c.entities))
+func (c *Collection) insert(entity Entity) Id {
+	index := uint(len(c.entities))
 	c.entities = append(c.entities, entity)
 	c.edges = append(c.edges, []uint{})
-	c.urls[entity.URI.String()] = nodeID
-	return nodeID
+	c.urls[entity.URI.String()] = index
+	return Id{owner: c, index: index}
 }
 
-func (c *Collection) Upsert(entity Entity) uint {
-	if nodeID, exists := c.findEntity(entity.URI); exists {
-		existing := &c.entities[nodeID]
-		existing.absorb(entity)
-		return nodeID
+func (c *Collection) Upsert(entity Entity) Id {
+	if id, exists := c.findEntity(entity.URI); exists {
+		c.entities[id.index].absorb(entity)
+		return id
 	}
 
 	return c.insert(entity)
 }
 
-func (c *Collection) AddEdges(from, to uint) {
-	if from >= uint(len(c.entities)) || to >= uint(len(c.entities)) {
-		return
-	}
+func (c *Collection) AddEdges(from, to Id) {
+	c.checkTag(from)
+	c.checkTag(to)
 
-	c.edges[from] = append(c.edges[from], to)
-	c.edges[to] = append(c.edges[to], from)
+	c.edges[from.index] = append(c.edges[from.index], to.index)
+	c.edges[to.index] = append(c.edges[to.index], from.index)
 }
 
 func (c *Collection) ApplyMappings(mappings map[string]string) {
