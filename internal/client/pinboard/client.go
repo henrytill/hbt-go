@@ -12,8 +12,8 @@ import (
 const (
 	BaseURL         = "https://api.pinboard.in/v1"
 	RateLimit       = 3 * time.Second
-	PostsAllRate    = 5 * time.Minute
-	PostsRecentRate = 1 * time.Minute
+	RatePostsAll    = 5 * time.Minute
+	RatePostsRecent = 1 * time.Minute
 )
 
 type AuthMethod interface {
@@ -45,8 +45,8 @@ type Client struct {
 	auth            AuthMethod
 	baseURL         string
 	lastRequest     time.Time
-	postsAllLast    time.Time
-	postsRecentLast time.Time
+	lastPostsAll    time.Time
+	lastPostsRecent time.Time
 }
 
 func NewClient(auth AuthMethod) *Client {
@@ -81,15 +81,15 @@ func (c *Client) rateLimit(endpoint string) {
 
 	switch endpoint {
 	case "posts/all":
-		if elapsed := now.Sub(c.postsAllLast); elapsed < PostsAllRate {
-			time.Sleep(PostsAllRate - elapsed)
+		if elapsed := now.Sub(c.lastPostsAll); elapsed < RatePostsAll {
+			time.Sleep(RatePostsAll - elapsed)
 		}
-		c.postsAllLast = now
+		c.lastPostsAll = now
 	case "posts/recent":
-		if elapsed := now.Sub(c.postsRecentLast); elapsed < PostsRecentRate {
-			time.Sleep(PostsRecentRate - elapsed)
+		if elapsed := now.Sub(c.lastPostsRecent); elapsed < RatePostsRecent {
+			time.Sleep(RatePostsRecent - elapsed)
 		}
-		c.postsRecentLast = now
+		c.lastPostsRecent = now
 	}
 
 	if elapsed := now.Sub(c.lastRequest); elapsed < RateLimit {
