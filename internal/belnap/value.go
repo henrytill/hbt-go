@@ -1,7 +1,5 @@
 package belnap
 
-import "errors"
-
 // Value represents a single truth value in Belnap's four-valued logic.
 //
 // Encoding: (neg_bit << 1) | pos_bit
@@ -20,8 +18,6 @@ const (
 )
 
 var fromBits = [4]Value{Unknown, True, False, Both}
-
-var ErrOutOfBounds = errors.New("index out of bounds")
 
 func (v Value) IsKnown() bool {
 	return v != Unknown

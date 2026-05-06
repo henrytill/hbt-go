@@ -1,6 +1,9 @@
 package belnap
 
-import "math/bits"
+import (
+	"errors"
+	"math/bits"
+)
 
 const (
 	bitsLog2 = 6
@@ -15,6 +18,8 @@ type Vec struct {
 	width int
 	words []uint64
 }
+
+var ErrOutOfBounds = errors.New("index out of bounds")
 
 func wordsNeeded(n int) int {
 	return (n + bitsMask) >> bitsLog2
