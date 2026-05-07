@@ -191,6 +191,51 @@ func TestVecCounts(t *testing.T) {
 	}
 }
 
+func TestVecWordBoundaries(t *testing.T) {
+	// Element 63: bit 63 (sign bit) of word-pair 0.
+	v := NewVec(65)
+	v.Set(63, Both)
+	if got, _ := v.Get(63); got != Both {
+		t.Errorf("get 63: got %v, want Both", got)
+	}
+	if got, _ := v.Get(62); got != Unknown {
+		t.Errorf("get 62: got %v, want Unknown", got)
+	}
+	if got, _ := v.Get(64); got != Unknown {
+		t.Errorf("get 64: got %v, want Unknown", got)
+	}
+
+	// Element 64: bit 0 of word-pair 1.
+	v.Set(64, True)
+	if got, _ := v.Get(64); got != True {
+		t.Errorf("get 64: got %v, want True", got)
+	}
+	if got, _ := v.Get(63); got != Both {
+		t.Errorf("get 63 after setting 64: got %v, want Both", got)
+	}
+}
+
+func TestVecWidth63(t *testing.T) {
+	// width=63 exercises r=63 in tailMask, the largest non-aligned width.
+	v := AllTrue(63)
+	if !v.IsAllTrue() {
+		t.Error("expected IsAllTrue")
+	}
+	if !v.IsAllDetermined() {
+		t.Error("expected IsAllDetermined")
+	}
+	if !v.IsConsistent() {
+		t.Error("expected IsConsistent")
+	}
+	if got, _ := v.Get(62); got != True {
+		t.Errorf("get 62: got %v, want True", got)
+	}
+	merged := v.Merge(AllFalse(63))
+	if merged.CountBoth() != 63 {
+		t.Errorf("count_both after merge: got %d, want 63", merged.CountBoth())
+	}
+}
+
 func TestVecAutoGrow(t *testing.T) {
 	v := NewVec(10)
 	v.Set(100, Both)
