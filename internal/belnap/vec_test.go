@@ -70,6 +70,67 @@ func TestVecBulkMerge(t *testing.T) {
 	}
 }
 
+func TestVecBulkConsensus(t *testing.T) {
+	a := AllTrue(64)
+	b := AllFalse(64)
+	c := a.Consensus(b)
+	if c.CountUnknown() != 64 {
+		t.Errorf("expected 64 unknown, got %d", c.CountUnknown())
+	}
+	if c.CountTrue() != 0 || c.CountFalse() != 0 || c.CountBoth() != 0 {
+		t.Errorf("expected all unknown, got T=%d F=%d B=%d",
+			c.CountTrue(), c.CountFalse(), c.CountBoth())
+	}
+}
+
+func TestVecConsensusDifferentWidths(t *testing.T) {
+	short := NewVec(10)
+	short.Set(0, True)
+	short.Set(1, Both)
+	short.Set(2, Both)
+
+	long := NewVec(100)
+	long.Set(0, True)
+	long.Set(1, True)
+	long.Set(2, False)
+	long.Set(99, Both)
+
+	ab := short.Consensus(long)
+	ba := long.Consensus(short)
+	if ab.Width() != 100 || ba.Width() != 100 {
+		t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
+	}
+
+	// True consensus True = True
+	if got, _ := ab.Get(0); got != True {
+		t.Errorf("index 0: got %v, want True", got)
+	}
+	// Both consensus True = True
+	if got, _ := ab.Get(1); got != True {
+		t.Errorf("index 1: got %v, want True", got)
+	}
+	// Both consensus False = False
+	if got, _ := ab.Get(2); got != False {
+		t.Errorf("index 2: got %v, want False", got)
+	}
+	// Unknown (short) consensus Both (long) = Unknown
+	if got, _ := ab.Get(99); got != Unknown {
+		t.Errorf("index 99: got %v, want Unknown", got)
+	}
+	// Beyond short: Unknown consensus Unknown = Unknown
+	if got, _ := ab.Get(50); got != Unknown {
+		t.Errorf("index 50: got %v, want Unknown", got)
+	}
+
+	for i := range ab.Width() {
+		g1, _ := ab.Get(i)
+		g2, _ := ba.Get(i)
+		if g1 != g2 {
+			t.Errorf("Consensus not commutative at index %d: %v vs %v", i, g1, g2)
+		}
+	}
+}
+
 func TestVecIsConsistent(t *testing.T) {
 	a := AllTrue(64)
 	if !a.IsConsistent() {

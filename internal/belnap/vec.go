@@ -227,6 +227,24 @@ func (v Vec) Merge(other Vec) Vec {
 	return Vec{width: width, words: out}
 }
 
+func (v Vec) Consensus(other Vec) Vec {
+	width := max(v.width, other.width)
+	nw := wordsNeeded(width)
+	out := make([]uint64, 2*nw)
+	for i := range nw {
+		base := 2 * i
+		var aPos, aNeg, bPos, bNeg uint64
+		if base+1 < len(v.words) {
+			aPos, aNeg = v.words[base], v.words[base+1]
+		}
+		if base+1 < len(other.words) {
+			bPos, bNeg = other.words[base], other.words[base+1]
+		}
+		out[base], out[base+1] = aPos&bPos, aNeg&bNeg
+	}
+	return Vec{width: width, words: out}
+}
+
 func (v *Vec) IsConsistent() bool {
 	for i := 0; i < len(v.words); i += 2 {
 		if v.words[i]&v.words[i+1] != 0 {
