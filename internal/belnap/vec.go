@@ -309,5 +309,9 @@ func (v *Vec) CountBoth() int {
 }
 
 func (v *Vec) CountUnknown() int {
-	return v.width - v.CountTrue() - v.CountFalse() - v.CountBoth()
+	n := 0
+	for i := 0; i < len(v.words); i += 2 {
+		n += bits.OnesCount64(v.words[i] | v.words[i+1])
+	}
+	return v.width - n
 }
