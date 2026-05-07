@@ -123,6 +123,62 @@ func TestScalarMergeTruthTable(t *testing.T) {
 	}
 }
 
+func TestScalarConsensusTruthTable(t *testing.T) {
+	expected := [4][4]Value{
+		{Unknown, Unknown, Unknown, Unknown},
+		{Unknown, True, Unknown, True},
+		{Unknown, Unknown, False, False},
+		{Unknown, True, False, Both},
+	}
+	variants := [4]Value{Unknown, True, False, Both}
+	for i, a := range variants {
+		for j, b := range variants {
+			got := a.Consensus(b)
+			if got != expected[i][j] {
+				t.Errorf("%v.Consensus(%v) = %v, want %v", a, b, got, expected[i][j])
+			}
+		}
+	}
+}
+
+func TestScalarLeqTruthTable(t *testing.T) {
+	// Truth order: False < {Unknown, Both} < True; Unknown and Both incomparable.
+	expected := [4][4]bool{
+		{true, true, false, false},
+		{false, true, false, false},
+		{true, true, true, true},
+		{false, true, false, true},
+	}
+	variants := [4]Value{Unknown, True, False, Both}
+	for i, a := range variants {
+		for j, b := range variants {
+			got := a.LeqTruth(b)
+			if got != expected[i][j] {
+				t.Errorf("%v.LeqTruth(%v) = %v, want %v", a, b, got, expected[i][j])
+			}
+		}
+	}
+}
+
+func TestScalarLeqKnowledgeTable(t *testing.T) {
+	// Knowledge order: Unknown < {True, False} < Both; True and False incomparable.
+	expected := [4][4]bool{
+		{true, true, true, true},
+		{false, true, false, true},
+		{false, false, true, true},
+		{false, false, false, true},
+	}
+	variants := [4]Value{Unknown, True, False, Both}
+	for i, a := range variants {
+		for j, b := range variants {
+			got := a.LeqKnowledge(b)
+			if got != expected[i][j] {
+				t.Errorf("%v.LeqKnowledge(%v) = %v, want %v", a, b, got, expected[i][j])
+			}
+		}
+	}
+}
+
 func TestScalarQueries(t *testing.T) {
 	if Unknown.IsKnown() {
 		t.Error("Unknown.IsKnown() should be false")

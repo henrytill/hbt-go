@@ -62,6 +62,18 @@ func (v Value) Merge(other Value) Value {
 	return fromBits[uint8(v)|uint8(other)]
 }
 
+func (v Value) Consensus(other Value) Value {
+	return fromBits[uint8(v)&uint8(other)]
+}
+
+func (v Value) LeqTruth(other Value) bool {
+	return v&1 <= other&1 && v>>1 >= other>>1
+}
+
+func (v Value) LeqKnowledge(other Value) bool {
+	return v&other == v
+}
+
 func (v Value) String() string {
 	switch v {
 	case True:
