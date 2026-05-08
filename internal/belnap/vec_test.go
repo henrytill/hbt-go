@@ -401,16 +401,16 @@ func TestVecAll(t *testing.T) {
 		t.Errorf("values: got %v, want %v", values, xs)
 	}
 
-	// Early termination via break.
-	count := 0
-	for range v.All() {
-		count++
-		if count == 2 {
+	// Early termination: break stops iteration after collecting two elements.
+	var seen []Value
+	for _, val := range v.All() {
+		seen = append(seen, val)
+		if len(seen) == 2 {
 			break
 		}
 	}
-	if count != 2 {
-		t.Errorf("early break: got %d iterations, want 2", count)
+	if !slices.Equal(seen, []Value{Unknown, True}) {
+		t.Errorf("early break: got %v, want [Unknown True]", seen)
 	}
 }
 
