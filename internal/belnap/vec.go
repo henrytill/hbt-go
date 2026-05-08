@@ -35,11 +35,16 @@ func NewVec(width int) Vec {
 	}
 }
 
+// fillBits stretches a Value's two bits to full uint64 lanes:
+// pos = all-1s if fill's pos bit is set, else 0; neg likewise.
+func fillBits(fill Value) (pos, neg uint64) {
+	return ^uint64(0) * uint64(fill&1), ^uint64(0) * uint64(fill>>1)
+}
+
 func newFilled(width int, fill Value) Vec {
 	nw := wordsNeeded(width)
 	words := make([]uint64, 2*nw)
-	fillPos := ^uint64(0) * uint64(fill&1)
-	fillNeg := ^uint64(0) * uint64(fill>>1)
+	fillPos, fillNeg := fillBits(fill)
 	for i := range nw {
 		words[2*i] = fillPos
 		words[2*i+1] = fillNeg
@@ -102,8 +107,7 @@ func (v *Vec) Resize(newWidth int, fill Value) {
 	oldNw := wordsNeeded(oldWidth)
 	newNw := wordsNeeded(newWidth)
 
-	fillPos := ^uint64(0) * uint64(fill&1)
-	fillNeg := ^uint64(0) * uint64(fill>>1)
+	fillPos, fillNeg := fillBits(fill)
 
 	if oldNw > 0 && oldWidth&bitsMask != 0 {
 		highMask := ^tailMask(oldWidth)
