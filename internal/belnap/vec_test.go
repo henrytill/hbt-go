@@ -8,24 +8,23 @@ import (
 	"testing/quick"
 )
 
+func assertGet(t *testing.T, v Vec, i int, want Value) {
+	t.Helper()
+	if got, _ := v.Get(i); got != want {
+		t.Errorf("index %d: got %v, want %v", i, got, want)
+	}
+}
+
 func TestVecGetSetAllFour(t *testing.T) {
 	v := NewVec(4)
 	v.Set(0, Unknown)
 	v.Set(1, True)
 	v.Set(2, False)
 	v.Set(3, Both)
-	if got, _ := v.Get(0); got != Unknown {
-		t.Errorf("index 0: got %v, want Unknown", got)
-	}
-	if got, _ := v.Get(1); got != True {
-		t.Errorf("index 1: got %v, want True", got)
-	}
-	if got, _ := v.Get(2); got != False {
-		t.Errorf("index 2: got %v, want False", got)
-	}
-	if got, _ := v.Get(3); got != Both {
-		t.Errorf("index 3: got %v, want Both", got)
-	}
+	assertGet(t, v, 0, Unknown)
+	assertGet(t, v, 1, True)
+	assertGet(t, v, 2, False)
+	assertGet(t, v, 3, Both)
 }
 
 func TestVecBulkAnd(t *testing.T) {
@@ -107,25 +106,15 @@ func TestVecConsensusDifferentWidths(t *testing.T) {
 	}
 
 	// True consensus True = True
-	if got, _ := ab.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
+	assertGet(t, ab, 0, True)
 	// Both consensus True = True
-	if got, _ := ab.Get(1); got != True {
-		t.Errorf("index 1: got %v, want True", got)
-	}
+	assertGet(t, ab, 1, True)
 	// Both consensus False = False
-	if got, _ := ab.Get(2); got != False {
-		t.Errorf("index 2: got %v, want False", got)
-	}
+	assertGet(t, ab, 2, False)
 	// Unknown (short) consensus Both (long) = Unknown
-	if got, _ := ab.Get(99); got != Unknown {
-		t.Errorf("index 99: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 99, Unknown)
 	// Beyond short: Unknown consensus Unknown = Unknown
-	if got, _ := ab.Get(50); got != Unknown {
-		t.Errorf("index 50: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 50, Unknown)
 
 	for i := range ab.Width() {
 		g1, _ := ab.Get(i)
@@ -200,24 +189,14 @@ func TestVecWordBoundaries(t *testing.T) {
 	// Element 63: bit 63 (sign bit) of word-pair 0.
 	v := NewVec(65)
 	v.Set(63, Both)
-	if got, _ := v.Get(63); got != Both {
-		t.Errorf("get 63: got %v, want Both", got)
-	}
-	if got, _ := v.Get(62); got != Unknown {
-		t.Errorf("get 62: got %v, want Unknown", got)
-	}
-	if got, _ := v.Get(64); got != Unknown {
-		t.Errorf("get 64: got %v, want Unknown", got)
-	}
+	assertGet(t, v, 63, Both)
+	assertGet(t, v, 62, Unknown)
+	assertGet(t, v, 64, Unknown)
 
 	// Element 64: bit 0 of word-pair 1.
 	v.Set(64, True)
-	if got, _ := v.Get(64); got != True {
-		t.Errorf("get 64: got %v, want True", got)
-	}
-	if got, _ := v.Get(63); got != Both {
-		t.Errorf("get 63 after setting 64: got %v, want Both", got)
-	}
+	assertGet(t, v, 64, True)
+	assertGet(t, v, 63, Both)
 }
 
 func TestVecWidth63(t *testing.T) {
@@ -232,9 +211,7 @@ func TestVecWidth63(t *testing.T) {
 	if !v.IsConsistent() {
 		t.Error("expected IsConsistent")
 	}
-	if got, _ := v.Get(62); got != True {
-		t.Errorf("get 62: got %v, want True", got)
-	}
+	assertGet(t, v, 62, True)
 	merged := v.Merge(AllFalse(63))
 	if merged.CountBoth() != 63 {
 		t.Errorf("count_both after merge: got %d, want 63", merged.CountBoth())
@@ -247,12 +224,8 @@ func TestVecAutoGrow(t *testing.T) {
 	if v.Width() != 101 {
 		t.Errorf("expected width 101, got %d", v.Width())
 	}
-	if got, _ := v.Get(100); got != Both {
-		t.Errorf("expected Both at 100, got %v", got)
-	}
-	if got, _ := v.Get(50); got != Unknown {
-		t.Errorf("expected Unknown at 50, got %v", got)
-	}
+	assertGet(t, v, 100, Both)
+	assertGet(t, v, 50, Unknown)
 	if _, err := v.Get(200); err != ErrOutOfBounds {
 		t.Errorf("expected ErrOutOfBounds at 200, got %v", err)
 	}
@@ -348,25 +321,15 @@ func TestVecAndDifferentWidths(t *testing.T) {
 	}
 
 	// True & True = True
-	if got, _ := ab.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
+	assertGet(t, ab, 0, True)
 	// False & True = False
-	if got, _ := ab.Get(1); got != False {
-		t.Errorf("index 1: got %v, want False", got)
-	}
+	assertGet(t, ab, 1, False)
 	// Both & True = Both
-	if got, _ := ab.Get(2); got != Both {
-		t.Errorf("index 2: got %v, want Both", got)
-	}
+	assertGet(t, ab, 2, Both)
 	// Unknown (short) & True (long) = Unknown
-	if got, _ := ab.Get(99); got != Unknown {
-		t.Errorf("index 99: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 99, Unknown)
 	// Beyond short: Unknown & Unknown = Unknown
-	if got, _ := ab.Get(50); got != Unknown {
-		t.Errorf("index 50: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 50, Unknown)
 
 	// Commutativity check
 	for i := range ab.Width() {
@@ -397,25 +360,15 @@ func TestVecOrDifferentWidths(t *testing.T) {
 	}
 
 	// True | False = True
-	if got, _ := ab.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
+	assertGet(t, ab, 0, True)
 	// False | True = True
-	if got, _ := ab.Get(1); got != True {
-		t.Errorf("index 1: got %v, want True", got)
-	}
+	assertGet(t, ab, 1, True)
 	// Both | False = Both
-	if got, _ := ab.Get(2); got != Both {
-		t.Errorf("index 2: got %v, want Both", got)
-	}
+	assertGet(t, ab, 2, Both)
 	// Unknown (short) | False (long) = Unknown
-	if got, _ := ab.Get(99); got != Unknown {
-		t.Errorf("index 99: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 99, Unknown)
 	// Beyond short: Unknown | Unknown = Unknown
-	if got, _ := ab.Get(50); got != Unknown {
-		t.Errorf("index 50: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 50, Unknown)
 
 	// Commutativity check
 	for i := range ab.Width() {
@@ -444,21 +397,13 @@ func TestVecMergeDifferentWidths(t *testing.T) {
 	}
 
 	// True merge False = Both
-	if got, _ := ab.Get(0); got != Both {
-		t.Errorf("index 0: got %v, want Both", got)
-	}
+	assertGet(t, ab, 0, Both)
 	// False merge True = Both
-	if got, _ := ab.Get(1); got != Both {
-		t.Errorf("index 1: got %v, want Both", got)
-	}
+	assertGet(t, ab, 1, Both)
 	// Unknown (short) merge True (long) = True
-	if got, _ := ab.Get(99); got != True {
-		t.Errorf("index 99: got %v, want True", got)
-	}
+	assertGet(t, ab, 99, True)
 	// Beyond short: Unknown merge Unknown = Unknown
-	if got, _ := ab.Get(50); got != Unknown {
-		t.Errorf("index 50: got %v, want Unknown", got)
-	}
+	assertGet(t, ab, 50, Unknown)
 
 	// Commutativity check
 	for i := range ab.Width() {
@@ -597,13 +542,9 @@ func TestVecImpliesDifferentWidths(t *testing.T) {
 		t.Errorf("width: got %d, want 100", result.Width())
 	}
 	// True -> True = True for first 10
-	if got, _ := result.Get(0); got != True {
-		t.Errorf("index 0: got %v, want True", got)
-	}
+	assertGet(t, result, 0, True)
 	// Unknown -> True = True for positions beyond short
-	if got, _ := result.Get(50); got != True {
-		t.Errorf("index 50: got %v, want True", got)
-	}
+	assertGet(t, result, 50, True)
 }
 
 const propMaxN = 200
