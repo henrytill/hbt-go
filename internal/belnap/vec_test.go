@@ -87,44 +87,6 @@ func TestVecBulkConsensus(t *testing.T) {
 	}
 }
 
-func TestVecConsensusDifferentWidths(t *testing.T) {
-	short := NewVec(10)
-	short.Set(0, True)
-	short.Set(1, Both)
-	short.Set(2, Both)
-
-	long := NewVec(100)
-	long.Set(0, True)
-	long.Set(1, True)
-	long.Set(2, False)
-	long.Set(99, Both)
-
-	ab := short.Consensus(long)
-	ba := long.Consensus(short)
-	if ab.Width() != 100 || ba.Width() != 100 {
-		t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
-	}
-
-	// True consensus True = True
-	assertGet(t, ab, 0, True)
-	// Both consensus True = True
-	assertGet(t, ab, 1, True)
-	// Both consensus False = False
-	assertGet(t, ab, 2, False)
-	// Unknown (short) consensus Both (long) = Unknown
-	assertGet(t, ab, 99, Unknown)
-	// Beyond short: Unknown consensus Unknown = Unknown
-	assertGet(t, ab, 50, Unknown)
-
-	for i := range ab.Width() {
-		g1, _ := ab.Get(i)
-		g2, _ := ba.Get(i)
-		if g1 != g2 {
-			t.Errorf("Consensus not commutative at index %d: %v vs %v", i, g1, g2)
-		}
-	}
-}
-
 func TestVecIsConsistent(t *testing.T) {
 	a := AllTrue(64)
 	if !a.IsConsistent() {
@@ -302,116 +264,96 @@ func TestVecTruncate(t *testing.T) {
 	}
 }
 
-func TestVecAndDifferentWidths(t *testing.T) {
-	short := NewVec(10)
-	short.Set(0, True)
-	short.Set(1, False)
-	short.Set(2, Both)
-
-	long := NewVec(100)
-	long.Set(0, True)
-	long.Set(1, True)
-	long.Set(2, True)
-	long.Set(99, True)
-
-	ab := short.And(long)
-	ba := long.And(short)
-	if ab.Width() != 100 || ba.Width() != 100 {
-		t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
+func TestVecBinaryOpDifferentWidths(t *testing.T) {
+	type indexed struct {
+		idx int
+		val Value
 	}
-
-	// True & True = True
-	assertGet(t, ab, 0, True)
-	// False & True = False
-	assertGet(t, ab, 1, False)
-	// Both & True = Both
-	assertGet(t, ab, 2, Both)
-	// Unknown (short) & True (long) = Unknown
-	assertGet(t, ab, 99, Unknown)
-	// Beyond short: Unknown & Unknown = Unknown
-	assertGet(t, ab, 50, Unknown)
-
-	// Commutativity check
-	for i := range ab.Width() {
-		g1, _ := ab.Get(i)
-		g2, _ := ba.Get(i)
-		if g1 != g2 {
-			t.Errorf("And not commutative at index %d: %v vs %v", i, g1, g2)
-		}
+	cases := []struct {
+		name   string
+		op     func(Vec, Vec) Vec
+		short  []indexed
+		long   []indexed
+		wantAB []indexed
+	}{
+		{
+			name:  "And",
+			op:    Vec.And,
+			short: []indexed{{0, True}, {1, False}, {2, Both}},
+			long:  []indexed{{0, True}, {1, True}, {2, True}, {99, True}},
+			wantAB: []indexed{
+				{0, True},     // True & True
+				{1, False},    // False & True
+				{2, Both},     // Both & True
+				{99, Unknown}, // Unknown (short) & True (long)
+				{50, Unknown}, // Beyond short: Unknown & Unknown
+			},
+		},
+		{
+			name:  "Or",
+			op:    Vec.Or,
+			short: []indexed{{0, True}, {1, False}, {2, Both}},
+			long:  []indexed{{0, False}, {1, True}, {2, False}, {99, False}},
+			wantAB: []indexed{
+				{0, True},     // True | False
+				{1, True},     // False | True
+				{2, Both},     // Both | False
+				{99, Unknown}, // Unknown (short) | False (long)
+				{50, Unknown}, // Beyond short: Unknown | Unknown
+			},
+		},
+		{
+			name:  "Merge",
+			op:    Vec.Merge,
+			short: []indexed{{0, True}, {1, False}},
+			long:  []indexed{{0, False}, {1, True}, {99, True}},
+			wantAB: []indexed{
+				{0, Both},     // True merge False
+				{1, Both},     // False merge True
+				{99, True},    // Unknown (short) merge True (long)
+				{50, Unknown}, // Beyond short: Unknown merge Unknown
+			},
+		},
+		{
+			name:  "Consensus",
+			op:    Vec.Consensus,
+			short: []indexed{{0, True}, {1, Both}, {2, Both}},
+			long:  []indexed{{0, True}, {1, True}, {2, False}, {99, Both}},
+			wantAB: []indexed{
+				{0, True},     // True consensus True
+				{1, True},     // Both consensus True
+				{2, False},    // Both consensus False
+				{99, Unknown}, // Unknown (short) consensus Both (long)
+				{50, Unknown}, // Beyond short: Unknown consensus Unknown
+			},
+		},
 	}
-}
-
-func TestVecOrDifferentWidths(t *testing.T) {
-	short := NewVec(10)
-	short.Set(0, True)
-	short.Set(1, False)
-	short.Set(2, Both)
-
-	long := NewVec(100)
-	long.Set(0, False)
-	long.Set(1, True)
-	long.Set(2, False)
-	long.Set(99, False)
-
-	ab := short.Or(long)
-	ba := long.Or(short)
-	if ab.Width() != 100 || ba.Width() != 100 {
-		t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
-	}
-
-	// True | False = True
-	assertGet(t, ab, 0, True)
-	// False | True = True
-	assertGet(t, ab, 1, True)
-	// Both | False = Both
-	assertGet(t, ab, 2, Both)
-	// Unknown (short) | False (long) = Unknown
-	assertGet(t, ab, 99, Unknown)
-	// Beyond short: Unknown | Unknown = Unknown
-	assertGet(t, ab, 50, Unknown)
-
-	// Commutativity check
-	for i := range ab.Width() {
-		g1, _ := ab.Get(i)
-		g2, _ := ba.Get(i)
-		if g1 != g2 {
-			t.Errorf("Or not commutative at index %d: %v vs %v", i, g1, g2)
-		}
-	}
-}
-
-func TestVecMergeDifferentWidths(t *testing.T) {
-	short := NewVec(10)
-	short.Set(0, True)
-	short.Set(1, False)
-
-	long := NewVec(100)
-	long.Set(0, False)
-	long.Set(1, True)
-	long.Set(99, True)
-
-	ab := short.Merge(long)
-	ba := long.Merge(short)
-	if ab.Width() != 100 || ba.Width() != 100 {
-		t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
-	}
-
-	// True merge False = Both
-	assertGet(t, ab, 0, Both)
-	// False merge True = Both
-	assertGet(t, ab, 1, Both)
-	// Unknown (short) merge True (long) = True
-	assertGet(t, ab, 99, True)
-	// Beyond short: Unknown merge Unknown = Unknown
-	assertGet(t, ab, 50, Unknown)
-
-	// Commutativity check
-	for i := range ab.Width() {
-		g1, _ := ab.Get(i)
-		g2, _ := ba.Get(i)
-		if g1 != g2 {
-			t.Errorf("Merge not commutative at index %d: %v vs %v", i, g1, g2)
-		}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			short := NewVec(10)
+			for _, s := range tc.short {
+				short.Set(s.idx, s.val)
+			}
+			long := NewVec(100)
+			for _, s := range tc.long {
+				long.Set(s.idx, s.val)
+			}
+			ab := tc.op(short, long)
+			ba := tc.op(long, short)
+			if ab.Width() != 100 || ba.Width() != 100 {
+				t.Errorf("width: got %d/%d, want 100", ab.Width(), ba.Width())
+			}
+			for _, e := range tc.wantAB {
+				assertGet(t, ab, e.idx, e.val)
+			}
+			for i := range ab.Width() {
+				g1, _ := ab.Get(i)
+				g2, _ := ba.Get(i)
+				if g1 != g2 {
+					t.Errorf("not commutative at index %d: %v vs %v", i, g1, g2)
+				}
+			}
+		})
 	}
 }
 
