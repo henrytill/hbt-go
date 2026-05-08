@@ -79,11 +79,9 @@ func TestVecBulkConsensus(t *testing.T) {
 	a := AllTrue(64)
 	b := AllFalse(64)
 	c := a.Consensus(b)
-	if c.CountUnknown() != 64 {
-		t.Errorf("expected 64 unknown, got %d", c.CountUnknown())
-	}
-	if c.CountTrue() != 0 || c.CountFalse() != 0 || c.CountBoth() != 0 {
-		t.Errorf("expected all unknown, got T=%d F=%d B=%d", c.CountTrue(), c.CountFalse(), c.CountBoth())
+	if !c.Equal(NewVec(64)) {
+		t.Errorf("expected all unknown, got T=%d F=%d B=%d U=%d",
+			c.CountTrue(), c.CountFalse(), c.CountBoth(), c.CountUnknown())
 	}
 }
 
