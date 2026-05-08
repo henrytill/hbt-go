@@ -1,8 +1,11 @@
 package belnap
 
 import (
+	"math/rand"
+	"reflect"
 	"slices"
 	"testing"
+	"testing/quick"
 )
 
 func TestVecGetSetAllFour(t *testing.T) {
@@ -602,4 +605,366 @@ func TestVecImpliesDifferentWidths(t *testing.T) {
 	if got, _ := result.Get(50); got != True {
 		t.Errorf("index 50: got %v, want True", got)
 	}
+}
+
+const propMaxN = 200
+
+func randXs(r *rand.Rand, n int) []Value {
+	xs := make([]Value, n)
+	for i := range xs {
+		xs[i] = Value(r.Intn(4))
+	}
+	return xs
+}
+
+type vec1 struct{ Xs []Value }
+
+func (vec1) Generate(r *rand.Rand, _ int) reflect.Value {
+	n := r.Intn(propMaxN + 1)
+	return reflect.ValueOf(vec1{Xs: randXs(r, n)})
+}
+
+type vec2 struct{ Xs, Ys []Value }
+
+func (vec2) Generate(r *rand.Rand, _ int) reflect.Value {
+	n := r.Intn(propMaxN + 1)
+	return reflect.ValueOf(vec2{Xs: randXs(r, n), Ys: randXs(r, n)})
+}
+
+type vec3 struct{ Xs, Ys, Zs []Value }
+
+func (vec3) Generate(r *rand.Rand, _ int) reflect.Value {
+	n := r.Intn(propMaxN + 1)
+	return reflect.ValueOf(vec3{Xs: randXs(r, n), Ys: randXs(r, n), Zs: randXs(r, n)})
+}
+
+type vecGetSet struct {
+	Xs []Value
+	I  int
+	V  Value
+}
+
+func (vecGetSet) Generate(r *rand.Rand, _ int) reflect.Value {
+	n := r.Intn(propMaxN) + 1
+	return reflect.ValueOf(vecGetSet{
+		Xs: randXs(r, n),
+		I:  r.Intn(n),
+		V:  Value(r.Intn(4)),
+	})
+}
+
+type vecNeedle struct {
+	Needle Value
+	Xs     []Value
+}
+
+func (vecNeedle) Generate(r *rand.Rand, _ int) reflect.Value {
+	n := r.Intn(propMaxN + 1)
+	return reflect.ValueOf(vecNeedle{
+		Needle: Value(r.Intn(4)),
+		Xs:     randXs(r, n),
+	})
+}
+
+func runProp(t *testing.T, f any) {
+	t.Helper()
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestPropOrCommutativity(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Or(b).Equal(b.Or(a))
+	})
+}
+
+func TestPropOrAssociativity(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.Or(b).Or(c).Equal(a.Or(b.Or(c)))
+	})
+}
+
+func TestPropOrIdempotency(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Or(a).Equal(a)
+	})
+}
+
+func TestPropAndCommutativity(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.And(b).Equal(b.And(a))
+	})
+}
+
+func TestPropAndAssociativity(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.And(b).And(c).Equal(a.And(b.And(c)))
+	})
+}
+
+func TestPropAndIdempotency(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.And(a).Equal(a)
+	})
+}
+
+func TestPropAbsorptionOrAnd(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Or(a.And(b)).Equal(a)
+	})
+}
+
+func TestPropAbsorptionAndOr(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.And(a.Or(b)).Equal(a)
+	})
+}
+
+func TestPropAndDistributesOverOr(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.And(b.Or(c)).Equal(a.And(b).Or(a.And(c)))
+	})
+}
+
+func TestPropOrDistributesOverAnd(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.Or(b.And(c)).Equal(a.Or(b).And(a.Or(c)))
+	})
+}
+
+func TestPropOrFalseIdentity(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Or(AllFalse(len(p.Xs))).Equal(a)
+	})
+}
+
+func TestPropAndTrueIdentity(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.And(AllTrue(len(p.Xs))).Equal(a)
+	})
+}
+
+func TestPropOrTrueAnnihilator(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Or(AllTrue(len(p.Xs))).Equal(AllTrue(len(p.Xs)))
+	})
+}
+
+func TestPropAndFalseAnnihilator(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.And(AllFalse(len(p.Xs))).Equal(AllFalse(len(p.Xs)))
+	})
+}
+
+func TestPropImpliesDefinition(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Implies(b).Equal(a.Not().Or(b))
+	})
+}
+
+func TestPropNotInvolutive(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Not().Not().Equal(a)
+	})
+}
+
+func TestPropDeMorganAnd(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.And(b).Not().Equal(a.Not().Or(b.Not()))
+	})
+}
+
+func TestPropDeMorganOr(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Or(b).Not().Equal(a.Not().And(b.Not()))
+	})
+}
+
+func TestPropMergeCommutativity(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Merge(b).Equal(b.Merge(a))
+	})
+}
+
+func TestPropMergeAssociativity(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.Merge(b).Merge(c).Equal(a.Merge(b.Merge(c)))
+	})
+}
+
+func TestPropMergeIdempotency(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Merge(a).Equal(a)
+	})
+}
+
+func TestPropMergeUnknownIdentity(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Merge(NewVec(len(p.Xs))).Equal(a)
+	})
+}
+
+func TestPropConsensusCommutativity(t *testing.T) {
+	runProp(t, func(p vec2) bool {
+		a, b := FromSlice(p.Xs), FromSlice(p.Ys)
+		return a.Consensus(b).Equal(b.Consensus(a))
+	})
+}
+
+func TestPropConsensusAssociativity(t *testing.T) {
+	runProp(t, func(p vec3) bool {
+		a, b, c := FromSlice(p.Xs), FromSlice(p.Ys), FromSlice(p.Zs)
+		return a.Consensus(b).Consensus(c).Equal(a.Consensus(b.Consensus(c)))
+	})
+}
+
+func TestPropConsensusIdempotency(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Consensus(a).Equal(a)
+	})
+}
+
+func TestPropConsensusBothIdentity(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		a := FromSlice(p.Xs)
+		return a.Consensus(AllBoth(len(p.Xs))).Equal(a)
+	})
+}
+
+func TestPropCountsSumToWidth(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		return v.CountTrue()+v.CountFalse()+v.CountBoth()+v.CountUnknown() == len(p.Xs)
+	})
+}
+
+func TestPropIsConsistentIffNoBoth(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		return v.IsConsistent() == (v.CountBoth() == 0)
+	})
+}
+
+func TestPropIsAllDeterminedIff(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		return v.IsAllDetermined() == (v.CountUnknown() == 0 && v.CountBoth() == 0)
+	})
+}
+
+func TestPropIsAllTrueIff(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		return v.IsAllTrue() == (v.CountTrue() == len(p.Xs))
+	})
+}
+
+func TestPropIsAllFalseIff(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		return v.IsAllFalse() == (v.CountFalse() == len(p.Xs))
+	})
+}
+
+func TestPropFromSliceToSliceRoundtrip(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		return slices.Equal(FromSlice(p.Xs).ToSlice(), p.Xs)
+	})
+}
+
+func TestPropToSliceMatchesGet(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		got := v.ToSlice()
+		for i := range p.Xs {
+			val, _ := v.Get(i)
+			if got[i] != val {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+func TestPropFindFirstReturnsMatch(t *testing.T) {
+	runProp(t, func(p vecNeedle) bool {
+		v := FromSlice(p.Xs)
+		i, ok := v.FindFirst(p.Needle)
+		if !ok {
+			return true
+		}
+		got, _ := v.Get(i)
+		return got == p.Needle
+	})
+}
+
+func TestPropFindFirstIsLeftmost(t *testing.T) {
+	runProp(t, func(p vecNeedle) bool {
+		v := FromSlice(p.Xs)
+		i, ok := v.FindFirst(p.Needle)
+		if !ok {
+			return true
+		}
+		for j := range i {
+			got, _ := v.Get(j)
+			if got == p.Needle {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+func TestPropFindFirstNoneIffCountZero(t *testing.T) {
+	runProp(t, func(p vec1) bool {
+		v := FromSlice(p.Xs)
+		for _, c := range []struct {
+			needle Value
+			count  int
+		}{
+			{True, v.CountTrue()},
+			{False, v.CountFalse()},
+			{Both, v.CountBoth()},
+			{Unknown, v.CountUnknown()},
+		} {
+			_, ok := v.FindFirst(c.needle)
+			if ok != (c.count > 0) {
+				return false
+			}
+		}
+		return true
+	})
+}
+
+func TestPropGetAfterSet(t *testing.T) {
+	runProp(t, func(p vecGetSet) bool {
+		v := FromSlice(p.Xs)
+		v.Set(p.I, p.V)
+		got, _ := v.Get(p.I)
+		return got == p.V
+	})
 }

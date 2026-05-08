@@ -51,6 +51,7 @@ func newFilled(width int, fill Value) Vec {
 
 func AllTrue(width int) Vec  { return newFilled(width, True) }
 func AllFalse(width int) Vec { return newFilled(width, False) }
+func AllBoth(width int) Vec  { return newFilled(width, Both) }
 
 func FromSlice(xs []Value) Vec {
 	v := NewVec(len(xs))
