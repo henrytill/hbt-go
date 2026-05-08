@@ -2,7 +2,9 @@ package belnap
 
 import (
 	"errors"
+	"iter"
 	"math/bits"
+	"slices"
 )
 
 const (
@@ -49,6 +51,14 @@ func newFilled(width int, fill Value) Vec {
 
 func AllTrue(width int) Vec  { return newFilled(width, True) }
 func AllFalse(width int) Vec { return newFilled(width, False) }
+
+func FromSlice(xs []Value) Vec {
+	v := NewVec(len(xs))
+	for i, x := range xs {
+		v.setUnchecked(i, x)
+	}
+	return v
+}
 
 func (v *Vec) Width() int {
 	return v.width
@@ -332,4 +342,51 @@ func (v *Vec) CountUnknown() int {
 		n += bits.OnesCount64(v.words[i] | v.words[i+1])
 	}
 	return v.width - n
+}
+
+func (v Vec) ToSlice() []Value {
+	out := make([]Value, v.width)
+	for i := range v.width {
+		out[i] = v.getUnchecked(i)
+	}
+	return out
+}
+
+func (v Vec) All() iter.Seq2[int, Value] {
+	return func(yield func(int, Value) bool) {
+		for i := range v.width {
+			if !yield(i, v.getUnchecked(i)) {
+				return
+			}
+		}
+	}
+}
+
+func (v Vec) FindFirst(needle Value) (int, bool) {
+	nw := wordsNeeded(v.width)
+	posBit := uint64(needle) & 1
+	negBit := uint64(needle) >> 1
+	for i := range nw {
+		base := 2 * i
+		wPos := v.words[base]
+		wNeg := v.words[base+1]
+		if posBit == 0 {
+			wPos = ^wPos
+		}
+		if negBit == 0 {
+			wNeg = ^wNeg
+		}
+		matched := wPos & wNeg
+		if i == nw-1 {
+			matched &= tailMask(v.width)
+		}
+		if matched != 0 {
+			return i*64 + bits.TrailingZeros64(matched), true
+		}
+	}
+	return 0, false
+}
+
+func (v Vec) Equal(other Vec) bool {
+	return v.width == other.width && slices.Equal(v.words, other.words)
 }

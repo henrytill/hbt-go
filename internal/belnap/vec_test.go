@@ -1,6 +1,9 @@
 package belnap
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestVecGetSetAllFour(t *testing.T) {
 	v := NewVec(4)
@@ -462,6 +465,125 @@ func TestVecMergeDifferentWidths(t *testing.T) {
 		if g1 != g2 {
 			t.Errorf("Merge not commutative at index %d: %v vs %v", i, g1, g2)
 		}
+	}
+}
+
+func TestVecToSliceFromSliceRoundtrip(t *testing.T) {
+	if got := NewVec(0).ToSlice(); len(got) != 0 {
+		t.Errorf("empty: got %v, want []", got)
+	}
+
+	xs := []Value{Unknown, True, False, Both}
+	if got := FromSlice(xs).ToSlice(); !slices.Equal(got, xs) {
+		t.Errorf("4 elems: got %v, want %v", got, xs)
+	}
+
+	// 64 elements exercises exactly one full word-pair.
+	xs64 := make([]Value, 64)
+	for i := range xs64 {
+		xs64[i] = True
+	}
+	if got := AllTrue(64).ToSlice(); !slices.Equal(got, xs64) {
+		t.Errorf("64 elems: got %v, want all True", got)
+	}
+
+	// 65 elements: last element straddles into word-pair 1.
+	xs65 := make([]Value, 65)
+	for i := range xs65 {
+		xs65[i] = True
+	}
+	xs65[64] = False
+	if got := FromSlice(xs65).ToSlice(); !slices.Equal(got, xs65) {
+		t.Errorf("65 elems: got %v, want %v", got, xs65)
+	}
+}
+
+func TestVecAll(t *testing.T) {
+	xs := []Value{Unknown, True, False, Both}
+	v := FromSlice(xs)
+	var indices []int
+	var values []Value
+	for i, val := range v.All() {
+		indices = append(indices, i)
+		values = append(values, val)
+	}
+	if !slices.Equal(indices, []int{0, 1, 2, 3}) {
+		t.Errorf("indices: got %v, want [0 1 2 3]", indices)
+	}
+	if !slices.Equal(values, xs) {
+		t.Errorf("values: got %v, want %v", values, xs)
+	}
+
+	// Early termination via break.
+	count := 0
+	for range v.All() {
+		count++
+		if count == 2 {
+			break
+		}
+	}
+	if count != 2 {
+		t.Errorf("early break: got %d iterations, want 2", count)
+	}
+}
+
+func TestVecFindFirst(t *testing.T) {
+	v := FromSlice([]Value{False, False, True, Both})
+	if i, ok := v.FindFirst(True); !ok || i != 2 {
+		t.Errorf("first True: got (%d, %v), want (2, true)", i, ok)
+	}
+	if i, ok := v.FindFirst(False); !ok || i != 0 {
+		t.Errorf("first False: got (%d, %v), want (0, true)", i, ok)
+	}
+	if i, ok := v.FindFirst(Both); !ok || i != 3 {
+		t.Errorf("first Both: got (%d, %v), want (3, true)", i, ok)
+	}
+	if _, ok := v.FindFirst(Unknown); ok {
+		t.Errorf("first Unknown: got ok=true, want false")
+	}
+
+	// Empty vec.
+	if _, ok := NewVec(0).FindFirst(True); ok {
+		t.Error("empty: got ok=true, want false")
+	}
+
+	// Match at word boundary (index 64, word-pair 1).
+	xs := make([]Value, 65)
+	for i := range xs {
+		xs[i] = False
+	}
+	xs[64] = True
+	if i, ok := FromSlice(xs).FindFirst(True); !ok || i != 64 {
+		t.Errorf("word-boundary True: got (%d, %v), want (64, true)", i, ok)
+	}
+
+	// FindFirst Unknown across multiple words: ensure tail-mask doesn't
+	// produce a false hit on garbage bits past width.
+	v63 := AllTrue(63)
+	if _, ok := v63.FindFirst(Unknown); ok {
+		t.Error("AllTrue(63) FindFirst Unknown: got ok=true, want false")
+	}
+}
+
+func TestVecEqual(t *testing.T) {
+	a := FromSlice([]Value{True, False, Both})
+	b := FromSlice([]Value{True, False, Both})
+	if !a.Equal(b) {
+		t.Error("identical vecs: Equal returned false")
+	}
+
+	c := FromSlice([]Value{True, False, Unknown})
+	if a.Equal(c) {
+		t.Error("differing values: Equal returned true")
+	}
+
+	d := FromSlice([]Value{True, False})
+	if a.Equal(d) {
+		t.Error("differing widths: Equal returned true")
+	}
+
+	if !NewVec(0).Equal(NewVec(0)) {
+		t.Error("empty vecs: Equal returned false")
 	}
 }
 
