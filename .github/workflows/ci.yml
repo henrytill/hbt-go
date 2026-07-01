@@ -10,10 +10,10 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.0
         with:
           submodules: true
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v6.4.0
         with:
           go-version-file: 'go.mod'
       - run: make all
@@ -21,7 +21,7 @@ jobs:
   linux-flake:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.0
         with:
           submodules: true
       - uses: DeterminateSystems/nix-installer-action@main
