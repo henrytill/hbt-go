@@ -80,20 +80,33 @@ func parseFormat(name string) (Format, bool) {
 	return Format{}, false
 }
 
-func (f *Format) Set(value string) error {
+// FormatFlag is a flag.Value that parses a Format constrained to a fixed
+// role (input or output). The role is independent of the currently held
+// Format, so setting the flag repeatedly validates each value the same way.
+type FormatFlag struct {
+	Format Format
+	role   FormatCapability
+}
+
+func NewInputFormatFlag() FormatFlag  { return FormatFlag{role: CapInput} }
+func NewOutputFormatFlag() FormatFlag { return FormatFlag{role: CapOutput} }
+
+func (f *FormatFlag) String() string { return f.Format.Name }
+
+func (f *FormatFlag) Set(value string) error {
 	parsed, ok := parseFormat(value)
 	if !ok {
 		return fmt.Errorf("invalid format: %s", value)
 	}
 
-	if f.CanInput() && !parsed.CanInput() {
+	if f.role&CapInput != 0 && !parsed.CanInput() {
 		return fmt.Errorf("format %s cannot be used for input", value)
 	}
-	if f.CanOutput() && !parsed.CanOutput() {
+	if f.role&CapOutput != 0 && !parsed.CanOutput() {
 		return fmt.Errorf("format %s cannot be used for output", value)
 	}
 
-	*f = parsed
+	f.Format = parsed
 	return nil
 }
 

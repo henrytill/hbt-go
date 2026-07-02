@@ -20,8 +20,8 @@ var (
 type Format = internal.Format
 
 type Config struct {
-	InputFormat  Format
-	OutputFormat Format
+	InputFormat  internal.FormatFlag
+	OutputFormat internal.FormatFlag
 	OutputFile   *string
 	Info         *bool
 	ListTags     *bool
@@ -78,8 +78,8 @@ func detectOutputFormat(filename string) (Format, error) {
 
 func main() {
 	config := Config{
-		InputFormat:  Format{Capability: internal.CapInput},
-		OutputFormat: Format{Capability: internal.CapOutput},
+		InputFormat:  internal.NewInputFormatFlag(),
+		OutputFormat: internal.NewOutputFormatFlag(),
 		OutputFile:   flag.String("o", "", "Output file (defaults to stdout)"),
 		Info:         flag.Bool("info", false, "Show collection info (entity count)"),
 		ListTags:     flag.Bool("list-tags", false, "List all tags"),
@@ -120,26 +120,26 @@ func main() {
 	config.InputFile = args[0]
 
 	// If no input format was specified, detect it from the filename
-	if config.InputFormat.Name == "" {
+	if config.InputFormat.Format.Name == "" {
 		format, err := detectInputFormat(config.InputFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		config.InputFormat = format
+		config.InputFormat.Format = format
 	}
 
 	// If no output format was specified, detect it from the output filename
-	if config.OutputFormat.Name == "" && *config.OutputFile != "" {
+	if config.OutputFormat.Format.Name == "" && *config.OutputFile != "" {
 		format, err := detectOutputFormat(*config.OutputFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		config.OutputFormat = format
+		config.OutputFormat.Format = format
 	}
 
-	if !*config.Info && !*config.ListTags && config.OutputFormat.Name == "" {
+	if !*config.Info && !*config.ListTags && config.OutputFormat.Format.Name == "" {
 		fmt.Fprintf(os.Stderr, "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)\n")
 		os.Exit(1)
 	}
@@ -156,7 +156,7 @@ func main() {
 	}
 	defer inputFile.Close()
 
-	coll, err := internal.Parse(config.InputFormat, inputFile)
+	coll, err := internal.Parse(config.InputFormat.Format, inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing file: %v\n", err)
 		os.Exit(1)
@@ -192,7 +192,7 @@ func main() {
 		return
 	}
 
-	if config.OutputFormat.Name != "" {
+	if config.OutputFormat.Format.Name != "" {
 		var output *os.File
 		if *config.OutputFile != "" {
 			output, err = os.Create(*config.OutputFile)
@@ -205,7 +205,7 @@ func main() {
 			output = os.Stdout
 		}
 
-		err = internal.Unparse(config.OutputFormat, output, &coll)
+		err = internal.Unparse(config.OutputFormat.Format, output, &coll)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
 			os.Exit(1)
