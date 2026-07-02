@@ -10,8 +10,30 @@ import (
 	"github.com/henrytill/hbt-go/internal/types"
 )
 
+// attrEscaper escapes the characters that are unsafe inside the template's
+// double-quoted attribute values. textEscaper does the same for text content,
+// where quotes are safe and left alone. Neither escapes single quotes, both
+// because they are safe in these contexts and to keep output byte-identical
+// for existing bookmark files.
+var (
+	attrEscaper = strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		`"`, "&quot;",
+	)
+	textEscaper = strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+	)
+)
+
 type HTMLFormatter struct{}
 
+// templateEntity holds the values interpolated into the bookmark template.
+// The string fields sourced from entity data (Href, Text, Tags, Extended)
+// are HTML-escaped by newTemplateEntity; the template must not escape again.
 type templateEntity struct {
 	Href         string
 	Text         string
@@ -54,7 +76,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 
 	var extended *string
 	if len(entity.Extended) > 0 {
-		s := string(entity.Extended[0])
+		s := textEscaper.Replace(string(entity.Extended[0]))
 		extended = &s
 	}
 
@@ -74,10 +96,10 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	}
 
 	ret := templateEntity{
-		Href:      href,
-		Text:      text,
+		Href:      attrEscaper.Replace(href),
+		Text:      textEscaper.Replace(text),
 		AddDate:   entity.CreatedAt.Unix(),
-		Tags:      strings.Join(tags, ","),
+		Tags:      attrEscaper.Replace(strings.Join(tags, ",")),
 		Private:   private,
 		ToRead:    toRead,
 		Feed:      feed,
