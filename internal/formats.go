@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/henrytill/hbt-go/internal/formatter"
@@ -98,7 +99,7 @@ func (f *Format) Set(value string) error {
 }
 
 func DetectInputFormat(filename string) (Format, bool) {
-	switch strings.ToLower(filename[strings.LastIndex(filename, "."):]) {
+	switch strings.ToLower(filepath.Ext(filename)) {
 	case ".html":
 		return HTML, true
 	case ".json":
@@ -113,7 +114,7 @@ func DetectInputFormat(filename string) (Format, bool) {
 }
 
 func DetectOutputFormat(filename string) (Format, bool) {
-	switch strings.ToLower(filename[strings.LastIndex(filename, "."):]) {
+	switch strings.ToLower(filepath.Ext(filename)) {
 	case ".html":
 		return HTML, true
 	case ".yaml":
