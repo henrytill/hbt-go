@@ -182,6 +182,14 @@ func (c *Collection) fromRepr(s collectionRepr) error {
 	}
 
 	length := len(s.Value)
+	if s.Length != uint(length) {
+		return fmt.Errorf(
+			"length mismatch in serialized data: declared %d, got %d nodes",
+			s.Length,
+			length,
+		)
+	}
+
 	c.entities = make([]Entity, length)
 	c.edges = make([][]uint, length)
 	c.urls = make(map[string]uint)
@@ -189,7 +197,15 @@ func (c *Collection) fromRepr(s collectionRepr) error {
 	for i, serNode := range s.Value {
 		var entity Entity
 		if err := entity.fromRepr(serNode.Entity); err != nil {
-			return err
+			return fmt.Errorf("node %d: %w", i, err)
+		}
+		if entity.URI == nil {
+			return fmt.Errorf("node %d: missing uri", i)
+		}
+		for _, edge := range serNode.Edges {
+			if edge >= uint(length) {
+				return fmt.Errorf("node %d: edge %d out of range [0, %d)", i, edge, length)
+			}
 		}
 		c.entities[i] = entity
 		if serNode.Edges != nil {
