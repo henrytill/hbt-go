@@ -70,13 +70,15 @@ func add(
 	}
 
 	labels := make(map[types.Label]struct{})
-	if pending.tags != "" {
-		tagList := strings.SplitSeq(pending.tags, ",")
-		for tag := range tagList {
-			tag = strings.TrimSpace(tag)
-			if tag != "" && tag != "toread" {
-				labels[types.Label(tag)] = struct{}{}
-			}
+	hasToreadTag := false
+	for tag := range strings.SplitSeq(pending.tags, ",") {
+		tag = strings.TrimSpace(tag)
+		switch tag {
+		case "":
+		case "toread":
+			hasToreadTag = true
+		default:
+			labels[types.Label(tag)] = struct{}{}
 		}
 	}
 
@@ -92,7 +94,7 @@ func add(
 	var toRead types.ToRead
 	if pending.toRead != "" {
 		toRead = types.NewToRead(pending.toRead == "1")
-	} else if pending.tags != "" && strings.Contains(pending.tags, "toread") {
+	} else if hasToreadTag {
 		toRead = types.NewToRead(true)
 	}
 
