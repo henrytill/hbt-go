@@ -199,9 +199,6 @@ func (c *Collection) fromRepr(s collectionRepr) error {
 		if err := entity.fromRepr(serNode.Entity); err != nil {
 			return fmt.Errorf("node %d: %w", i, err)
 		}
-		if entity.URI == nil {
-			return fmt.Errorf("node %d: missing uri", i)
-		}
 		for _, edge := range serNode.Edges {
 			if edge >= uint(length) {
 				return fmt.Errorf("node %d: edge %d out of range [0, %d)", i, edge, length)
