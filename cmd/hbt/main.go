@@ -62,6 +62,9 @@ func detectInputFormat(filename string) (Format, error) {
 	format, ok := internal.DetectInputFormat(filename)
 	if !ok {
 		ext := filepath.Ext(filename)
+		if ext == "" {
+			return Format{}, fmt.Errorf("cannot detect input format of %s: no file extension (use -f)", filename)
+		}
 		return Format{}, fmt.Errorf("no parser for extension: %s", ext)
 	}
 	return format, nil
@@ -71,6 +74,9 @@ func detectOutputFormat(filename string) (Format, error) {
 	format, ok := internal.DetectOutputFormat(filename)
 	if !ok {
 		ext := filepath.Ext(filename)
+		if ext == "" {
+			return Format{}, fmt.Errorf("cannot detect output format of %s: no file extension (use -t)", filename)
+		}
 		return Format{}, fmt.Errorf("no formatter for extension: %s", ext)
 	}
 	return format, nil
