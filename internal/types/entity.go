@@ -270,15 +270,14 @@ func (e Entity) toRepr() entityRepr {
 }
 
 func (e *Entity) fromRepr(s entityRepr) error {
-	if s.URI != "" {
-		parsedURL, err := url.Parse(s.URI)
-		if err != nil {
-			return err
-		}
-		e.URI = parsedURL
-	} else {
-		e.URI = nil
+	if s.URI == "" {
+		return fmt.Errorf("missing uri")
 	}
+	parsedURL, err := url.Parse(s.URI)
+	if err != nil {
+		return err
+	}
+	e.URI = parsedURL
 
 	e.CreatedAt = CreatedAt(time.Unix(s.CreatedAt, 0))
 
