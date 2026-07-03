@@ -211,6 +211,14 @@ func main() {
 		log.Fatalf("Error finding test cases: %v", err)
 	}
 
+	if len(testCases) == 0 {
+		log.Fatalf(
+			"No test cases found in %s; refusing to overwrite %s with an empty test suite (is the testdata submodule initialized? try: git submodule update --init)",
+			testDataDir,
+			outputFile,
+		)
+	}
+
 	if err := generateTestFile(outputFile, testCases); err != nil {
 		log.Fatalf("Error generating test file: %v", err)
 	}
