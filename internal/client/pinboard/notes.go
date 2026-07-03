@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/henrytill/hbt-go/internal/pinboard"
 )
@@ -29,7 +30,11 @@ func (c *Client) ListNotes(ctx context.Context) ([]Note, error) {
 }
 
 func (c *Client) GetNote(ctx context.Context, noteID string) (*Note, error) {
-	endpoint := fmt.Sprintf("notes/%s", noteID)
+	if noteID == "" {
+		return nil, fmt.Errorf("note ID is required")
+	}
+
+	endpoint := fmt.Sprintf("notes/%s", url.PathEscape(noteID))
 
 	resp, err := c.makeRequest(ctx, endpoint, nil)
 	if err != nil {
