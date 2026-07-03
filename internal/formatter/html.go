@@ -143,7 +143,7 @@ func (f *HTMLFormatter) Format(writer io.Writer, coll *types.Collection) error {
 		Entities: make([]templateEntity, 0, coll.Len()),
 	}
 
-	for _, entity := range coll.Entities() {
+	for entity := range coll.Entities() {
 		templateEntity := newTemplateEntity(entity)
 		templateData.Entities = append(templateData.Entities, templateEntity)
 	}

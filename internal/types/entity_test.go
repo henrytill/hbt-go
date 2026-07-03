@@ -82,6 +82,15 @@ func entityAt(uri string, unix int64) Entity {
 	}
 }
 
+func firstEntity(t *testing.T, coll Collection) Entity {
+	t.Helper()
+	for e := range coll.Entities() {
+		return e
+	}
+	t.Fatal("collection is empty")
+	return Entity{}
+}
+
 func TestUpsertInsertsDistinctURIs(t *testing.T) {
 	coll := NewCollection()
 
@@ -123,7 +132,7 @@ func TestUpsertMergesSameURI(t *testing.T) {
 		t.Error("upserting the same URI should return the same id")
 	}
 
-	got := coll.Entities()[0]
+	got := firstEntity(t, coll)
 
 	if names := MapToSortedSlice(got.Names); !slices.Equal(names, []string{"First", "Second"}) {
 		t.Errorf("Names = %v, want union [First Second]", names)
@@ -151,7 +160,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 100))
 		coll.Upsert(entityAt("https://example.com/", 200))
 
-		got := coll.Entities()[0]
+		got := firstEntity(t, coll)
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
@@ -165,7 +174,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 200))
 		coll.Upsert(entityAt("https://example.com/", 100))
 
-		got := coll.Entities()[0]
+		got := firstEntity(t, coll)
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
@@ -180,7 +189,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 100))
 		coll.Upsert(entityAt("https://example.com/", 200))
 
-		got := coll.Entities()[0]
+		got := firstEntity(t, coll)
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
@@ -198,7 +207,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 100))
 		coll.Upsert(entityAt("https://example.com/", 100))
 
-		got := coll.Entities()[0]
+		got := firstEntity(t, coll)
 		if len(got.UpdatedAt) != 0 {
 			t.Errorf("UpdatedAt = %v, want empty for identical timestamps", got.UpdatedAt)
 		}
@@ -218,7 +227,7 @@ func TestApplyMappings(t *testing.T) {
 		"alias": "new", // two labels collapsing into one
 	})
 
-	labels := MapToSortedSlice(coll.Entities()[0].Labels)
+	labels := MapToSortedSlice(firstEntity(t, coll).Labels)
 	if !slices.Equal(labels, []string{"keep", "new"}) {
 		t.Errorf("Labels = %v, want [keep new]", labels)
 	}

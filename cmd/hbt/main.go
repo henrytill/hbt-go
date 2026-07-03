@@ -190,7 +190,7 @@ func main() {
 
 	if *config.ListTags {
 		tags := make(map[string]struct{})
-		for _, entity := range coll.Entities() {
+		for entity := range coll.Entities() {
 			for label := range entity.Labels {
 				if string(label) != "" {
 					tags[string(label)] = struct{}{}
