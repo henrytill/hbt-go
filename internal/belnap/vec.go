@@ -66,7 +66,7 @@ func FromSlice(xs []Value) Vec {
 	return v
 }
 
-func (v *Vec) Width() int {
+func (v Vec) Width() int {
 	return v.width
 }
 
@@ -125,7 +125,7 @@ func (v *Vec) Resize(newWidth int, fill Value) {
 	}
 }
 
-func (v *Vec) getUnchecked(i int) Value {
+func (v Vec) getUnchecked(i int) Value {
 	w := i >> bitsLog2
 	b := uint(i & bitsMask)
 	base := 2 * w
@@ -134,7 +134,9 @@ func (v *Vec) getUnchecked(i int) Value {
 	return fromBits[negBit<<1|posBit]
 }
 
-func (v *Vec) Get(i int) (Value, error) {
+// Get returns the value at position i. Unlike Set, it never grows the
+// vector: an index outside [0, Width()) returns ErrOutOfBounds.
+func (v Vec) Get(i int) (Value, error) {
 	if i < 0 || i >= v.width {
 		return Unknown, ErrOutOfBounds
 	}
@@ -158,6 +160,9 @@ func (v *Vec) setUnchecked(i int, val Value) {
 	}
 }
 
+// Set stores val at position i. Setting at or beyond the current width
+// grows the vector to i+1, padding new positions with Unknown; a negative
+// index panics.
 func (v *Vec) Set(i int, val Value) {
 	if i < 0 {
 		panic("belnap: negative index")
@@ -260,7 +265,7 @@ func (v Vec) Consensus(other Vec) Vec {
 	return Vec{width: width, words: out}
 }
 
-func (v *Vec) IsConsistent() bool {
+func (v Vec) IsConsistent() bool {
 	for i := 0; i < len(v.words); i += 2 {
 		if v.words[i]&v.words[i+1] != 0 {
 			return false
@@ -269,7 +274,7 @@ func (v *Vec) IsConsistent() bool {
 	return true
 }
 
-func (v *Vec) IsAllDetermined() bool {
+func (v Vec) IsAllDetermined() bool {
 	nw := wordsNeeded(v.width)
 	if nw == 0 {
 		return true
@@ -285,7 +290,7 @@ func (v *Vec) IsAllDetermined() bool {
 	return v.words[base]^v.words[base+1] == m
 }
 
-func (v *Vec) IsAllTrue() bool {
+func (v Vec) IsAllTrue() bool {
 	nw := wordsNeeded(v.width)
 	if nw == 0 {
 		return true
@@ -301,7 +306,7 @@ func (v *Vec) IsAllTrue() bool {
 	return v.words[base] == m && v.words[base+1] == 0
 }
 
-func (v *Vec) IsAllFalse() bool {
+func (v Vec) IsAllFalse() bool {
 	nw := wordsNeeded(v.width)
 	if nw == 0 {
 		return true
@@ -317,7 +322,7 @@ func (v *Vec) IsAllFalse() bool {
 	return v.words[base] == 0 && v.words[base+1] == m
 }
 
-func (v *Vec) CountTrue() int {
+func (v Vec) CountTrue() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
 		n += bits.OnesCount64(v.words[i] &^ v.words[i+1])
@@ -325,7 +330,7 @@ func (v *Vec) CountTrue() int {
 	return n
 }
 
-func (v *Vec) CountFalse() int {
+func (v Vec) CountFalse() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
 		n += bits.OnesCount64(v.words[i+1] &^ v.words[i])
@@ -333,7 +338,7 @@ func (v *Vec) CountFalse() int {
 	return n
 }
 
-func (v *Vec) CountBoth() int {
+func (v Vec) CountBoth() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
 		n += bits.OnesCount64(v.words[i] & v.words[i+1])
@@ -341,7 +346,7 @@ func (v *Vec) CountBoth() int {
 	return n
 }
 
-func (v *Vec) CountUnknown() int {
+func (v Vec) CountUnknown() int {
 	n := 0
 	for i := 0; i < len(v.words); i += 2 {
 		n += bits.OnesCount64(v.words[i] | v.words[i+1])
