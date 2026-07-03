@@ -87,30 +87,54 @@ func (c *Client) WithHTTPClient(client *http.Client) *Client {
 	return c
 }
 
-func (c *Client) rateLimit(endpoint string) {
-	now := time.Now()
+// rateLimit waits until the endpoint's minimum request interval has passed,
+// returning early with the context's error if it is canceled first. The
+// per-endpoint and general intervals are enforced from the time the previous
+// request was actually released, not from when its rateLimit call started.
+// Client is not safe for concurrent use; callers must serialize requests.
+func (c *Client) rateLimit(ctx context.Context, endpoint string) error {
+	var wait time.Duration
 
 	switch endpoint {
 	case "posts/all":
-		if elapsed := now.Sub(c.lastPostsAll); elapsed < RatePostsAll {
-			time.Sleep(RatePostsAll - elapsed)
+		if elapsed := time.Since(c.lastPostsAll); elapsed < RatePostsAll {
+			wait = RatePostsAll - elapsed
 		}
-		c.lastPostsAll = now
 	case "posts/recent":
-		if elapsed := now.Sub(c.lastPostsRecent); elapsed < RatePostsRecent {
-			time.Sleep(RatePostsRecent - elapsed)
+		if elapsed := time.Since(c.lastPostsRecent); elapsed < RatePostsRecent {
+			wait = RatePostsRecent - elapsed
 		}
-		c.lastPostsRecent = now
 	}
 
-	if elapsed := now.Sub(c.lastRequest); elapsed < RateLimit {
-		time.Sleep(RateLimit - elapsed)
+	if elapsed := time.Since(c.lastRequest); elapsed < RateLimit {
+		wait = max(wait, RateLimit-elapsed)
 	}
-	c.lastRequest = time.Now()
+
+	if wait > 0 {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	now := time.Now()
+	switch endpoint {
+	case "posts/all":
+		c.lastPostsAll = now
+	case "posts/recent":
+		c.lastPostsRecent = now
+	}
+	c.lastRequest = now
+	return nil
 }
 
 func (c *Client) makeRequest(ctx context.Context, endpoint string, params url.Values) (*http.Response, error) {
-	c.rateLimit(endpoint)
+	if err := c.rateLimit(ctx, endpoint); err != nil {
+		return nil, err
+	}
 
 	reqURL := fmt.Sprintf("%s/%s", c.baseURL, endpoint)
 	if params == nil {

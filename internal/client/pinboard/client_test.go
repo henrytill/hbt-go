@@ -357,3 +357,91 @@ func TestGetRecentPostsWithMultipleTags(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestRateLimitFreshClientDoesNotWait(t *testing.T) {
+	client := NewClient(TokenAuth{Username: "test", Token: "token123"})
+
+	start := time.Now()
+	if err := client.rateLimit(context.Background(), "posts/all"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("fresh client should not wait, took %v", elapsed)
+	}
+
+	if client.lastPostsAll.IsZero() || client.lastRequest.IsZero() {
+		t.Error("expected timestamps to be recorded")
+	}
+}
+
+func TestRateLimitRecordsTimeAfterWait(t *testing.T) {
+	client := NewClient(TokenAuth{Username: "test", Token: "token123"})
+
+	// Backdate the last posts/all request so ~100ms of its interval remains.
+	wait := 100 * time.Millisecond
+	client.lastPostsAll = time.Now().Add(-RatePostsAll + wait)
+	client.lastRequest = client.lastPostsAll
+
+	start := time.Now()
+	if err := client.rateLimit(context.Background(), "posts/all"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if elapsed := time.Since(start); elapsed < wait-10*time.Millisecond {
+		t.Errorf("expected to wait ~%v, only waited %v", wait, elapsed)
+	}
+
+	// The timestamp must reflect when the request was released (after the
+	// wait), not when rateLimit was called; otherwise the next interval is
+	// measured from too early and under-waits.
+	if recorded := client.lastPostsAll; recorded.Before(start.Add(wait - 10*time.Millisecond)) {
+		t.Errorf("lastPostsAll recorded pre-wait: %v is before %v", recorded, start.Add(wait))
+	}
+}
+
+func TestRateLimitContextCanceled(t *testing.T) {
+	client := NewClient(TokenAuth{Username: "test", Token: "token123"})
+
+	// Force a pending wait of the full posts/all interval (5 minutes).
+	mark := time.Now()
+	client.lastPostsAll = mark
+	client.lastRequest = mark
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	err := client.rateLimit(ctx, "posts/all")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error from canceled context, got nil")
+	}
+	if elapsed > time.Second {
+		t.Errorf("canceled context should return promptly, took %v", elapsed)
+	}
+
+	// A wait that was aborted must not count as a released request.
+	if !client.lastPostsAll.Equal(mark) || !client.lastRequest.Equal(mark) {
+		t.Error("timestamps should not be updated when the wait is aborted")
+	}
+}
+
+func TestMakeRequestRateLimitContextCanceled(t *testing.T) {
+	client := NewClient(TokenAuth{Username: "test", Token: "token123"})
+	client.lastRequest = time.Now()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	_, err := client.makeRequest(ctx, "posts/get", nil)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected error from canceled context, got nil")
+	}
+	if elapsed > time.Second {
+		t.Errorf("canceled context should abort the rate-limit wait promptly, took %v", elapsed)
+	}
+}
