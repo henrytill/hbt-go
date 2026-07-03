@@ -119,10 +119,8 @@ func TestSuggestTags(t *testing.T) {
 		if len(popular) != 1 || popular[0] != "go" {
 			t.Errorf("popular = %v, want [go]", popular)
 		}
-		// Documents current behavior: only the first array element is
-		// read, so recommended tags in the second element are dropped.
-		if recommended != nil {
-			t.Errorf("recommended = %v, current implementation reads only result[0]", recommended)
+		if len(recommended) != 2 || recommended[0] != "golang" || recommended[1] != "web" {
+			t.Errorf("recommended = %v, want [golang web]", recommended)
 		}
 	})
 
