@@ -96,6 +96,66 @@ func TestMakeRequestRateLimit429(t *testing.T) {
 	auth := TokenAuth{Username: "test", Token: "token123"}
 	client := NewClient(auth)
 	client.baseURL = server.URL
+	client.retryDelay = 10 * time.Millisecond
+
+	resp, err := client.makeRequest(context.Background(), "test/endpoint", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if callCount != 2 {
+		t.Errorf("expected 2 calls (429 then success), got %d", callCount)
+	}
+}
+
+func TestMakeRequestRateLimit429Exhausted(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	auth := TokenAuth{Username: "test", Token: "token123"}
+	client := NewClient(auth)
+	client.baseURL = server.URL
+	client.retryDelay = time.Millisecond
+
+	_, err := client.makeRequest(context.Background(), "test/endpoint", nil)
+	if err == nil {
+		t.Fatal("expected error after exhausting retries, got nil")
+	}
+	if !strings.Contains(err.Error(), "rate limited") {
+		t.Errorf("expected rate limited error, got: %v", err)
+	}
+
+	wantCalls := maxRetries429 + 1
+	if callCount != wantCalls {
+		t.Errorf("expected %d calls (initial + %d retries), got %d", wantCalls, maxRetries429, callCount)
+	}
+}
+
+func TestMakeRequestRateLimit429RetryAfter(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result": "success"}`))
+	}))
+	defer server.Close()
+
+	auth := TokenAuth{Username: "test", Token: "token123"}
+	client := NewClient(auth)
+	client.baseURL = server.URL
+	// A Retry-After of 0 seconds must override the configured delay; if it
+	// does not, this test times out rather than finishing instantly.
+	client.retryDelay = time.Hour
 
 	start := time.Now()
 	resp, err := client.makeRequest(context.Background(), "test/endpoint", nil)
@@ -109,9 +169,37 @@ func TestMakeRequestRateLimit429(t *testing.T) {
 	if callCount != 2 {
 		t.Errorf("expected 2 calls (429 then success), got %d", callCount)
 	}
+	if elapsed > 10*time.Second {
+		t.Errorf("Retry-After: 0 should retry immediately, took %v", elapsed)
+	}
+}
 
-	if elapsed < 5*time.Second {
-		t.Errorf("expected at least 5s delay for 429 retry, got %v", elapsed)
+func TestMakeRequestRateLimit429ContextCanceled(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	auth := TokenAuth{Username: "test", Token: "token123"}
+	client := NewClient(auth)
+	client.baseURL = server.URL
+	client.retryDelay = time.Hour
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := client.makeRequest(ctx, "test/endpoint", nil)
+		done <- err
+	}()
+	cancel()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expected error from canceled context, got nil")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("makeRequest did not return promptly after context cancellation")
 	}
 }
 
