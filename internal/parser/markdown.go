@@ -41,17 +41,12 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (types.Id, error)
 	}
 
 	if linkTitle != "" {
-		entity.Names = map[types.Name]struct{}{types.Name(linkTitle): {}}
-	} else {
-		entity.Names = make(map[types.Name]struct{})
+		entity.Names[types.Name(linkTitle)] = struct{}{}
 	}
 
-	entity.Labels = make(map[types.Label]struct{})
-	if len(state.labels) > 0 {
-		for _, label := range state.labels {
-			if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
-				entity.Labels[types.Label(trimmedLabel)] = struct{}{}
-			}
+	for _, label := range state.labels {
+		if trimmedLabel := strings.TrimSpace(label); trimmedLabel != "" {
+			entity.Labels[types.Label(trimmedLabel)] = struct{}{}
 		}
 	}
 
