@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -14,6 +15,14 @@ const (
 	RateLimit       = 3 * time.Second
 	RatePostsAll    = 5 * time.Minute
 	RatePostsRecent = 1 * time.Minute
+
+	// maxRetries429 is the number of times a request is retried after a
+	// 429 response before giving up.
+	maxRetries429 = 3
+	// defaultRetryDelay is the base delay before retrying a 429 response;
+	// it doubles on each subsequent retry unless the response carries a
+	// Retry-After header.
+	defaultRetryDelay = 5 * time.Second
 )
 
 type AuthMethod interface {
@@ -44,6 +53,7 @@ type Client struct {
 	httpClient      *http.Client
 	auth            AuthMethod
 	baseURL         string
+	retryDelay      time.Duration
 	lastRequest     time.Time
 	lastPostsAll    time.Time
 	lastPostsRecent time.Time
@@ -54,6 +64,7 @@ func NewClient(auth AuthMethod) *Client {
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		auth:       auth,
 		baseURL:    BaseURL,
+		retryDelay: defaultRetryDelay,
 	}
 }
 
@@ -111,36 +122,47 @@ func (c *Client) makeRequest(ctx context.Context, endpoint string, params url.Va
 		reqURL += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	c.auth.Apply(req)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode == 429 {
-		resp.Body.Close()
-
-		backoff := 5 * time.Second
-		select {
-		case <-time.After(backoff):
-			return c.makeRequest(ctx, endpoint, params)
-		case <-ctx.Done():
-			return nil, ctx.Err()
+	for attempt := 0; ; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	if resp.StatusCode != 200 {
-		resp.Body.Close()
-		return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
-	}
+		c.auth.Apply(req)
 
-	return resp, nil
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := resp.Header.Get("Retry-After")
+			resp.Body.Close()
+
+			if attempt == maxRetries429 {
+				return nil, fmt.Errorf("API request rate limited (status 429) after %d attempts", attempt+1)
+			}
+
+			backoff := c.retryDelay << attempt
+			if secs, err := strconv.Atoi(retryAfter); err == nil && secs >= 0 {
+				backoff = time.Duration(secs) * time.Second
+			}
+
+			select {
+			case <-time.After(backoff):
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
+		}
+
+		return resp, nil
+	}
 }
 
 func (c *Client) GetAPIToken(ctx context.Context) (string, error) {
