@@ -157,3 +157,17 @@ func TestCLIErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestCLIListTags(t *testing.T) {
+	input := writeFlagsTestInput(t)
+
+	stdout, stderr, exitCode := runHbt(t, "--list-tags", input)
+	if exitCode != 0 {
+		t.Fatalf("exit %d, stderr: %s", exitCode, stderr)
+	}
+
+	want := "Tags found:\n  keep\n  old\n  shared\n"
+	if stdout != want {
+		t.Errorf("--list-tags output not sorted as expected:\ngot:\n%q\nwant:\n%q", stdout, want)
+	}
+}

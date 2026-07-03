@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/henrytill/hbt-go/internal"
@@ -192,7 +194,7 @@ func main() {
 			}
 		}
 		fmt.Println("Tags found:")
-		for tag := range tags {
+		for _, tag := range slices.Sorted(maps.Keys(tags)) {
 			fmt.Printf("  %s\n", tag)
 		}
 		return
