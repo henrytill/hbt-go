@@ -273,6 +273,8 @@ func (c *Client) SuggestTags(ctx context.Context, urlParam string) ([]string, []
 	}
 	defer resp.Body.Close()
 
+	// The API returns popular and recommended tags as separate elements of
+	// one array: [{"popular": [...]}, {"recommended": [...]}].
 	var result []struct {
 		Popular     []string `json:"popular"`
 		Recommended []string `json:"recommended"`
@@ -282,9 +284,12 @@ func (c *Client) SuggestTags(ctx context.Context, urlParam string) ([]string, []
 		return nil, nil, fmt.Errorf("failed to decode suggest response: %w", err)
 	}
 
-	if len(result) == 0 {
-		return []string{}, []string{}, nil
+	popular := []string{}
+	recommended := []string{}
+	for _, entry := range result {
+		popular = append(popular, entry.Popular...)
+		recommended = append(recommended, entry.Recommended...)
 	}
 
-	return result[0].Popular, result[0].Recommended, nil
+	return popular, recommended, nil
 }
