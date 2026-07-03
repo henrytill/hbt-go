@@ -17,6 +17,9 @@ var (
 
 func showVersion() {
 	fmt.Printf("pinboard %s\n", Version)
+	if Commit != "unknown" {
+		fmt.Printf("  commit: %s (%s, %s)\n", Commit, CommitDate, TreeState)
+	}
 }
 
 func showUsage() {

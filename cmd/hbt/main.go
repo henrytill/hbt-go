@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -58,6 +60,9 @@ func showUsage() {
 
 func showVersion() {
 	fmt.Printf("hbt %s\n", Version)
+	if Commit != "unknown" {
+		fmt.Printf("  commit: %s (%s, %s)\n", Commit, CommitDate, TreeState)
+	}
 }
 
 func detectInputFormat(filename string) (Format, error) {
@@ -152,14 +157,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat(config.InputFile); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: Input file does not exist: %s\n", config.InputFile)
-		os.Exit(1)
-	}
-
 	inputFile, err := os.Open(config.InputFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening input file: %v\n", err)
+		if errors.Is(err, fs.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "Error: Input file does not exist: %s\n", config.InputFile)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error opening input file: %v\n", err)
+		}
 		os.Exit(1)
 	}
 	defer inputFile.Close()
@@ -185,11 +189,11 @@ func main() {
 	}
 
 	if *config.ListTags {
-		tags := make(map[string]bool)
+		tags := make(map[string]struct{})
 		for _, entity := range coll.Entities() {
 			for label := range entity.Labels {
 				if string(label) != "" {
-					tags[string(label)] = true
+					tags[string(label)] = struct{}{}
 				}
 			}
 		}
@@ -201,22 +205,28 @@ func main() {
 	}
 
 	if config.OutputFormat.Format.Name != "" {
-		var output *os.File
+		output := os.Stdout
 		if *config.OutputFile != "" {
 			output, err = os.Create(*config.OutputFile)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating output file: %v\n", err)
 				os.Exit(1)
 			}
-			defer output.Close()
-		} else {
-			output = os.Stdout
 		}
 
 		err = internal.Unparse(config.OutputFormat.Format, output, &coll)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
 			os.Exit(1)
+		}
+
+		// Close errors on the output file mean data may not have reached
+		// disk; unlike the read side, they must not be ignored.
+		if output != os.Stdout {
+			if err := output.Close(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error closing output file: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 }
