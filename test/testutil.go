@@ -81,18 +81,19 @@ func RunExecutableAndCompare(
 	t.Fail()
 }
 
-func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
-	var binaryPath string
-	var err error
+func hbtBinaryPath(t *testing.T) string {
+	t.Helper()
 
 	if envPath := os.Getenv("HBT_BINARY_PATH"); envPath != "" {
-		binaryPath = envPath
-	} else {
-		binaryPath, err = filepath.Abs("../bin/hbt")
-		if err != nil {
-			t.Fatalf("Failed to get binary path: %v", err)
-		}
+		return envPath
 	}
+	binaryPath, err := filepath.Abs("../bin/hbt")
+	if err != nil {
+		t.Fatalf("Failed to get binary path: %v", err)
+	}
+	return binaryPath
+}
 
-	RunExecutableAndCompare(t, binaryPath, []string{"-t", format, inputFile}, expectedFile)
+func RunHbtAndCompare(t *testing.T, format, inputFile, expectedFile string) {
+	RunExecutableAndCompare(t, hbtBinaryPath(t), []string{"-t", format, inputFile}, expectedFile)
 }
