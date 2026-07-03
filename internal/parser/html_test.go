@@ -25,7 +25,11 @@ func parseSingleBookmark(t *testing.T, anchor string) types.Entity {
 	if coll.Len() != 1 {
 		t.Fatalf("expected 1 entity, got %d", coll.Len())
 	}
-	return coll.Entities()[0]
+	for e := range coll.Entities() {
+		return e
+	}
+	t.Fatal("no entity parsed")
+	return types.Entity{}
 }
 
 func labelSet(e types.Entity) map[string]struct{} {

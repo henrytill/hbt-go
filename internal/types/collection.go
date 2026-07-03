@@ -3,7 +3,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"iter"
 	"net/url"
+	"slices"
 
 	"github.com/henrytill/hbt-go/internal/pinboard"
 	"golang.org/x/mod/semver"
@@ -106,8 +108,12 @@ func (c *Collection) Len() int {
 	return len(c.entities)
 }
 
-func (c *Collection) Entities() []Entity {
-	return c.entities
+// Entities returns an iterator over the collection's entities in insertion
+// order. The yielded values are copies, so the collection's structure cannot
+// be modified through them, but they share interior maps and slices (Names,
+// Labels, Extended) with the collection.
+func (c *Collection) Entities() iter.Seq[Entity] {
+	return slices.Values(c.entities)
 }
 
 type Version string

@@ -2,6 +2,7 @@ package formatter
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ func TestHTMLFormatterRoundTrip(t *testing.T) {
 		t.Fatalf("expected 1 entity after round trip, got %d", reparsed.Len())
 	}
 
-	got := reparsed.Entities()[0]
+	got := slices.Collect(reparsed.Entities())[0]
 	if got.URI.String() != original.URI.String() {
 		t.Errorf("URI: got %q, want %q", got.URI.String(), original.URI.String())
 	}
