@@ -136,6 +136,19 @@ type AddPostOptions struct {
 	ToRead   *bool
 }
 
+// setYesNo sets a Pinboard yes/no parameter from an optional bool: nil
+// leaves the parameter unset so the API default applies.
+func setYesNo(params url.Values, key string, value *bool) {
+	if value == nil {
+		return
+	}
+	if *value {
+		params.Set(key, "yes")
+	} else {
+		params.Set(key, "no")
+	}
+}
+
 func (c *Client) AddPost(ctx context.Context, urlParam, description string, opts *AddPostOptions) error {
 	params := url.Values{}
 	params.Set("url", urlParam)
@@ -151,25 +164,9 @@ func (c *Client) AddPost(ctx context.Context, urlParam, description string, opts
 		if !opts.Dt.IsZero() {
 			params.Set("dt", opts.Dt.Format(time.RFC3339))
 		}
-		if opts.Replace != nil {
-			if *opts.Replace {
-				params.Set("replace", "yes")
-			} else {
-				params.Set("replace", "no")
-			}
-		}
-		if opts.Shared != nil {
-			if *opts.Shared {
-				params.Set("shared", "yes")
-			} else {
-				params.Set("shared", "no")
-			}
-		}
-		if opts.ToRead != nil {
-			if *opts.ToRead {
-				params.Set("toread", "yes")
-			}
-		}
+		setYesNo(params, "replace", opts.Replace)
+		setYesNo(params, "shared", opts.Shared)
+		setYesNo(params, "toread", opts.ToRead)
 	}
 
 	resp, err := c.makeRequest(ctx, "posts/add", params)
