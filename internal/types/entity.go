@@ -14,74 +14,57 @@ type Name string
 type Label string
 type Extended string
 
-type Shared struct {
+// optBool is a tri-state bool: unset (the zero value), false, or true.
+// It is the shared implementation behind Shared, ToRead, and IsFeed, which
+// stay distinct types so Entity fields cannot be mixed up.
+type optBool struct {
 	Bool  bool
 	Valid bool
 }
 
-func NewShared(b bool) Shared {
-	return Shared{Bool: b, Valid: true}
+func newOptBool(b bool) optBool {
+	return optBool{Bool: b, Valid: true}
 }
 
-func (s Shared) Get() (bool, bool) {
-	return s.Bool, s.Valid
+func (o optBool) get() (bool, bool) {
+	return o.Bool, o.Valid
 }
 
-func (s Shared) Merge(t Shared) Shared {
-	if !s.Valid {
-		return t
+// merge combines two values: an unset side yields the other, and two set
+// values OR together.
+func (o optBool) merge(p optBool) optBool {
+	if !o.Valid {
+		return p
 	}
-	if !t.Valid {
-		return s
+	if !p.Valid {
+		return o
 	}
-	return Shared{Bool: s.Bool || t.Bool, Valid: true}
+	return optBool{Bool: o.Bool || p.Bool, Valid: true}
 }
 
-type ToRead struct {
-	Bool  bool
-	Valid bool
-}
+type Shared struct{ optBool }
 
-func NewToRead(b bool) ToRead {
-	return ToRead{Bool: b, Valid: true}
-}
+func NewShared(b bool) Shared { return Shared{newOptBool(b)} }
 
-func (r ToRead) Get() (bool, bool) {
-	return r.Bool, r.Valid
-}
+func (s Shared) Get() (bool, bool) { return s.get() }
 
-func (r ToRead) Merge(s ToRead) ToRead {
-	if !r.Valid {
-		return s
-	}
-	if !s.Valid {
-		return r
-	}
-	return ToRead{Bool: r.Bool || s.Bool, Valid: true}
-}
+func (s Shared) Merge(t Shared) Shared { return Shared{s.merge(t.optBool)} }
 
-type IsFeed struct {
-	Bool  bool
-	Valid bool
-}
+type ToRead struct{ optBool }
 
-func NewIsFeed(b bool) IsFeed {
-	return IsFeed{Bool: b, Valid: true}
-}
+func NewToRead(b bool) ToRead { return ToRead{newOptBool(b)} }
 
-func (f IsFeed) Get() (bool, bool) {
-	return f.Bool, f.Valid
-}
+func (r ToRead) Get() (bool, bool) { return r.get() }
 
-func (f IsFeed) Merge(g IsFeed) IsFeed {
-	if !f.Valid {
-		return g
-	}
-	if !g.Valid {
-		return f
-	}
-	return IsFeed{Bool: f.Bool || g.Bool, Valid: true}
-}
+func (r ToRead) Merge(s ToRead) ToRead { return ToRead{r.merge(s.optBool)} }
+
+type IsFeed struct{ optBool }
+
+func NewIsFeed(b bool) IsFeed { return IsFeed{newOptBool(b)} }
+
+func (f IsFeed) Get() (bool, bool) { return f.get() }
+
+func (f IsFeed) Merge(g IsFeed) IsFeed { return IsFeed{f.merge(g.optBool)} }
 
 type CreatedAt time.Time
 
