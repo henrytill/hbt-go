@@ -40,6 +40,22 @@ func TestHTMLBookmarksPrivacyYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_privacy.input.html", "testdata/html/bookmarks_privacy.expected.yaml")
 }
 
+func TestHTMLBookmarksRepeatedHTML(t *testing.T) {
+	RunHbtAndCompare(t, "html", "testdata/html/bookmarks_repeated.input.html", "testdata/html/bookmarks_repeated.expected.html")
+}
+
+func TestHTMLBookmarksRepeatedYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_repeated.input.html", "testdata/html/bookmarks_repeated.expected.yaml")
+}
+
+func TestHTMLBookmarksSameTimestampHTML(t *testing.T) {
+	RunHbtAndCompare(t, "html", "testdata/html/bookmarks_same_timestamp.input.html", "testdata/html/bookmarks_same_timestamp.expected.html")
+}
+
+func TestHTMLBookmarksSameTimestampYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_same_timestamp.input.html", "testdata/html/bookmarks_same_timestamp.expected.yaml")
+}
+
 func TestHTMLBookmarksSimpleHTML(t *testing.T) {
 	RunHbtAndCompare(t, "html", "testdata/html/bookmarks_simple.input.html", "testdata/html/bookmarks_simple.expected.html")
 }
