@@ -214,6 +214,84 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 	})
 }
 
+func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
+	identical := func() Entity {
+		e := entityAt("https://e.test/", 100)
+		e.Names[Name("a")] = struct{}{}
+		e.Extended = []Extended{"desc"}
+		return e
+	}
+
+	coll := NewCollection()
+	coll.Upsert(identical())
+	coll.Upsert(identical())
+	coll.Upsert(identical())
+
+	got := firstEntity(t, coll)
+	if !slices.Equal(got.Extended, []Extended{"desc"}) {
+		t.Errorf("Extended = %v, want [desc]: a repeated bookmark should not repeat its description", got.Extended)
+	}
+	if len(got.UpdatedAt) != 0 {
+		t.Errorf("UpdatedAt = %v, want empty", got.UpdatedAt)
+	}
+	if names := MapToSortedSlice(got.Names); !slices.Equal(names, []string{"a"}) {
+		t.Errorf("Names = %v, want [a]", names)
+	}
+}
+
+func TestEntityEqual(t *testing.T) {
+	base := func() Entity {
+		e := entityAt("https://example.com/", 100)
+		e.Names[Name("a")] = struct{}{}
+		e.Labels[Label("l")] = struct{}{}
+		e.UpdatedAt = []UpdatedAt{UpdatedAt(time.Unix(200, 0))}
+		e.Shared = NewShared(true)
+		e.Extended = []Extended{"desc"}
+		e.LastVisitedAt = NewLastVisitedAt(time.Unix(300, 0))
+		return e
+	}
+
+	if !base().Equal(base()) {
+		t.Error("independently built identical entities should compare equal")
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*Entity)
+	}{
+		{"uri", func(e *Entity) { e.URI = mustParseURL("https://other.test/") }},
+		{"nil uri", func(e *Entity) { e.URI = nil }},
+		{"createdAt", func(e *Entity) { e.CreatedAt = CreatedAt(time.Unix(101, 0)) }},
+		{"updatedAt", func(e *Entity) { e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(time.Unix(400, 0))) }},
+		{"names", func(e *Entity) { e.Names[Name("b")] = struct{}{} }},
+		{"labels", func(e *Entity) { delete(e.Labels, Label("l")) }},
+		{"shared", func(e *Entity) { e.Shared = NewShared(false) }},
+		{"toRead", func(e *Entity) { e.ToRead = NewToRead(false) }},
+		{"isFeed", func(e *Entity) { e.IsFeed = NewIsFeed(false) }},
+		{"extended", func(e *Entity) { e.Extended = []Extended{"other"} }},
+		{"lastVisitedAt", func(e *Entity) { e.LastVisitedAt = LastVisitedAt{} }},
+	}
+
+	for _, tt := range tests {
+		modified := base()
+		tt.mutate(&modified)
+		if base().Equal(modified) {
+			t.Errorf("%s: entities differing in %s should not compare equal", tt.name, tt.name)
+		}
+		if modified.Equal(base()) {
+			t.Errorf("%s: equality should be symmetric", tt.name)
+		}
+	}
+
+	t.Run("times compare by instant", func(t *testing.T) {
+		utc, other := base(), base()
+		other.CreatedAt = CreatedAt(time.Unix(100, 0).In(time.FixedZone("elsewhere", 3600)))
+		if !utc.Equal(other) {
+			t.Error("the same instant in a different location should compare equal")
+		}
+	})
+}
+
 func TestApplyMappings(t *testing.T) {
 	coll := NewCollection()
 	e := entityAt("https://example.com/", 100)

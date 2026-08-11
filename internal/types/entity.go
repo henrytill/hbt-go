@@ -2,7 +2,9 @@ package types
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -103,6 +105,14 @@ func (l LastVisitedAt) Get() (time.Time, bool) {
 	return l.Time, l.Valid
 }
 
+// Equal reports whether l and m denote the same instant, or are both unset.
+func (l LastVisitedAt) Equal(m LastVisitedAt) bool {
+	if l.Valid != m.Valid {
+		return false
+	}
+	return !l.Valid || l.Time.Equal(m.Time)
+}
+
 func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
 	if !l.Valid {
 		return m
@@ -129,7 +139,46 @@ type Entity struct {
 	LastVisitedAt LastVisitedAt
 }
 
+// Equal reports whether e and other carry the same data. Times compare by
+// instant rather than by representation, Names and Labels by set membership,
+// and UpdatedAt and Extended element by element.
+func (e Entity) Equal(other Entity) bool {
+	if (e.URI == nil) != (other.URI == nil) {
+		return false
+	}
+	if e.URI != nil && e.URI.String() != other.URI.String() {
+		return false
+	}
+	if !time.Time(e.CreatedAt).Equal(time.Time(other.CreatedAt)) {
+		return false
+	}
+	sameInstant := func(u, v UpdatedAt) bool { return time.Time(u).Equal(time.Time(v)) }
+	if !slices.EqualFunc(e.UpdatedAt, other.UpdatedAt, sameInstant) {
+		return false
+	}
+	if !maps.Equal(e.Names, other.Names) || !maps.Equal(e.Labels, other.Labels) {
+		return false
+	}
+	if e.Shared != other.Shared || e.ToRead != other.ToRead || e.IsFeed != other.IsFeed {
+		return false
+	}
+	if !slices.Equal(e.Extended, other.Extended) {
+		return false
+	}
+	return e.LastVisitedAt.Equal(other.LastVisitedAt)
+}
+
 func (e *Entity) absorb(other Entity) {
+	// Absorbing an identical entity is a no-op, mirroring Entity.absorb in
+	// hbt-ocaml. Without the guard, a bookmark repeated in the input would
+	// accumulate a copy of its description per occurrence.
+	if e.Equal(other) {
+		return
+	}
+
+	// A timestamp equal to the existing CreatedAt is deliberately not recorded:
+	// an "update" whose timestamp merely repeats CreatedAt carries no
+	// information. hbt-ocaml and hbt-rs append it here.
 	if other.CreatedAt.Before(e.CreatedAt) {
 		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
