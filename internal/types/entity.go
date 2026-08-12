@@ -168,17 +168,19 @@ func (e Entity) Equal(other Entity) bool {
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
 }
 
+// absorb merges other into e. The two behaviors commented below are shared with
+// hbt-ocaml and hbt-rs, settled in #57 and pinned by fixtures in hbt-data.
 func (e *Entity) absorb(other Entity) {
-	// Absorbing an identical entity is a no-op, mirroring Entity.absorb in
-	// hbt-ocaml. Without the guard, a bookmark repeated in the input would
-	// accumulate a copy of its description per occurrence.
+	// Absorbing an identical entity is a no-op: without the guard, a bookmark
+	// repeated in the input would accumulate a copy of its description per
+	// occurrence. See the bookmarks_repeated fixture.
 	if e.Equal(other) {
 		return
 	}
 
 	// A timestamp equal to the existing CreatedAt is deliberately not recorded:
 	// an "update" whose timestamp merely repeats CreatedAt carries no
-	// information. hbt-ocaml and hbt-rs append it here.
+	// information. See the bookmarks_same_timestamp fixture.
 	if other.CreatedAt.Before(e.CreatedAt) {
 		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
