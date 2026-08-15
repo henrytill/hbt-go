@@ -1,0 +1,8 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # slsa-verifier cannot verify a hash-pinned reusable workflow, so the
+        # trusted builder must be referenced by a @vX.Y.Z tag.
+        "slsa-framework/*": ref-pin
+        "*": hash-pin
