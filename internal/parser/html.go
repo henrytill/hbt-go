@@ -120,7 +120,7 @@ func add(
 	}
 
 	if pending.description != "" {
-		entity.Extended = []types.Extended{types.Extended(pending.description)}
+		entity.Extended = map[types.Extended]struct{}{types.Extended(pending.description): {}}
 	}
 
 	entity.LastVisitedAt = lastVisitedAt

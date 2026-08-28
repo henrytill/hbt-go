@@ -24,7 +24,7 @@ func makeReprTestCollection(t *testing.T) Collection {
 		Shared:        NewShared(true),
 		ToRead:        NewToRead(false),
 		IsFeed:        NewIsFeed(false),
-		Extended:      []Extended{"extended text"},
+		Extended:      map[Extended]struct{}{"extended text": {}},
 		LastVisitedAt: NewLastVisitedAt(time.Unix(300, 0)),
 	}
 	child := Entity{

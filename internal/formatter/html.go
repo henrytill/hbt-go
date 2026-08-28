@@ -76,7 +76,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 
 	var extended *string
 	if len(entity.Extended) > 0 {
-		s := textEscaper.Replace(string(entity.Extended[0]))
+		s := textEscaper.Replace(types.MapToSortedSlice(entity.Extended)[0])
 		extended = &s
 	}
 

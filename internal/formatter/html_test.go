@@ -27,8 +27,8 @@ func specialEntity(t *testing.T) types.Entity {
 		Labels: map[types.Label]struct{}{
 			types.Label("tag&co"): {},
 		},
-		Extended: []types.Extended{
-			types.Extended(`description with <b>html</b> & "quotes"`),
+		Extended: map[types.Extended]struct{}{
+			types.Extended(`description with <b>html</b> & "quotes"`): {},
 		},
 	}
 }
@@ -122,7 +122,7 @@ func TestHTMLFormatterRoundTrip(t *testing.T) {
 			t.Errorf("label %q lost in round trip, got %v", label, got.Labels)
 		}
 	}
-	if len(got.Extended) != 1 || got.Extended[0] != original.Extended[0] {
-		t.Errorf("extended: got %v, want %v", got.Extended, original.Extended)
+	if extended := types.MapToSortedSlice(got.Extended); !slices.Equal(extended, types.MapToSortedSlice(original.Extended)) {
+		t.Errorf("extended: got %v, want %v", extended, types.MapToSortedSlice(original.Extended))
 	}
 }
