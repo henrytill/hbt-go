@@ -164,6 +164,10 @@ func TestMarkdownParentsYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/markdown/parents.input.md", "testdata/markdown/parents.expected.yaml")
 }
 
+func TestMarkdownRepeatedParentYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/markdown/repeated_parent.input.md", "testdata/markdown/repeated_parent.expected.yaml")
+}
+
 func TestMarkdownSingleParentYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/markdown/single_parent.input.md", "testdata/markdown/single_parent.expected.yaml")
 }
