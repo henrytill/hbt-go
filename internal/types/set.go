@@ -1,6 +1,9 @@
 package types
 
-import "sort"
+import (
+	"maps"
+	"slices"
+)
 
 // Set is the map[T]struct{} idiom under a name. Its constraint is what a map
 // key requires and no more; operations that need an ordering take one.
@@ -23,9 +26,7 @@ func (s Set[T]) Union(other Set[T]) Set[T] {
 	if s == nil {
 		s = make(Set[T], len(other))
 	}
-	for k := range other {
-		s[k] = struct{}{}
-	}
+	maps.Copy(s, other)
 	return s
 }
 
@@ -34,7 +35,7 @@ func SortedSlice[T ~string](s Set[T]) []string {
 	for k := range s {
 		strs = append(strs, string(k))
 	}
-	sort.Strings(strs)
+	slices.Sort(strs)
 	return strs
 }
 

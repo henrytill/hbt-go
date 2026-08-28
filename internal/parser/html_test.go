@@ -32,14 +32,6 @@ func parseSingleBookmark(t *testing.T, anchor string) types.Entity {
 	return types.Entity{}
 }
 
-func labelSet(e types.Entity) types.Set[string] {
-	set := make(types.Set[string])
-	for label := range e.Labels {
-		set[string(label)] = struct{}{}
-	}
-	return set
-}
-
 func TestHTMLParserToreadTag(t *testing.T) {
 	t.Run("exact toread tag sets flag and is dropped from labels", func(t *testing.T) {
 		e := parseSingleBookmark(t, `<A HREF="https://example.com/" ADD_DATE="100" TAGS="toread,go">Ex</A>`)
@@ -47,7 +39,7 @@ func TestHTMLParserToreadTag(t *testing.T) {
 		if toRead, ok := e.ToRead.Get(); !ok || !toRead {
 			t.Errorf("expected ToRead true, got (%v, %v)", toRead, ok)
 		}
-		labels := labelSet(e)
+		labels := e.Labels
 		if _, exists := labels["toread"]; exists {
 			t.Error("toread should not appear as a label")
 		}
@@ -62,7 +54,7 @@ func TestHTMLParserToreadTag(t *testing.T) {
 		if _, ok := e.ToRead.Get(); ok {
 			t.Error("ToRead should be unset for tag toreading")
 		}
-		labels := labelSet(e)
+		labels := e.Labels
 		if _, exists := labels["toreading"]; !exists {
 			t.Error("expected toreading label to be kept")
 		}
