@@ -135,13 +135,13 @@ type Entity struct {
 	Shared        Shared
 	ToRead        ToRead
 	IsFeed        IsFeed
-	Extended      []Extended
+	Extended      map[Extended]struct{}
 	LastVisitedAt LastVisitedAt
 }
 
 // Equal reports whether e and other carry the same data. Times compare by
-// instant rather than by representation, Names and Labels by set membership,
-// and UpdatedAt and Extended element by element.
+// instant rather than by representation, Names, Labels and Extended by set
+// membership, and UpdatedAt element by element.
 func (e Entity) Equal(other Entity) bool {
 	if (e.URI == nil) != (other.URI == nil) {
 		return false
@@ -159,10 +159,10 @@ func (e Entity) Equal(other Entity) bool {
 	if !maps.Equal(e.Names, other.Names) || !maps.Equal(e.Labels, other.Labels) {
 		return false
 	}
-	if e.Shared != other.Shared || e.ToRead != other.ToRead || e.IsFeed != other.IsFeed {
+	if !maps.Equal(e.Extended, other.Extended) {
 		return false
 	}
-	if !slices.Equal(e.Extended, other.Extended) {
+	if e.Shared != other.Shared || e.ToRead != other.ToRead || e.IsFeed != other.IsFeed {
 		return false
 	}
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
@@ -171,9 +171,10 @@ func (e Entity) Equal(other Entity) bool {
 // absorb merges other into e. The two behaviors commented below are shared with
 // hbt-ocaml and hbt-rs, settled in #57 and pinned by fixtures in hbt-data.
 func (e *Entity) absorb(other Entity) {
-	// Absorbing an identical entity is a no-op: without the guard, a bookmark
-	// repeated in the input would accumulate a copy of its description per
-	// occurrence. See the bookmarks_repeated fixture.
+	// Absorbing an identical entity is a no-op. Every field below merges by
+	// union or by a comparison, so the merge would reach the same result on
+	// its own; the guard just says so directly. See the bookmarks_repeated
+	// fixture.
 	if e.Equal(other) {
 		return
 	}
@@ -198,18 +199,22 @@ func (e *Entity) absorb(other Entity) {
 	if e.Labels == nil {
 		e.Labels = make(map[Label]struct{})
 	}
+	if e.Extended == nil {
+		e.Extended = make(map[Extended]struct{})
+	}
 	for k := range other.Names {
 		e.Names[k] = struct{}{}
 	}
 	for k := range other.Labels {
 		e.Labels[k] = struct{}{}
 	}
+	for k := range other.Extended {
+		e.Extended[k] = struct{}{}
+	}
 
 	e.Shared = e.Shared.Merge(other.Shared)
 	e.ToRead = e.ToRead.Merge(other.ToRead)
 	e.IsFeed = e.IsFeed.Merge(other.IsFeed)
-
-	e.Extended = append(e.Extended, other.Extended...)
 
 	e.LastVisitedAt = e.LastVisitedAt.Merge(other.LastVisitedAt)
 }
@@ -262,10 +267,7 @@ func (e Entity) toRepr() entityRepr {
 
 	var extended []string
 	if len(e.Extended) > 0 {
-		extended = make([]string, len(e.Extended))
-		for i, ext := range e.Extended {
-			extended[i] = string(ext)
-		}
+		extended = MapToSortedSlice(e.Extended)
 	}
 
 	var lastVisitedAt *int64
@@ -348,10 +350,7 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 
 	if len(s.Extended) > 0 {
-		e.Extended = make([]Extended, len(s.Extended))
-		for i, ext := range s.Extended {
-			e.Extended[i] = Extended(ext)
-		}
+		e.Extended = sliceToMap[Extended](s.Extended)
 	} else {
 		e.Extended = nil
 	}
@@ -386,9 +385,9 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 		}
 	}
 
-	var extended []Extended
+	var extended map[Extended]struct{}
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
-		extended = []Extended{Extended(trimmedExt)}
+		extended = map[Extended]struct{}{Extended(trimmedExt): {}}
 	}
 
 	entity := Entity{
