@@ -190,7 +190,7 @@ func main() {
 	if *config.ListTags {
 		tags := make(types.Set[types.Label])
 		for entity := range coll.Entities() {
-			tags = tags.Union(entity.Labels)
+			tags = tags.Merge(entity.Labels)
 		}
 		delete(tags, "")
 		fmt.Println("Tags found:")
