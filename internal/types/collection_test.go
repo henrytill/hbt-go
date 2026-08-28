@@ -2,6 +2,7 @@ package types
 
 import (
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 )
@@ -38,4 +39,30 @@ func TestAddEdges_wrongCollection_panics(t *testing.T) {
 	}()
 
 	collA.AddEdges(idA, idB)
+}
+
+func TestAddEdges_repeatedRelationRecordsOneEdge(t *testing.T) {
+	coll := NewCollection()
+
+	foo := coll.Upsert(makeEntity("https://foo.com"))
+	bar := coll.Upsert(makeEntity("https://bar.com"))
+	baz := coll.Upsert(makeEntity("https://baz.com"))
+
+	coll.AddEdges(foo, bar)
+	coll.AddEdges(foo, baz)
+	coll.AddEdges(foo, bar)
+	coll.AddEdges(foo, bar)
+
+	// Stating a relation three times must not record it three times, and
+	// deduping must not collapse the distinct Foo-Baz edge along with it.
+	want := map[Id][]uint{
+		foo: {bar.index, baz.index},
+		bar: {foo.index},
+		baz: {foo.index},
+	}
+	for id, edges := range want {
+		if got := coll.edges[id.index]; !slices.Equal(got, edges) {
+			t.Errorf("node %d: edges = %v, want %v", id.index, got, edges)
+		}
+	}
 }

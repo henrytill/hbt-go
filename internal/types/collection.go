@@ -78,12 +78,19 @@ func (c *Collection) Upsert(entity Entity) Id {
 	return c.insert(entity)
 }
 
+func (c *Collection) addEdge(from, to Id) {
+	if slices.Contains(c.edges[from.index], to.index) {
+		return
+	}
+	c.edges[from.index] = append(c.edges[from.index], to.index)
+}
+
 func (c *Collection) AddEdges(from, to Id) {
 	c.checkId(from)
 	c.checkId(to)
 
-	c.edges[from.index] = append(c.edges[from.index], to.index)
-	c.edges[to.index] = append(c.edges[to.index], from.index)
+	c.addEdge(from, to)
+	c.addEdge(to, from)
 }
 
 func (c *Collection) ApplyMappings(mappings map[string]string) {
