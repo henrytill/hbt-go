@@ -69,7 +69,7 @@ func add(
 		}
 	}
 
-	labels := make(map[types.Label]struct{})
+	labels := make(types.Set[types.Label])
 	hasToreadTag := false
 	for tag := range strings.SplitSeq(pending.tags, ",") {
 		tag = strings.TrimSpace(tag)
@@ -103,7 +103,7 @@ func add(
 		isFeed = types.NewIsFeed(true)
 	}
 
-	names := make(map[types.Name]struct{})
+	names := make(types.Set[types.Name])
 	if pending.title != "" {
 		names[types.Name(pending.title)] = struct{}{}
 	}
@@ -120,7 +120,7 @@ func add(
 	}
 
 	if pending.description != "" {
-		entity.Extended = map[types.Extended]struct{}{types.Extended(pending.description): {}}
+		entity.Extended = types.NewSet(types.Extended(pending.description))
 	}
 
 	entity.LastVisitedAt = lastVisitedAt

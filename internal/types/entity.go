@@ -130,12 +130,12 @@ type Entity struct {
 	URI           *url.URL
 	CreatedAt     CreatedAt
 	UpdatedAt     []UpdatedAt
-	Names         map[Name]struct{}
-	Labels        map[Label]struct{}
+	Names         Set[Name]
+	Labels        Set[Label]
 	Shared        Shared
 	ToRead        ToRead
 	IsFeed        IsFeed
-	Extended      map[Extended]struct{}
+	Extended      Set[Extended]
 	LastVisitedAt LastVisitedAt
 }
 
@@ -193,24 +193,9 @@ func (e *Entity) absorb(other Entity) {
 		return e.UpdatedAt[i].Before(e.UpdatedAt[j])
 	})
 
-	if e.Names == nil {
-		e.Names = make(map[Name]struct{})
-	}
-	if e.Labels == nil {
-		e.Labels = make(map[Label]struct{})
-	}
-	if e.Extended == nil {
-		e.Extended = make(map[Extended]struct{})
-	}
-	for k := range other.Names {
-		e.Names[k] = struct{}{}
-	}
-	for k := range other.Labels {
-		e.Labels[k] = struct{}{}
-	}
-	for k := range other.Extended {
-		e.Extended[k] = struct{}{}
-	}
+	e.Names = e.Names.Union(other.Names)
+	e.Labels = e.Labels.Union(other.Labels)
+	e.Extended = e.Extended.Union(other.Extended)
 
 	e.Shared = e.Shared.Merge(other.Shared)
 	e.ToRead = e.ToRead.Merge(other.ToRead)
@@ -232,28 +217,6 @@ type entityRepr struct {
 	LastVisitedAt *int64   `yaml:"lastVisitedAt,omitempty" json:"lastVisitedAt,omitempty"`
 }
 
-func MapToSortedSlice[K ~string](m map[K]struct{}) []string {
-	if m == nil {
-		return []string{}
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, string(k))
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func sliceToMap[K ~string](slice []string) map[K]struct{} {
-	m := make(map[K]struct{})
-	for _, s := range slice {
-		if s != "" {
-			m[K(s)] = struct{}{}
-		}
-	}
-	return m
-}
-
 func (e Entity) toRepr() entityRepr {
 	var uriString string
 	if e.URI != nil {
@@ -267,7 +230,7 @@ func (e Entity) toRepr() entityRepr {
 
 	var extended []string
 	if len(e.Extended) > 0 {
-		extended = MapToSortedSlice(e.Extended)
+		extended = SortedSlice(e.Extended)
 	}
 
 	var lastVisitedAt *int64
@@ -295,8 +258,8 @@ func (e Entity) toRepr() entityRepr {
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
 		UpdatedAt:     updatedAtUnix,
-		Names:         MapToSortedSlice(e.Names),
-		Labels:        MapToSortedSlice(e.Labels),
+		Names:         SortedSlice(e.Names),
+		Labels:        SortedSlice(e.Labels),
 		Shared:        shared,
 		ToRead:        toRead,
 		IsFeed:        isFeed,
@@ -328,8 +291,8 @@ func (e *Entity) fromRepr(s entityRepr) error {
 		e.LastVisitedAt = LastVisitedAt{}
 	}
 
-	e.Names = sliceToMap[Name](s.Names)
-	e.Labels = sliceToMap[Label](s.Labels)
+	e.Names = sliceToSet[Name](s.Names)
+	e.Labels = sliceToSet[Label](s.Labels)
 
 	if s.Shared != nil {
 		e.Shared = NewShared(*s.Shared)
@@ -350,7 +313,7 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 
 	if len(s.Extended) > 0 {
-		e.Extended = sliceToMap[Extended](s.Extended)
+		e.Extended = sliceToSet[Extended](s.Extended)
 	} else {
 		e.Extended = nil
 	}
@@ -373,21 +336,21 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 		return Entity{}, err
 	}
 
-	names := make(map[Name]struct{})
+	names := make(Set[Name])
 	if trimmedDesc := strings.TrimSpace(p.Description); trimmedDesc != "" {
 		names[Name(trimmedDesc)] = struct{}{}
 	}
 
-	labels := make(map[Label]struct{})
+	labels := make(Set[Label])
 	if trimmedTags := strings.TrimSpace(p.Tags); trimmedTags != "" {
 		for tag := range strings.FieldsSeq(trimmedTags) {
 			labels[Label(tag)] = struct{}{}
 		}
 	}
 
-	var extended map[Extended]struct{}
+	var extended Set[Extended]
 	if trimmedExt := strings.TrimSpace(p.Extended); trimmedExt != "" {
-		extended = map[Extended]struct{}{Extended(trimmedExt): {}}
+		extended = NewSet(Extended(trimmedExt))
 	}
 
 	entity := Entity{

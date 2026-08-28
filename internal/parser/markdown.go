@@ -36,8 +36,8 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (types.Id, error)
 		URI:       parsedURL,
 		CreatedAt: types.CreatedAt(state.currentDate),
 		UpdatedAt: []types.UpdatedAt{},
-		Names:     make(map[types.Name]struct{}),
-		Labels:    make(map[types.Label]struct{}),
+		Names:     make(types.Set[types.Name]),
+		Labels:    make(types.Set[types.Label]),
 	}
 
 	if linkTitle != "" {

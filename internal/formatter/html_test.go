@@ -21,15 +21,9 @@ func specialEntity(t *testing.T) types.Entity {
 		URI:       u,
 		CreatedAt: types.CreatedAt(time.Unix(100, 0)),
 		UpdatedAt: []types.UpdatedAt{},
-		Names: map[types.Name]struct{}{
-			types.Name(`Title with "quotes" & <markup>`): {},
-		},
-		Labels: map[types.Label]struct{}{
-			types.Label("tag&co"): {},
-		},
-		Extended: map[types.Extended]struct{}{
-			types.Extended(`description with <b>html</b> & "quotes"`): {},
-		},
+		Names:     types.NewSet(types.Name(`Title with "quotes" & <markup>`)),
+		Labels:    types.NewSet(types.Label("tag&co")),
+		Extended:  types.NewSet(types.Extended(`description with <b>html</b> & "quotes"`)),
 	}
 }
 
@@ -82,7 +76,7 @@ func TestHTMLFormatterPreservesSingleQuotes(t *testing.T) {
 	coll.Upsert(types.Entity{
 		URI:       u,
 		CreatedAt: types.CreatedAt(time.Unix(100, 0)),
-		Names:     map[types.Name]struct{}{types.Name("O'Reilly Radar"): {}},
+		Names:     types.NewSet(types.Name("O'Reilly Radar")),
 	})
 
 	out := formatCollection(t, &coll)
@@ -122,7 +116,7 @@ func TestHTMLFormatterRoundTrip(t *testing.T) {
 			t.Errorf("label %q lost in round trip, got %v", label, got.Labels)
 		}
 	}
-	if extended := types.MapToSortedSlice(got.Extended); !slices.Equal(extended, types.MapToSortedSlice(original.Extended)) {
-		t.Errorf("extended: got %v, want %v", extended, types.MapToSortedSlice(original.Extended))
+	if extended := types.SortedSlice(got.Extended); !slices.Equal(extended, types.SortedSlice(original.Extended)) {
+		t.Errorf("extended: got %v, want %v", extended, types.SortedSlice(original.Extended))
 	}
 }

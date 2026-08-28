@@ -60,7 +60,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		href = entity.URI.String()
 	}
 
-	names := types.MapToSortedSlice(entity.Names)
+	names := types.SortedSlice(entity.Names)
 	text := href
 	if len(names) > 0 {
 		text = names[0]
@@ -72,11 +72,11 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		lastVisit = &unix
 	}
 
-	tags := types.MapToSortedSlice(entity.Labels)
+	tags := types.SortedSlice(entity.Labels)
 
 	var extended *string
 	if len(entity.Extended) > 0 {
-		s := textEscaper.Replace(types.MapToSortedSlice(entity.Extended)[0])
+		s := textEscaper.Replace(types.SortedSlice(entity.Extended)[0])
 		extended = &s
 	}
 
