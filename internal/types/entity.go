@@ -171,10 +171,12 @@ func (e Entity) Equal(other Entity) bool {
 // absorb merges other into e. The two behaviors commented below are shared with
 // hbt-ocaml and hbt-rs, settled in #57 and pinned by fixtures in hbt-data.
 func (e *Entity) absorb(other Entity) {
-	// Absorbing an identical entity is a no-op. Every field below merges by
-	// union or by a comparison, so the merge would reach the same result on
-	// its own; the guard just says so directly. See the bookmarks_repeated
-	// fixture.
+	// Absorbing an identical entity is a no-op, which the guard states
+	// directly rather than leaving to the merge below. Every field there
+	// merges by union or by a comparison except UpdatedAt, which appends and
+	// is then sorted, so without the guard an entity carrying unsorted
+	// timestamps would come back reordered. UpdatedAt is also the one field
+	// the merge can still duplicate: see #65. Fixture: bookmarks_repeated.
 	if e.Equal(other) {
 		return
 	}
