@@ -193,9 +193,9 @@ func (e *Entity) absorb(other Entity) {
 		return e.UpdatedAt[i].Before(e.UpdatedAt[j])
 	})
 
-	e.Names = e.Names.Union(other.Names)
-	e.Labels = e.Labels.Union(other.Labels)
-	e.Extended = e.Extended.Union(other.Extended)
+	e.Names = e.Names.Merge(other.Names)
+	e.Labels = e.Labels.Merge(other.Labels)
+	e.Extended = e.Extended.Merge(other.Extended)
 
 	e.Shared = e.Shared.Merge(other.Shared)
 	e.ToRead = e.ToRead.Merge(other.ToRead)
