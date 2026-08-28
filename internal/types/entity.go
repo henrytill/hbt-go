@@ -228,11 +228,6 @@ func (e Entity) toRepr() entityRepr {
 		updatedAtUnix[i] = t.Unix()
 	}
 
-	var extended []string
-	if len(e.Extended) > 0 {
-		extended = SortedSlice(e.Extended)
-	}
-
 	var lastVisitedAt *int64
 	if t, ok := e.LastVisitedAt.Get(); ok {
 		unix := t.Unix()
@@ -263,7 +258,7 @@ func (e Entity) toRepr() entityRepr {
 		Shared:        shared,
 		ToRead:        toRead,
 		IsFeed:        isFeed,
-		Extended:      extended,
+		Extended:      SortedSlice(e.Extended),
 		LastVisitedAt: lastVisitedAt,
 	}
 }
@@ -312,11 +307,7 @@ func (e *Entity) fromRepr(s entityRepr) error {
 		e.IsFeed = IsFeed{}
 	}
 
-	if len(s.Extended) > 0 {
-		e.Extended = sliceToSet[Extended](s.Extended)
-	} else {
-		e.Extended = nil
-	}
+	e.Extended = sliceToSet[Extended](s.Extended)
 
 	return nil
 }
