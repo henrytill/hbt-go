@@ -90,7 +90,7 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 	for i := range c.entities {
 		entity := &c.entities[i]
 
-		newLabels := make(map[Label]struct{})
+		newLabels := make(Set[Label])
 
 		for label := range entity.Labels {
 			if newLabel, exists := mappings[string(label)]; exists {

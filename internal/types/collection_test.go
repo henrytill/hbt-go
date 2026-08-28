@@ -19,8 +19,8 @@ func makeEntity(uri string) Entity {
 		URI:       mustParseURL(uri),
 		CreatedAt: CreatedAt(time.Time{}),
 		UpdatedAt: []UpdatedAt{},
-		Names:     make(map[Name]struct{}),
-		Labels:    make(map[Label]struct{}),
+		Names:     make(Set[Name]),
+		Labels:    make(Set[Label]),
 	}
 }
 

@@ -5,13 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/henrytill/hbt-go/internal"
+	"github.com/henrytill/hbt-go/internal/types"
 )
 
 var (
@@ -189,16 +188,13 @@ func main() {
 	}
 
 	if *config.ListTags {
-		tags := make(map[string]struct{})
+		tags := make(types.Set[types.Label])
 		for entity := range coll.Entities() {
-			for label := range entity.Labels {
-				if string(label) != "" {
-					tags[string(label)] = struct{}{}
-				}
-			}
+			tags = tags.Union(entity.Labels)
 		}
+		delete(tags, "")
 		fmt.Println("Tags found:")
-		for _, tag := range slices.Sorted(maps.Keys(tags)) {
+		for _, tag := range types.SortedSlice(tags) {
 			fmt.Printf("  %s\n", tag)
 		}
 		return

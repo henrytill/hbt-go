@@ -77,8 +77,8 @@ func entityAt(uri string, unix int64) Entity {
 		URI:       mustParseURL(uri),
 		CreatedAt: CreatedAt(time.Unix(unix, 0)),
 		UpdatedAt: []UpdatedAt{},
-		Names:     make(map[Name]struct{}),
-		Labels:    make(map[Label]struct{}),
+		Names:     make(Set[Name]),
+		Labels:    make(Set[Label]),
 	}
 }
 
@@ -112,14 +112,14 @@ func TestUpsertMergesSameURI(t *testing.T) {
 	first.Names[Name("First")] = struct{}{}
 	first.Labels[Label("a")] = struct{}{}
 	first.Shared = NewShared(false)
-	first.Extended = map[Extended]struct{}{"one": {}}
+	first.Extended = NewSet[Extended]("one")
 
 	second := entityAt("https://example.com/", 200)
 	second.Names[Name("Second")] = struct{}{}
 	second.Labels[Label("b")] = struct{}{}
 	second.Shared = NewShared(true)
 	second.ToRead = NewToRead(true)
-	second.Extended = map[Extended]struct{}{"two": {}}
+	second.Extended = NewSet[Extended]("two")
 	second.LastVisitedAt = NewLastVisitedAt(time.Unix(300, 0))
 
 	idFirst := coll.Upsert(first)
@@ -134,10 +134,10 @@ func TestUpsertMergesSameURI(t *testing.T) {
 
 	got := firstEntity(t, coll)
 
-	if names := MapToSortedSlice(got.Names); !slices.Equal(names, []string{"First", "Second"}) {
+	if names := SortedSlice(got.Names); !slices.Equal(names, []string{"First", "Second"}) {
 		t.Errorf("Names = %v, want union [First Second]", names)
 	}
-	if labels := MapToSortedSlice(got.Labels); !slices.Equal(labels, []string{"a", "b"}) {
+	if labels := SortedSlice(got.Labels); !slices.Equal(labels, []string{"a", "b"}) {
 		t.Errorf("Labels = %v, want union [a b]", labels)
 	}
 	if s, ok := got.Shared.Get(); !ok || !s {
@@ -146,7 +146,7 @@ func TestUpsertMergesSameURI(t *testing.T) {
 	if tr, ok := got.ToRead.Get(); !ok || !tr {
 		t.Errorf("ToRead = (%v, %v), want (true, true): set value wins over unset", tr, ok)
 	}
-	if extended := MapToSortedSlice(got.Extended); !slices.Equal(extended, []string{"one", "two"}) {
+	if extended := SortedSlice(got.Extended); !slices.Equal(extended, []string{"one", "two"}) {
 		t.Errorf("Extended = %v, want union [one two]", extended)
 	}
 	if lv, ok := got.LastVisitedAt.Get(); !ok || !lv.Equal(time.Unix(300, 0)) {
@@ -218,7 +218,7 @@ func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	identical := func() Entity {
 		e := entityAt("https://e.test/", 100)
 		e.Names[Name("a")] = struct{}{}
-		e.Extended = map[Extended]struct{}{"desc": {}}
+		e.Extended = NewSet[Extended]("desc")
 		return e
 	}
 
@@ -228,13 +228,13 @@ func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	coll.Upsert(identical())
 
 	got := firstEntity(t, coll)
-	if extended := MapToSortedSlice(got.Extended); !slices.Equal(extended, []string{"desc"}) {
+	if extended := SortedSlice(got.Extended); !slices.Equal(extended, []string{"desc"}) {
 		t.Errorf("Extended = %v, want [desc]: a repeated bookmark should not repeat its description", extended)
 	}
 	if len(got.UpdatedAt) != 0 {
 		t.Errorf("UpdatedAt = %v, want empty", got.UpdatedAt)
 	}
-	if names := MapToSortedSlice(got.Names); !slices.Equal(names, []string{"a"}) {
+	if names := SortedSlice(got.Names); !slices.Equal(names, []string{"a"}) {
 		t.Errorf("Names = %v, want [a]", names)
 	}
 }
@@ -243,7 +243,7 @@ func TestUpsertSharedDescriptionIsNotDuplicated(t *testing.T) {
 	describedWithLabel := func(label Label) Entity {
 		e := entityAt("https://e.test/", 100)
 		e.Labels[label] = struct{}{}
-		e.Extended = map[Extended]struct{}{"desc": {}}
+		e.Extended = NewSet[Extended]("desc")
 		return e
 	}
 
@@ -253,10 +253,10 @@ func TestUpsertSharedDescriptionIsNotDuplicated(t *testing.T) {
 	coll.Upsert(describedWithLabel("c"))
 
 	got := firstEntity(t, coll)
-	if extended := MapToSortedSlice(got.Extended); !slices.Equal(extended, []string{"desc"}) {
+	if extended := SortedSlice(got.Extended); !slices.Equal(extended, []string{"desc"}) {
 		t.Errorf("Extended = %v, want [desc]: entities that differ elsewhere still share one description", extended)
 	}
-	if labels := MapToSortedSlice(got.Labels); !slices.Equal(labels, []string{"a", "b", "c"}) {
+	if labels := SortedSlice(got.Labels); !slices.Equal(labels, []string{"a", "b", "c"}) {
 		t.Errorf("Labels = %v, want union [a b c]", labels)
 	}
 }
@@ -268,7 +268,7 @@ func TestEntityEqual(t *testing.T) {
 		e.Labels[Label("l")] = struct{}{}
 		e.UpdatedAt = []UpdatedAt{UpdatedAt(time.Unix(200, 0))}
 		e.Shared = NewShared(true)
-		e.Extended = map[Extended]struct{}{"desc": {}}
+		e.Extended = NewSet[Extended]("desc")
 		e.LastVisitedAt = NewLastVisitedAt(time.Unix(300, 0))
 		return e
 	}
@@ -290,7 +290,7 @@ func TestEntityEqual(t *testing.T) {
 		{"shared", func(e *Entity) { e.Shared = NewShared(false) }},
 		{"toRead", func(e *Entity) { e.ToRead = NewToRead(false) }},
 		{"isFeed", func(e *Entity) { e.IsFeed = NewIsFeed(false) }},
-		{"extended", func(e *Entity) { e.Extended = map[Extended]struct{}{"other": {}} }},
+		{"extended", func(e *Entity) { e.Extended = NewSet[Extended]("other") }},
 		{"lastVisitedAt", func(e *Entity) { e.LastVisitedAt = LastVisitedAt{} }},
 	}
 
@@ -327,7 +327,7 @@ func TestApplyMappings(t *testing.T) {
 		"alias": "new", // two labels collapsing into one
 	})
 
-	labels := MapToSortedSlice(firstEntity(t, coll).Labels)
+	labels := SortedSlice(firstEntity(t, coll).Labels)
 	if !slices.Equal(labels, []string{"keep", "new"}) {
 		t.Errorf("Labels = %v, want [keep new]", labels)
 	}
@@ -351,10 +351,10 @@ func TestNewEntityFromPost(t *testing.T) {
 		if entity.URI.String() != "https://example.com/" {
 			t.Errorf("URI = %s", entity.URI)
 		}
-		if names := MapToSortedSlice(entity.Names); !slices.Equal(names, []string{"Example"}) {
+		if names := SortedSlice(entity.Names); !slices.Equal(names, []string{"Example"}) {
 			t.Errorf("Names = %v, want trimmed [Example]", names)
 		}
-		if labels := MapToSortedSlice(entity.Labels); !slices.Equal(labels, []string{"go", "web"}) {
+		if labels := SortedSlice(entity.Labels); !slices.Equal(labels, []string{"go", "web"}) {
 			t.Errorf("Labels = %v, want [go web]", labels)
 		}
 		if s, ok := entity.Shared.Get(); !ok || !s {
@@ -363,7 +363,7 @@ func TestNewEntityFromPost(t *testing.T) {
 		if tr, ok := entity.ToRead.Get(); !ok || tr {
 			t.Errorf("ToRead = (%v, %v), want (false, true)", tr, ok)
 		}
-		if extended := MapToSortedSlice(entity.Extended); !slices.Equal(extended, []string{"extended text"}) {
+		if extended := SortedSlice(entity.Extended); !slices.Equal(extended, []string{"extended text"}) {
 			t.Errorf("Extended = %v, want trimmed [extended text]", extended)
 		}
 	})

@@ -19,20 +19,20 @@ func makeReprTestCollection(t *testing.T) Collection {
 		URI:           mustParseURL("https://example.com/parent"),
 		CreatedAt:     CreatedAt(time.Unix(100, 0)),
 		UpdatedAt:     []UpdatedAt{UpdatedAt(time.Unix(200, 0))},
-		Names:         map[Name]struct{}{"Parent": {}},
-		Labels:        map[Label]struct{}{"a": {}, "b": {}},
+		Names:         NewSet[Name]("Parent"),
+		Labels:        NewSet[Label]("a", "b"),
 		Shared:        NewShared(true),
 		ToRead:        NewToRead(false),
 		IsFeed:        NewIsFeed(false),
-		Extended:      map[Extended]struct{}{"extended text": {}},
+		Extended:      NewSet[Extended]("extended text"),
 		LastVisitedAt: NewLastVisitedAt(time.Unix(300, 0)),
 	}
 	child := Entity{
 		URI:       mustParseURL("https://example.com/child"),
 		CreatedAt: CreatedAt(time.Unix(150, 0)),
 		UpdatedAt: []UpdatedAt{},
-		Names:     map[Name]struct{}{"Child": {}},
-		Labels:    map[Label]struct{}{},
+		Names:     NewSet[Name]("Child"),
+		Labels:    NewSet[Label](),
 	}
 
 	parentID := coll.Upsert(parent)

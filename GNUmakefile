@@ -35,6 +35,7 @@ SOURCES += internal/pinboard/post.go
 SOURCES += internal/types/collection.go
 SOURCES += internal/types/entity.go
 SOURCES += internal/types/intf.go
+SOURCES += internal/types/set.go
 
 BIN_TARGETS = $(addprefix $(BINDIR)/,$(BIN))
 

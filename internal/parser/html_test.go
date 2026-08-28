@@ -32,8 +32,8 @@ func parseSingleBookmark(t *testing.T, anchor string) types.Entity {
 	return types.Entity{}
 }
 
-func labelSet(e types.Entity) map[string]struct{} {
-	set := make(map[string]struct{})
+func labelSet(e types.Entity) types.Set[string] {
+	set := make(types.Set[string])
 	for label := range e.Labels {
 		set[string(label)] = struct{}{}
 	}
