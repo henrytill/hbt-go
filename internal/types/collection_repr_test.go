@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/goccy/go-yaml"
 )
@@ -17,19 +16,19 @@ func makeReprTestCollection(t *testing.T) Collection {
 
 	parent := Entity{
 		URI:           mustParseURL("https://example.com/parent"),
-		CreatedAt:     NewCreatedAt(time.Unix(100, 0)),
-		UpdatedAt:     NewSet(UpdatedAt{200}),
+		CreatedAt:     NewCreatedAt(100),
+		UpdatedAt:     NewSet(NewUpdatedAt(200)),
 		Names:         NewSet[Name]("Parent"),
 		Labels:        NewSet[Label]("a", "b"),
 		Shared:        NewShared(true),
 		ToRead:        NewToRead(false),
 		IsFeed:        NewIsFeed(false),
 		Extended:      NewSet[Extended]("extended text"),
-		LastVisitedAt: NewLastVisitedAt(time.Unix(300, 0)),
+		LastVisitedAt: NewLastVisitedAt(300),
 	}
 	child := Entity{
 		URI:       mustParseURL("https://example.com/child"),
-		CreatedAt: NewCreatedAt(time.Unix(150, 0)),
+		CreatedAt: NewCreatedAt(150),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     NewSet[Name]("Child"),
 		Labels:    NewSet[Label](),

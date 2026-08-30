@@ -75,17 +75,13 @@ func (f IsFeed) Merge(g IsFeed) IsFeed { return IsFeed{f.merge(g.optBool)} }
 // distinct types so Entity fields cannot be mixed up.
 type timestamp int64
 
-func newTimestamp(t time.Time) timestamp {
-	return timestamp(t.Unix())
-}
-
 func (t timestamp) unix() int64 {
 	return int64(t)
 }
 
 type CreatedAt struct{ timestamp }
 
-func NewCreatedAt(t time.Time) CreatedAt { return CreatedAt{newTimestamp(t)} }
+func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{timestamp(unix)} }
 
 func (c CreatedAt) Unix() int64 { return c.unix() }
 
@@ -95,7 +91,7 @@ func (c CreatedAt) After(d CreatedAt) bool { return c.timestamp > d.timestamp }
 
 type UpdatedAt struct{ timestamp }
 
-func NewUpdatedAt(t time.Time) UpdatedAt { return UpdatedAt{newTimestamp(t)} }
+func NewUpdatedAt(unix int64) UpdatedAt { return UpdatedAt{timestamp(unix)} }
 
 func (u UpdatedAt) Unix() int64 { return u.unix() }
 
@@ -111,7 +107,7 @@ func sortedUnix(s Set[UpdatedAt]) []int64 {
 func unixToSet(unix []int64) Set[UpdatedAt] {
 	s := make(Set[UpdatedAt], len(unix))
 	for _, u := range unix {
-		s[UpdatedAt{timestamp(u)}] = struct{}{}
+		s[NewUpdatedAt(u)] = struct{}{}
 	}
 	return s
 }
@@ -123,8 +119,8 @@ type LastVisitedAt struct {
 	Valid bool
 }
 
-func NewLastVisitedAt(t time.Time) LastVisitedAt {
-	return LastVisitedAt{newTimestamp(t), true}
+func NewLastVisitedAt(unix int64) LastVisitedAt {
+	return LastVisitedAt{timestamp(unix), true}
 }
 
 // Get returns the instant as a Unix second count, and whether it is set.
@@ -301,12 +297,12 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 	e.URI = parsedURL
 
-	e.CreatedAt = CreatedAt{timestamp(s.CreatedAt)}
+	e.CreatedAt = NewCreatedAt(s.CreatedAt)
 
 	e.UpdatedAt = unixToSet(s.UpdatedAt)
 
 	if s.LastVisitedAt != nil {
-		e.LastVisitedAt = LastVisitedAt{timestamp(*s.LastVisitedAt), true}
+		e.LastVisitedAt = NewLastVisitedAt(*s.LastVisitedAt)
 	} else {
 		e.LastVisitedAt = LastVisitedAt{}
 	}
@@ -371,7 +367,7 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 
 	entity := Entity{
 		URI:       parsedURL,
-		CreatedAt: NewCreatedAt(createdAt),
+		CreatedAt: NewCreatedAt(createdAt.Unix()),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     names,
 		Labels:    labels,
