@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"maps"
+	"math"
 	"net/url"
 	"slices"
 	"strings"
@@ -188,11 +189,14 @@ func (e Entity) Equal(other Entity) bool {
 // EarliestUpdate returns the earliest recorded update instant as a Unix second
 // count, and whether there is one.
 func (e Entity) EarliestUpdate() (int64, bool) {
-	unix := sortedUnix(e.UpdatedAt)
-	if len(unix) == 0 {
+	if len(e.UpdatedAt) == 0 {
 		return 0, false
 	}
-	return unix[0], true
+	earliest := int64(math.MaxInt64)
+	for u := range e.UpdatedAt {
+		earliest = min(earliest, u.unix())
+	}
+	return earliest, true
 }
 
 // absorb merges other into e. The two behaviors commented below are shared with
