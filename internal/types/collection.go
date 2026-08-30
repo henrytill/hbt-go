@@ -93,6 +93,10 @@ func (c *Collection) AddEdges(from, to Id) {
 	c.addEdge(to, from)
 }
 
+// ApplyMappings rewrites each entity's labels through mappings. A label
+// mapped to the empty string is dropped rather than replaced, since an empty
+// label is not one every reader accepts back: sliceToSet skips it when
+// deserializing, and the parsers refuse to produce one.
 func (c *Collection) ApplyMappings(mappings map[string]string) {
 	for i := range c.entities {
 		entity := &c.entities[i]
@@ -100,10 +104,13 @@ func (c *Collection) ApplyMappings(mappings map[string]string) {
 		newLabels := make(Set[Label])
 
 		for label := range entity.Labels {
-			if newLabel, exists := mappings[string(label)]; exists {
-				newLabels[Label(newLabel)] = struct{}{}
-			} else {
+			newLabel, exists := mappings[string(label)]
+			if !exists {
 				newLabels[label] = struct{}{}
+				continue
+			}
+			if newLabel != "" {
+				newLabels[Label(newLabel)] = struct{}{}
 			}
 		}
 
