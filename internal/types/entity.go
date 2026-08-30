@@ -93,8 +93,6 @@ type UpdatedAt struct{ timestamp }
 
 func NewUpdatedAt(unix int64) UpdatedAt { return UpdatedAt{timestamp(unix)} }
 
-func (u UpdatedAt) Unix() int64 { return u.unix() }
-
 func sortedUnix(s Set[UpdatedAt]) []int64 {
 	unix := make([]int64, 0, len(s))
 	for u := range s {
@@ -189,17 +187,14 @@ func (e Entity) Equal(other Entity) bool {
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
 }
 
-// EarliestUpdate returns the earliest recorded update instant, and whether
-// there is one.
-func (e Entity) EarliestUpdate() (UpdatedAt, bool) {
-	var earliest UpdatedAt
-	found := false
-	for u := range e.UpdatedAt {
-		if !found || u.timestamp < earliest.timestamp {
-			earliest, found = u, true
-		}
+// EarliestUpdate returns the earliest recorded update instant as a Unix second
+// count, and whether there is one.
+func (e Entity) EarliestUpdate() (int64, bool) {
+	unix := sortedUnix(e.UpdatedAt)
+	if len(unix) == 0 {
+		return 0, false
 	}
-	return earliest, found
+	return unix[0], true
 }
 
 // absorb merges other into e. The two behaviors commented below are shared with
