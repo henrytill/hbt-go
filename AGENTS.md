@@ -38,7 +38,7 @@ Language-agnostic test data for conformance testing:
 
 **Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `LastVisitedAt` is optional too, but as a timestamp plus a `Valid` flag rather than an `optBool` wrapper.
 
-**Timestamps**: `CreatedAt`, `UpdatedAt`, and `LastVisitedAt` are distinct types over an unexported `timestamp`, a Unix second count -- the resolution the wire format carries. Seconds rather than `time.Time` because `==` on a `time.Time` compares the monotonic reading and the `*Location` as well as the instant, which would let a `Set[UpdatedAt]` hold two members denoting the same moment. This mirrors hbt-rs, where all three are newtypes over one `Time`.
+**Timestamps**: `CreatedAt`, `UpdatedAt`, and `LastVisitedAt` are distinct types over an unexported `timestamp`, a Unix second count -- the resolution the wire format carries, and what they are constructed from. This mirrors hbt-rs, where all three are newtypes over one `Time`. The doc comment on `timestamp` says why seconds rather than `time.Time`.
 
 **Set idiom**: `Set[T comparable] map[T]struct{}` in `internal/types/set.go`, with `NewSet`, `Add`, `Merge`, and `SortedSlice` for deterministic output. `Add` and `Merge` return the set, since a nil map cannot be assigned into.
 
