@@ -19,7 +19,7 @@ func specialEntity(t *testing.T) types.Entity {
 	}
 	return types.Entity{
 		URI:       u,
-		CreatedAt: types.CreatedAt(time.Unix(100, 0)),
+		CreatedAt: types.NewCreatedAt(time.Unix(100, 0)),
 		UpdatedAt: make(types.Set[types.UpdatedAt]),
 		Names:     types.NewSet(types.Name(`Title with "quotes" & <markup>`)),
 		Labels:    types.NewSet(types.Label("tag&co")),
@@ -75,7 +75,7 @@ func TestHTMLFormatterPreservesSingleQuotes(t *testing.T) {
 	coll := types.NewCollection()
 	coll.Upsert(types.Entity{
 		URI:       u,
-		CreatedAt: types.CreatedAt(time.Unix(100, 0)),
+		CreatedAt: types.NewCreatedAt(time.Unix(100, 0)),
 		Names:     types.NewSet(types.Name("O'Reilly Radar")),
 	})
 

@@ -65,7 +65,7 @@ func add(
 	updatedAt := make(types.Set[types.UpdatedAt])
 	if pending.lastModified != "" {
 		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
-			updatedAt[types.UpdatedAt(parsed)] = struct{}{}
+			updatedAt[types.NewUpdatedAt(time.Unix(parsed, 0))] = struct{}{}
 		}
 	}
 
@@ -110,7 +110,7 @@ func add(
 
 	entity := types.Entity{
 		URI:       parsedURL,
-		CreatedAt: types.CreatedAt(createdAt),
+		CreatedAt: types.NewCreatedAt(createdAt),
 		UpdatedAt: updatedAt,
 		Names:     names,
 		Labels:    labels,

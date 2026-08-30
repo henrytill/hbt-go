@@ -67,38 +67,42 @@ func (f IsFeed) Get() (bool, bool) { return f.get() }
 
 func (f IsFeed) Merge(g IsFeed) IsFeed { return IsFeed{f.merge(g.optBool)} }
 
-type CreatedAt time.Time
-
-func (c CreatedAt) Unix() int64 {
-	return time.Time(c).Unix()
-}
-
-func (c CreatedAt) Before(d CreatedAt) bool {
-	return time.Time(c).Before(time.Time(d))
-}
-
-func (c CreatedAt) After(d CreatedAt) bool {
-	return time.Time(c).After(time.Time(d))
-}
-
-// UpdatedAt is an update instant as a Unix second count, the resolution the
-// wire format carries. It is not a time.Time because == on one compares the
+// timestamp is an instant as a Unix second count, the resolution the wire
+// format carries. It is not a time.Time because == on one compares the
 // monotonic reading and the *Location as well as the instant, which would let
-// a Set[UpdatedAt] hold two members denoting the same moment.
-type UpdatedAt int64
+// a Set[UpdatedAt] hold two members denoting the same moment. It is the shared
+// implementation behind CreatedAt, UpdatedAt, and LastVisitedAt, which stay
+// distinct types so Entity fields cannot be mixed up.
+type timestamp int64
 
-func NewUpdatedAt(t time.Time) UpdatedAt {
-	return UpdatedAt(t.Unix())
+func newTimestamp(t time.Time) timestamp {
+	return timestamp(t.Unix())
 }
 
-func (u UpdatedAt) Unix() int64 {
-	return int64(u)
+func (t timestamp) unix() int64 {
+	return int64(t)
 }
+
+type CreatedAt struct{ timestamp }
+
+func NewCreatedAt(t time.Time) CreatedAt { return CreatedAt{newTimestamp(t)} }
+
+func (c CreatedAt) Unix() int64 { return c.unix() }
+
+func (c CreatedAt) Before(d CreatedAt) bool { return c.timestamp < d.timestamp }
+
+func (c CreatedAt) After(d CreatedAt) bool { return c.timestamp > d.timestamp }
+
+type UpdatedAt struct{ timestamp }
+
+func NewUpdatedAt(t time.Time) UpdatedAt { return UpdatedAt{newTimestamp(t)} }
+
+func (u UpdatedAt) Unix() int64 { return u.unix() }
 
 func sortedUnix(s Set[UpdatedAt]) []int64 {
 	unix := make([]int64, 0, len(s))
 	for u := range s {
-		unix = append(unix, u.Unix())
+		unix = append(unix, u.unix())
 	}
 	slices.Sort(unix)
 	return unix
@@ -107,22 +111,25 @@ func sortedUnix(s Set[UpdatedAt]) []int64 {
 func unixToSet(unix []int64) Set[UpdatedAt] {
 	s := make(Set[UpdatedAt], len(unix))
 	for _, u := range unix {
-		s[UpdatedAt(u)] = struct{}{}
+		s[UpdatedAt{timestamp(u)}] = struct{}{}
 	}
 	return s
 }
 
+// LastVisitedAt is an optional visit instant: unset (the zero value) or a
+// timestamp.
 type LastVisitedAt struct {
-	Time  time.Time
+	timestamp
 	Valid bool
 }
 
 func NewLastVisitedAt(t time.Time) LastVisitedAt {
-	return LastVisitedAt{Time: t, Valid: true}
+	return LastVisitedAt{newTimestamp(t), true}
 }
 
-func (l LastVisitedAt) Get() (time.Time, bool) {
-	return l.Time, l.Valid
+// Get returns the instant as a Unix second count, and whether it is set.
+func (l LastVisitedAt) Get() (int64, bool) {
+	return l.unix(), l.Valid
 }
 
 // Equal reports whether l and m denote the same instant, or are both unset.
@@ -130,7 +137,7 @@ func (l LastVisitedAt) Equal(m LastVisitedAt) bool {
 	if l.Valid != m.Valid {
 		return false
 	}
-	return !l.Valid || l.Time.Equal(m.Time)
+	return !l.Valid || l.timestamp == m.timestamp
 }
 
 func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
@@ -140,7 +147,7 @@ func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
 	if !m.Valid {
 		return l
 	}
-	if l.Time.Before(m.Time) {
+	if l.timestamp < m.timestamp {
 		return m
 	}
 	return l
@@ -159,9 +166,8 @@ type Entity struct {
 	LastVisitedAt LastVisitedAt
 }
 
-// Equal reports whether e and other carry the same data. CreatedAt compares by
-// instant rather than by representation, and UpdatedAt, Names, Labels and
-// Extended by set membership.
+// Equal reports whether e and other carry the same data. UpdatedAt, Names,
+// Labels and Extended compare by set membership.
 func (e Entity) Equal(other Entity) bool {
 	if (e.URI == nil) != (other.URI == nil) {
 		return false
@@ -169,7 +175,7 @@ func (e Entity) Equal(other Entity) bool {
 	if e.URI != nil && e.URI.String() != other.URI.String() {
 		return false
 	}
-	if !time.Time(e.CreatedAt).Equal(time.Time(other.CreatedAt)) {
+	if e.CreatedAt != other.CreatedAt {
 		return false
 	}
 	if !maps.Equal(e.UpdatedAt, other.UpdatedAt) {
@@ -193,7 +199,7 @@ func (e Entity) EarliestUpdate() (UpdatedAt, bool) {
 	var earliest UpdatedAt
 	found := false
 	for u := range e.UpdatedAt {
-		if !found || u < earliest {
+		if !found || u.timestamp < earliest.timestamp {
 			earliest, found = u, true
 		}
 	}
@@ -214,10 +220,10 @@ func (e *Entity) absorb(other Entity) {
 	// an "update" whose timestamp merely repeats CreatedAt carries no
 	// information. See the bookmarks_same_timestamp fixture.
 	if other.CreatedAt.Before(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(NewUpdatedAt(time.Time(e.CreatedAt))))
+		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(UpdatedAt(e.CreatedAt)))
 		e.CreatedAt = other.CreatedAt
 	} else if other.CreatedAt.After(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(NewUpdatedAt(time.Time(other.CreatedAt))))
+		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(UpdatedAt(other.CreatedAt)))
 	}
 
 	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)
@@ -252,8 +258,7 @@ func (e Entity) toRepr() entityRepr {
 	}
 
 	var lastVisitedAt *int64
-	if t, ok := e.LastVisitedAt.Get(); ok {
-		unix := t.Unix()
+	if unix, ok := e.LastVisitedAt.Get(); ok {
 		lastVisitedAt = &unix
 	}
 
@@ -296,12 +301,12 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 	e.URI = parsedURL
 
-	e.CreatedAt = CreatedAt(time.Unix(s.CreatedAt, 0))
+	e.CreatedAt = CreatedAt{timestamp(s.CreatedAt)}
 
 	e.UpdatedAt = unixToSet(s.UpdatedAt)
 
 	if s.LastVisitedAt != nil {
-		e.LastVisitedAt = NewLastVisitedAt(time.Unix(*s.LastVisitedAt, 0))
+		e.LastVisitedAt = LastVisitedAt{timestamp(*s.LastVisitedAt), true}
 	} else {
 		e.LastVisitedAt = LastVisitedAt{}
 	}
@@ -366,7 +371,7 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 
 	entity := Entity{
 		URI:       parsedURL,
-		CreatedAt: CreatedAt(createdAt),
+		CreatedAt: NewCreatedAt(createdAt),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     names,
 		Labels:    labels,
