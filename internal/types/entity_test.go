@@ -358,6 +358,21 @@ func TestApplyMappings(t *testing.T) {
 	}
 }
 
+func TestApplyMappingsDropsLabelsMappedToEmpty(t *testing.T) {
+	coll := NewCollection()
+	e := entityAt("https://example.com/", 100)
+	e.Labels[Label("news")] = struct{}{}
+	e.Labels[Label("go")] = struct{}{}
+	coll.Upsert(e)
+
+	coll.ApplyMappings(map[string]string{"news": ""})
+
+	labels := SortedSlice(firstEntity(t, coll).Labels)
+	if !slices.Equal(labels, []string{"go"}) {
+		t.Errorf("Labels = %v, want [go]: a label mapped to the empty string is dropped, not replaced", labels)
+	}
+}
+
 func TestNewEntityFromPost(t *testing.T) {
 	t.Run("full post", func(t *testing.T) {
 		entity, err := NewEntityFromPost(pinboard.Post{
