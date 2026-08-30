@@ -20,7 +20,7 @@ func specialEntity(t *testing.T) types.Entity {
 	return types.Entity{
 		URI:       u,
 		CreatedAt: types.CreatedAt(time.Unix(100, 0)),
-		UpdatedAt: []types.UpdatedAt{},
+		UpdatedAt: make(types.Set[types.UpdatedAt]),
 		Names:     types.NewSet(types.Name(`Title with "quotes" & <markup>`)),
 		Labels:    types.NewSet(types.Label("tag&co")),
 		Extended:  types.NewSet(types.Extended(`description with <b>html</b> & "quotes"`)),

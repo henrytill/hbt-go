@@ -35,7 +35,7 @@ func saveEntity(state *parserState, linkURL, linkTitle string) (types.Id, error)
 	entity := types.Entity{
 		URI:       parsedURL,
 		CreatedAt: types.CreatedAt(state.currentDate),
-		UpdatedAt: []types.UpdatedAt{},
+		UpdatedAt: make(types.Set[types.UpdatedAt]),
 		Names:     make(types.Set[types.Name]),
 		Labels:    make(types.Set[types.Label]),
 	}

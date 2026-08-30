@@ -76,7 +76,7 @@ func entityAt(uri string, unix int64) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
 		CreatedAt: CreatedAt(time.Unix(unix, 0)),
-		UpdatedAt: []UpdatedAt{},
+		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),
 	}
@@ -164,8 +164,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
-		if len(got.UpdatedAt) != 1 || got.UpdatedAt[0].Unix() != 200 {
-			t.Errorf("UpdatedAt = %v, want [200]", got.UpdatedAt)
+		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
+			t.Errorf("UpdatedAt = %v, want [200]", updates)
 		}
 	})
 
@@ -178,8 +178,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
-		if len(got.UpdatedAt) != 1 || got.UpdatedAt[0].Unix() != 200 {
-			t.Errorf("UpdatedAt = %v, want [200]", got.UpdatedAt)
+		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
+			t.Errorf("UpdatedAt = %v, want [200]", updates)
 		}
 	})
 
@@ -193,10 +193,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		if got.CreatedAt.Unix() != 100 {
 			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
 		}
-		updates := make([]int64, len(got.UpdatedAt))
-		for i, u := range got.UpdatedAt {
-			updates[i] = u.Unix()
-		}
+		updates := sortedUnix(got.UpdatedAt)
 		if !slices.Equal(updates, []int64{200, 300}) {
 			t.Errorf("UpdatedAt = %v, want [200 300] sorted ascending", updates)
 		}
@@ -261,12 +258,35 @@ func TestUpsertSharedDescriptionIsNotDuplicated(t *testing.T) {
 	}
 }
 
+func TestUpsertSharedTimestampIsNotDuplicated(t *testing.T) {
+	updatedWithLabel := func(unix int64, label Label) Entity {
+		e := entityAt("https://e.test/", unix)
+		e.Labels[label] = struct{}{}
+		return e
+	}
+
+	coll := NewCollection()
+	coll.Upsert(updatedWithLabel(300, "a"))
+	coll.Upsert(updatedWithLabel(100, "b"))
+	coll.Upsert(updatedWithLabel(300, "c"))
+	coll.Upsert(updatedWithLabel(200, "d"))
+	coll.Upsert(updatedWithLabel(300, "e"))
+
+	got := firstEntity(t, coll)
+	if got.CreatedAt.Unix() != 100 {
+		t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+	}
+	if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200, 300}) {
+		t.Errorf("UpdatedAt = %v, want [200 300]: entities that differ elsewhere still share one timestamp", updates)
+	}
+}
+
 func TestEntityEqual(t *testing.T) {
 	base := func() Entity {
 		e := entityAt("https://example.com/", 100)
 		e.Names[Name("a")] = struct{}{}
 		e.Labels[Label("l")] = struct{}{}
-		e.UpdatedAt = []UpdatedAt{UpdatedAt(time.Unix(200, 0))}
+		e.UpdatedAt = NewSet(UpdatedAt(200))
 		e.Shared = NewShared(true)
 		e.Extended = NewSet[Extended]("desc")
 		e.LastVisitedAt = NewLastVisitedAt(time.Unix(300, 0))
@@ -284,7 +304,7 @@ func TestEntityEqual(t *testing.T) {
 		{"uri", func(e *Entity) { e.URI = mustParseURL("https://other.test/") }},
 		{"nil uri", func(e *Entity) { e.URI = nil }},
 		{"createdAt", func(e *Entity) { e.CreatedAt = CreatedAt(time.Unix(101, 0)) }},
-		{"updatedAt", func(e *Entity) { e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(time.Unix(400, 0))) }},
+		{"updatedAt", func(e *Entity) { e.UpdatedAt[UpdatedAt(400)] = struct{}{} }},
 		{"names", func(e *Entity) { e.Names[Name("b")] = struct{}{} }},
 		{"labels", func(e *Entity) { delete(e.Labels, Label("l")) }},
 		{"shared", func(e *Entity) { e.Shared = NewShared(false) }},

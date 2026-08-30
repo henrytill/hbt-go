@@ -34,7 +34,7 @@ Language-agnostic test data for conformance testing:
 
 - `Collection` - `entities []Entity`, `edges [][]uint`, and a `urls map[string]uint` index for deduplication
 - `Id` - an opaque handle pairing an owning `*Collection` with an index; `checkId` rejects ids from a different collection
-- `Entity` - a bookmark: `URI`, `CreatedAt`, `UpdatedAt []UpdatedAt`, `Names`, `Labels`, `Shared`, `ToRead`, `IsFeed`, `Extended`, `LastVisitedAt`
+- `Entity` - a bookmark: `URI`, `CreatedAt`, `UpdatedAt Set[UpdatedAt]`, `Names`, `Labels`, `Shared`, `ToRead`, `IsFeed`, `Extended`, `LastVisitedAt`
 
 **Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `LastVisitedAt` is optional too, but as its own `{Time, Valid}` struct rather than an `optBool` wrapper.
 

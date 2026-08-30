@@ -64,6 +64,14 @@ func TestHTMLBookmarksSharedDescriptionYAML(t *testing.T) {
 	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_shared_description.input.html", "testdata/html/bookmarks_shared_description.expected.yaml")
 }
 
+func TestHTMLBookmarksSharedTimestampHTML(t *testing.T) {
+	RunHbtAndCompare(t, "html", "testdata/html/bookmarks_shared_timestamp.input.html", "testdata/html/bookmarks_shared_timestamp.expected.html")
+}
+
+func TestHTMLBookmarksSharedTimestampYAML(t *testing.T) {
+	RunHbtAndCompare(t, "yaml", "testdata/html/bookmarks_shared_timestamp.input.html", "testdata/html/bookmarks_shared_timestamp.expected.yaml")
+}
+
 func TestHTMLBookmarksSimpleHTML(t *testing.T) {
 	RunHbtAndCompare(t, "html", "testdata/html/bookmarks_simple.input.html", "testdata/html/bookmarks_simple.expected.html")
 }

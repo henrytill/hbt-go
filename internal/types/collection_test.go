@@ -19,7 +19,7 @@ func makeEntity(uri string) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
 		CreatedAt: CreatedAt(time.Time{}),
-		UpdatedAt: []UpdatedAt{},
+		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),
 	}
