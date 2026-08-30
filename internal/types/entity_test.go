@@ -75,7 +75,7 @@ func TestLastVisitedAtMerge(t *testing.T) {
 func entityAt(uri string, unix int64) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
-		CreatedAt: CreatedAt(time.Unix(unix, 0)),
+		CreatedAt: NewCreatedAt(time.Unix(unix, 0)),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),
@@ -149,7 +149,7 @@ func TestUpsertMergesSameURI(t *testing.T) {
 	if extended := SortedSlice(got.Extended); !slices.Equal(extended, []string{"one", "two"}) {
 		t.Errorf("Extended = %v, want union [one two]", extended)
 	}
-	if lv, ok := got.LastVisitedAt.Get(); !ok || !lv.Equal(time.Unix(300, 0)) {
+	if lv, ok := got.LastVisitedAt.Get(); !ok || lv != 300 {
 		t.Errorf("LastVisitedAt = (%v, %v), want (300, true)", lv, ok)
 	}
 }
@@ -286,7 +286,7 @@ func TestEntityEqual(t *testing.T) {
 		e := entityAt("https://example.com/", 100)
 		e.Names[Name("a")] = struct{}{}
 		e.Labels[Label("l")] = struct{}{}
-		e.UpdatedAt = NewSet(UpdatedAt(200))
+		e.UpdatedAt = NewSet(UpdatedAt{200})
 		e.Shared = NewShared(true)
 		e.Extended = NewSet[Extended]("desc")
 		e.LastVisitedAt = NewLastVisitedAt(time.Unix(300, 0))
@@ -303,8 +303,8 @@ func TestEntityEqual(t *testing.T) {
 	}{
 		{"uri", func(e *Entity) { e.URI = mustParseURL("https://other.test/") }},
 		{"nil uri", func(e *Entity) { e.URI = nil }},
-		{"createdAt", func(e *Entity) { e.CreatedAt = CreatedAt(time.Unix(101, 0)) }},
-		{"updatedAt", func(e *Entity) { e.UpdatedAt[UpdatedAt(400)] = struct{}{} }},
+		{"createdAt", func(e *Entity) { e.CreatedAt = NewCreatedAt(time.Unix(101, 0)) }},
+		{"updatedAt", func(e *Entity) { e.UpdatedAt[UpdatedAt{400}] = struct{}{} }},
 		{"names", func(e *Entity) { e.Names[Name("b")] = struct{}{} }},
 		{"labels", func(e *Entity) { delete(e.Labels, Label("l")) }},
 		{"shared", func(e *Entity) { e.Shared = NewShared(false) }},
@@ -327,7 +327,7 @@ func TestEntityEqual(t *testing.T) {
 
 	t.Run("times compare by instant", func(t *testing.T) {
 		utc, other := base(), base()
-		other.CreatedAt = CreatedAt(time.Unix(100, 0).In(time.FixedZone("elsewhere", 3600)))
+		other.CreatedAt = NewCreatedAt(time.Unix(100, 0).In(time.FixedZone("elsewhere", 3600)))
 		if !utc.Equal(other) {
 			t.Error("the same instant in a different location should compare equal")
 		}

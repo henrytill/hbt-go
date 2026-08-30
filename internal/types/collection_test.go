@@ -18,7 +18,7 @@ func mustParseURL(s string) *url.URL {
 func makeEntity(uri string) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
-		CreatedAt: CreatedAt(time.Time{}),
+		CreatedAt: NewCreatedAt(time.Time{}),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),

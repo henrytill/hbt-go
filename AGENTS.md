@@ -36,7 +36,9 @@ Language-agnostic test data for conformance testing:
 - `Id` - an opaque handle pairing an owning `*Collection` with an index; `checkId` rejects ids from a different collection
 - `Entity` - a bookmark: `URI`, `CreatedAt`, `UpdatedAt Set[UpdatedAt]`, `Names`, `Labels`, `Shared`, `ToRead`, `IsFeed`, `Extended`, `LastVisitedAt`
 
-**Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `LastVisitedAt` is optional too, but as its own `{Time, Valid}` struct rather than an `optBool` wrapper.
+**Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `LastVisitedAt` is optional too, but as a timestamp plus a `Valid` flag rather than an `optBool` wrapper.
+
+**Timestamps**: `CreatedAt`, `UpdatedAt`, and `LastVisitedAt` are distinct types over an unexported `timestamp`, a Unix second count -- the resolution the wire format carries. Seconds rather than `time.Time` because `==` on a `time.Time` compares the monotonic reading and the `*Location` as well as the instant, which would let a `Set[UpdatedAt]` hold two members denoting the same moment. This mirrors hbt-rs, where all three are newtypes over one `Time`.
 
 **Set idiom**: `Set[T comparable] map[T]struct{}` in `internal/types/set.go`, with `NewSet`, `Merge`, and `SortedSlice` for deterministic output.
 
