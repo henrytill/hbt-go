@@ -220,10 +220,10 @@ func (e *Entity) absorb(other Entity) {
 	// an "update" whose timestamp merely repeats CreatedAt carries no
 	// information. See the bookmarks_same_timestamp fixture.
 	if other.CreatedAt.Before(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(UpdatedAt(e.CreatedAt)))
+		e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
 	} else if other.CreatedAt.After(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(UpdatedAt(other.CreatedAt)))
+		e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(other.CreatedAt))
 	}
 
 	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)

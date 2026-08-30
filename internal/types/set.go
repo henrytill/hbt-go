@@ -34,6 +34,16 @@ func (s Set[T]) Merge(other Set[T]) Set[T] {
 	return s
 }
 
+// Add adds v to s and returns the result. Like Merge, it may modify s in
+// place, so callers must use the returned value.
+func (s Set[T]) Add(v T) Set[T] {
+	if s == nil {
+		s = make(Set[T], 1)
+	}
+	s[v] = struct{}{}
+	return s
+}
+
 func SortedSlice[T ~string](s Set[T]) []string {
 	strs := make([]string, 0, len(s))
 	for k := range s {

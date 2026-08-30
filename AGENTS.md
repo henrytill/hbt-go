@@ -40,7 +40,7 @@ Language-agnostic test data for conformance testing:
 
 **Timestamps**: `CreatedAt`, `UpdatedAt`, and `LastVisitedAt` are distinct types over an unexported `timestamp`, a Unix second count -- the resolution the wire format carries. Seconds rather than `time.Time` because `==` on a `time.Time` compares the monotonic reading and the `*Location` as well as the instant, which would let a `Set[UpdatedAt]` hold two members denoting the same moment. This mirrors hbt-rs, where all three are newtypes over one `Time`.
 
-**Set idiom**: `Set[T comparable] map[T]struct{}` in `internal/types/set.go`, with `NewSet`, `Merge`, and `SortedSlice` for deterministic output.
+**Set idiom**: `Set[T comparable] map[T]struct{}` in `internal/types/set.go`, with `NewSet`, `Add`, `Merge`, and `SortedSlice` for deterministic output. `Add` and `Merge` return the set, since a nil map cannot be assigned into.
 
 **Interface-Based Design**: Clean separation between parsing and formatting, both defined in `internal/types/intf.go`:
 - `Parser` - `Parse(r io.Reader) (Collection, error)`
