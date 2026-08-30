@@ -45,27 +45,24 @@ func add(
 		parsedURL.Path = "/"
 	}
 
-	var createdAt time.Time
+	createdAt := time.Now().Unix()
 	if pending.addDate != "" {
 		if parsed, err := strconv.ParseInt(pending.addDate, 10, 64); err == nil {
-			createdAt = time.Unix(parsed, 0)
+			createdAt = parsed
 		}
-	}
-	if createdAt.IsZero() {
-		createdAt = time.Now()
 	}
 
 	var lastVisitedAt types.LastVisitedAt
 	if pending.lastVisit != "" {
 		if parsed, err := strconv.ParseInt(pending.lastVisit, 10, 64); err == nil {
-			lastVisitedAt = types.NewLastVisitedAt(time.Unix(parsed, 0))
+			lastVisitedAt = types.NewLastVisitedAt(parsed)
 		}
 	}
 
 	updatedAt := make(types.Set[types.UpdatedAt])
 	if pending.lastModified != "" {
 		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
-			updatedAt = updatedAt.Add(types.NewUpdatedAt(time.Unix(parsed, 0)))
+			updatedAt = updatedAt.Add(types.NewUpdatedAt(parsed))
 		}
 	}
 

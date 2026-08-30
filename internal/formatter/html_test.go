@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/henrytill/hbt-go/internal/parser"
 	"github.com/henrytill/hbt-go/internal/types"
@@ -19,7 +18,7 @@ func specialEntity(t *testing.T) types.Entity {
 	}
 	return types.Entity{
 		URI:       u,
-		CreatedAt: types.NewCreatedAt(time.Unix(100, 0)),
+		CreatedAt: types.NewCreatedAt(100),
 		UpdatedAt: make(types.Set[types.UpdatedAt]),
 		Names:     types.NewSet(types.Name(`Title with "quotes" & <markup>`)),
 		Labels:    types.NewSet(types.Label("tag&co")),
@@ -75,7 +74,7 @@ func TestHTMLFormatterPreservesSingleQuotes(t *testing.T) {
 	coll := types.NewCollection()
 	coll.Upsert(types.Entity{
 		URI:       u,
-		CreatedAt: types.NewCreatedAt(time.Unix(100, 0)),
+		CreatedAt: types.NewCreatedAt(100),
 		Names:     types.NewSet(types.Name("O'Reilly Radar")),
 	})
 

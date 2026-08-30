@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"slices"
 	"testing"
-	"time"
 )
 
 func mustParseURL(s string) *url.URL {
@@ -18,7 +17,7 @@ func mustParseURL(s string) *url.URL {
 func makeEntity(uri string) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
-		CreatedAt: NewCreatedAt(time.Time{}),
+		CreatedAt: NewCreatedAt(0),
 		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),
