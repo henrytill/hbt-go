@@ -65,7 +65,7 @@ func add(
 	updatedAt := make(types.Set[types.UpdatedAt])
 	if pending.lastModified != "" {
 		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
-			updatedAt[types.NewUpdatedAt(time.Unix(parsed, 0))] = struct{}{}
+			updatedAt = updatedAt.Add(types.NewUpdatedAt(time.Unix(parsed, 0)))
 		}
 	}
 
