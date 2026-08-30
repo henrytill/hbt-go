@@ -192,7 +192,6 @@ func main() {
 		for entity := range coll.Entities() {
 			tags = tags.Merge(entity.Labels)
 		}
-		delete(tags, "")
 		fmt.Println("Tags found:")
 		for _, tag := range types.SortedSlice(tags) {
 			fmt.Printf("  %s\n", tag)
