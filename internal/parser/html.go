@@ -59,7 +59,7 @@ func add(
 		}
 	}
 
-	updatedAt := make(types.Set[types.UpdatedAt])
+	var updatedAt types.Set[types.UpdatedAt]
 	if pending.lastModified != "" {
 		if parsed, err := strconv.ParseInt(pending.lastModified, 10, 64); err == nil {
 			updatedAt = updatedAt.Add(types.NewUpdatedAt(parsed))
