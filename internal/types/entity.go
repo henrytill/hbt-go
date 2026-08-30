@@ -368,7 +368,6 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 	entity := Entity{
 		URI:       parsedURL,
 		CreatedAt: NewCreatedAt(createdAt.Unix()),
-		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     names,
 		Labels:    labels,
 		Shared:    NewShared(p.Shared == "yes"),
