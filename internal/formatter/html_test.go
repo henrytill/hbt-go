@@ -119,3 +119,26 @@ func TestHTMLFormatterRoundTrip(t *testing.T) {
 		t.Errorf("extended: got %v, want %v", extended, types.SortedSlice(original.Extended))
 	}
 }
+
+func TestHTMLFormatterLastModifiedIsTheLatestUpdate(t *testing.T) {
+	u, err := url.Parse("https://example.com/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := types.NewCollection()
+	coll.Upsert(types.Entity{
+		URI:       u,
+		CreatedAt: types.NewCreatedAt(100),
+		UpdatedAt: types.NewSet(
+			types.NewUpdatedAt(300),
+			types.NewUpdatedAt(500),
+			types.NewUpdatedAt(400),
+		),
+	})
+
+	out := formatCollection(t, &coll)
+
+	if want := `LAST_MODIFIED="500"`; !strings.Contains(out, want) {
+		t.Errorf("output missing %q: LAST_MODIFIED is the most recent update, not the oldest\noutput:\n%s", want, out)
+	}
+}
