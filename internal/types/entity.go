@@ -110,8 +110,6 @@ func unixToSet(unix []int64) Set[UpdatedAt] {
 	return s
 }
 
-// LastVisitedAt is an optional visit instant: unset (the zero value) or a
-// timestamp.
 type LastVisitedAt struct {
 	timestamp
 	Valid bool
