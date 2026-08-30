@@ -90,6 +90,20 @@ func firstEntity(t *testing.T, coll Collection) Entity {
 	return Entity{}
 }
 
+func TestLatestUpdate(t *testing.T) {
+	e := entityAt("https://e.test/", 100)
+
+	if unix, ok := e.LatestUpdate(); ok || unix != 0 {
+		t.Errorf("LatestUpdate() = (%d, %v), want (0, false) for an entity with no updates", unix, ok)
+	}
+
+	e.UpdatedAt = NewSet(NewUpdatedAt(300), NewUpdatedAt(500), NewUpdatedAt(400))
+
+	if unix, ok := e.LatestUpdate(); !ok || unix != 500 {
+		t.Errorf("LatestUpdate() = (%d, %v), want (500, true)", unix, ok)
+	}
+}
+
 func TestUpsertInsertsDistinctURIs(t *testing.T) {
 	coll := NewCollection()
 

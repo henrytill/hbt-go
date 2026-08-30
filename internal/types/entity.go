@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"maps"
-	"math"
 	"net/url"
 	"slices"
 	"strings"
@@ -186,17 +185,17 @@ func (e Entity) Equal(other Entity) bool {
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
 }
 
-// EarliestUpdate returns the earliest recorded update instant as a Unix second
+// LatestUpdate returns the most recent recorded update instant as a Unix second
 // count, and whether there is one.
-func (e Entity) EarliestUpdate() (int64, bool) {
-	if len(e.UpdatedAt) == 0 {
-		return 0, false
-	}
-	earliest := int64(math.MaxInt64)
+func (e Entity) LatestUpdate() (int64, bool) {
+	var latest int64
+	found := false
 	for u := range e.UpdatedAt {
-		earliest = min(earliest, u.unix())
+		if unix := u.unix(); !found || unix > latest {
+			latest, found = unix, true
+		}
 	}
-	return earliest, true
+	return latest, found
 }
 
 // absorb merges other into e. The two behaviors commented below are shared with

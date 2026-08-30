@@ -106,7 +106,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 		Extended:  extended,
 	}
 
-	if unix, ok := entity.EarliestUpdate(); ok {
+	if unix, ok := entity.LatestUpdate(); ok {
 		ret.LastModified = &unix
 	}
 
