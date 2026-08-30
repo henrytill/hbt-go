@@ -18,7 +18,7 @@ func makeReprTestCollection(t *testing.T) Collection {
 	parent := Entity{
 		URI:           mustParseURL("https://example.com/parent"),
 		CreatedAt:     CreatedAt(time.Unix(100, 0)),
-		UpdatedAt:     []UpdatedAt{UpdatedAt(time.Unix(200, 0))},
+		UpdatedAt:     NewSet(UpdatedAt(200)),
 		Names:         NewSet[Name]("Parent"),
 		Labels:        NewSet[Label]("a", "b"),
 		Shared:        NewShared(true),
@@ -30,7 +30,7 @@ func makeReprTestCollection(t *testing.T) Collection {
 	child := Entity{
 		URI:       mustParseURL("https://example.com/child"),
 		CreatedAt: CreatedAt(time.Unix(150, 0)),
-		UpdatedAt: []UpdatedAt{},
+		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     NewSet[Name]("Child"),
 		Labels:    NewSet[Label](),
 	}

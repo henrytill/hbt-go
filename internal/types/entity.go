@@ -5,7 +5,6 @@ import (
 	"maps"
 	"net/url"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -82,14 +81,35 @@ func (c CreatedAt) After(d CreatedAt) bool {
 	return time.Time(c).After(time.Time(d))
 }
 
-type UpdatedAt time.Time
+// UpdatedAt is an update instant as a Unix second count, the resolution the
+// wire format carries. It is not a time.Time because == on one compares the
+// monotonic reading and the *Location as well as the instant, which would let
+// a Set[UpdatedAt] hold two members denoting the same moment.
+type UpdatedAt int64
 
-func (u UpdatedAt) Unix() int64 {
-	return time.Time(u).Unix()
+func NewUpdatedAt(t time.Time) UpdatedAt {
+	return UpdatedAt(t.Unix())
 }
 
-func (u UpdatedAt) Before(v UpdatedAt) bool {
-	return time.Time(u).Before(time.Time(v))
+func (u UpdatedAt) Unix() int64 {
+	return int64(u)
+}
+
+func sortedUnix(s Set[UpdatedAt]) []int64 {
+	unix := make([]int64, 0, len(s))
+	for u := range s {
+		unix = append(unix, u.Unix())
+	}
+	slices.Sort(unix)
+	return unix
+}
+
+func unixToSet(unix []int64) Set[UpdatedAt] {
+	s := make(Set[UpdatedAt], len(unix))
+	for _, u := range unix {
+		s[UpdatedAt(u)] = struct{}{}
+	}
+	return s
 }
 
 type LastVisitedAt struct {
@@ -129,7 +149,7 @@ func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
 type Entity struct {
 	URI           *url.URL
 	CreatedAt     CreatedAt
-	UpdatedAt     []UpdatedAt
+	UpdatedAt     Set[UpdatedAt]
 	Names         Set[Name]
 	Labels        Set[Label]
 	Shared        Shared
@@ -139,9 +159,9 @@ type Entity struct {
 	LastVisitedAt LastVisitedAt
 }
 
-// Equal reports whether e and other carry the same data. Times compare by
-// instant rather than by representation, Names, Labels and Extended by set
-// membership, and UpdatedAt element by element.
+// Equal reports whether e and other carry the same data. CreatedAt compares by
+// instant rather than by representation, and UpdatedAt, Names, Labels and
+// Extended by set membership.
 func (e Entity) Equal(other Entity) bool {
 	if (e.URI == nil) != (other.URI == nil) {
 		return false
@@ -152,8 +172,7 @@ func (e Entity) Equal(other Entity) bool {
 	if !time.Time(e.CreatedAt).Equal(time.Time(other.CreatedAt)) {
 		return false
 	}
-	sameInstant := func(u, v UpdatedAt) bool { return time.Time(u).Equal(time.Time(v)) }
-	if !slices.EqualFunc(e.UpdatedAt, other.UpdatedAt, sameInstant) {
+	if !maps.Equal(e.UpdatedAt, other.UpdatedAt) {
 		return false
 	}
 	if !maps.Equal(e.Names, other.Names) || !maps.Equal(e.Labels, other.Labels) {
@@ -168,15 +187,25 @@ func (e Entity) Equal(other Entity) bool {
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
 }
 
+// EarliestUpdate returns the earliest recorded update instant, and whether
+// there is one.
+func (e Entity) EarliestUpdate() (UpdatedAt, bool) {
+	var earliest UpdatedAt
+	found := false
+	for u := range e.UpdatedAt {
+		if !found || u < earliest {
+			earliest, found = u, true
+		}
+	}
+	return earliest, found
+}
+
 // absorb merges other into e. The two behaviors commented below are shared with
 // hbt-ocaml and hbt-rs, settled in #57 and pinned by fixtures in hbt-data.
 func (e *Entity) absorb(other Entity) {
 	// Absorbing an identical entity is a no-op, which the guard states
-	// directly rather than leaving to the merge below. Every field there
-	// merges by union or by a comparison except UpdatedAt, which appends and
-	// is then sorted, so without the guard an entity carrying unsorted
-	// timestamps would come back reordered. UpdatedAt is also the one field
-	// the merge can still duplicate: see #65. Fixture: bookmarks_repeated.
+	// directly rather than leaving to the merge below, where every field
+	// merges by union or by a comparison. Fixture: bookmarks_repeated.
 	if e.Equal(other) {
 		return
 	}
@@ -185,16 +214,13 @@ func (e *Entity) absorb(other Entity) {
 	// an "update" whose timestamp merely repeats CreatedAt carries no
 	// information. See the bookmarks_same_timestamp fixture.
 	if other.CreatedAt.Before(e.CreatedAt) {
-		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(e.CreatedAt))
+		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(NewUpdatedAt(time.Time(e.CreatedAt))))
 		e.CreatedAt = other.CreatedAt
 	} else if other.CreatedAt.After(e.CreatedAt) {
-		e.UpdatedAt = append(e.UpdatedAt, UpdatedAt(other.CreatedAt))
+		e.UpdatedAt = e.UpdatedAt.Merge(NewSet(NewUpdatedAt(time.Time(other.CreatedAt))))
 	}
 
-	sort.Slice(e.UpdatedAt, func(i, j int) bool {
-		return e.UpdatedAt[i].Before(e.UpdatedAt[j])
-	})
-
+	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)
 	e.Names = e.Names.Merge(other.Names)
 	e.Labels = e.Labels.Merge(other.Labels)
 	e.Extended = e.Extended.Merge(other.Extended)
@@ -225,11 +251,6 @@ func (e Entity) toRepr() entityRepr {
 		uriString = e.URI.String()
 	}
 
-	updatedAtUnix := make([]int64, len(e.UpdatedAt))
-	for i, t := range e.UpdatedAt {
-		updatedAtUnix[i] = t.Unix()
-	}
-
 	var lastVisitedAt *int64
 	if t, ok := e.LastVisitedAt.Get(); ok {
 		unix := t.Unix()
@@ -254,7 +275,7 @@ func (e Entity) toRepr() entityRepr {
 	return entityRepr{
 		URI:           uriString,
 		CreatedAt:     e.CreatedAt.Unix(),
-		UpdatedAt:     updatedAtUnix,
+		UpdatedAt:     sortedUnix(e.UpdatedAt),
 		Names:         SortedSlice(e.Names),
 		Labels:        SortedSlice(e.Labels),
 		Shared:        shared,
@@ -277,10 +298,7 @@ func (e *Entity) fromRepr(s entityRepr) error {
 
 	e.CreatedAt = CreatedAt(time.Unix(s.CreatedAt, 0))
 
-	e.UpdatedAt = make([]UpdatedAt, len(s.UpdatedAt))
-	for i, unix := range s.UpdatedAt {
-		e.UpdatedAt[i] = UpdatedAt(time.Unix(unix, 0))
-	}
+	e.UpdatedAt = unixToSet(s.UpdatedAt)
 
 	if s.LastVisitedAt != nil {
 		e.LastVisitedAt = NewLastVisitedAt(time.Unix(*s.LastVisitedAt, 0))
@@ -349,7 +367,7 @@ func NewEntityFromPost(p pinboard.Post) (Entity, error) {
 	entity := Entity{
 		URI:       parsedURL,
 		CreatedAt: CreatedAt(createdAt),
-		UpdatedAt: []UpdatedAt{},
+		UpdatedAt: make(Set[UpdatedAt]),
 		Names:     names,
 		Labels:    labels,
 		Shared:    NewShared(p.Shared == "yes"),

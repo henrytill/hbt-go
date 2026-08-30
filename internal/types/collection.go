@@ -117,8 +117,8 @@ func (c *Collection) Len() int {
 
 // Entities returns an iterator over the collection's entities in insertion
 // order. The yielded values are copies, so the collection's structure cannot
-// be modified through them, but they share interior maps and slices (Names,
-// Labels, Extended, UpdatedAt) with the collection.
+// be modified through them, but they share interior maps (UpdatedAt, Names,
+// Labels, Extended) with the collection.
 func (c *Collection) Entities() iter.Seq[Entity] {
 	return slices.Values(c.entities)
 }
