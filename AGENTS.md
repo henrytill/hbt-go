@@ -125,7 +125,7 @@ testdata/            # hbt-data submodule
   ```
   The harness's flags, what counts as a match, and its timezone policy are documented in `testdata/README.md`.
 - **The flake check** is the same harness: `testdata/` is also the `hbt-data` flake input (`path:./testdata`), whose `lib.check` runs it against the Nix-built `hbt`. A relative path input locks relative to this flake, not by hash, so bumping the submodule needs no relock. Nix sees committed state only, so a moved but uncommitted submodule checkout is not what the check runs.
-- All parsers and formatters exercised through CLI integration, plus unit tests alongside each package
+- Flag handling exercised through the CLI in `test/cli_flags_test.go`, plus unit tests alongside each package
 - The API client is tested against an `httptest` server; no tests hit the live Pinboard API
 
 ## Git Workflow
