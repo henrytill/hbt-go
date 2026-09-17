@@ -7,5 +7,4 @@ require (
 	github.com/yuin/goldmark v1.8.4
 	golang.org/x/mod v0.38.0
 	golang.org/x/net v0.57.0
-	golang.org/x/text v0.40.0
 )

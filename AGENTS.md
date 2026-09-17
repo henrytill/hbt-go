@@ -74,9 +74,6 @@ internal/
 ├── formats.go       # Format registry and dispatch logic
 └── mappings.go      # Label transformation system
 test/
-├── testgen.go       # go:generate source (//go:build ignore); writes cli_test.go
-├── testgen_deps.go  # Blank imports keeping testgen.go's deps in the module graph
-├── cli_test.go      # Generated conformance tests (committed)
 ├── cli_flags_test.go
 └── testutil.go      # Shared test helpers
 testdata/            # hbt-data submodule
@@ -123,8 +120,6 @@ testdata/            # hbt-data submodule
 - 429 responses are retried up to 3 times with an exponential backoff that honors `Retry-After`
 
 ### Testing Strategy
-- `test/cli_test.go` is **generated** by `go generate ./test` from the hbt-data submodule and committed; edit `test/testgen.go`, never the generated file
-- Golden file testing for output format validation, covering all format combinations
 - All parsers and formatters exercised through CLI integration, plus unit tests alongside each package
 - The API client is tested against an `httptest` server; no tests hit the live Pinboard API
 
@@ -194,7 +189,7 @@ Following idiomatic Go practices with influences from:
 | Target | Effect |
 | --- | --- |
 | `all` | Build `bin/hbt` and `bin/pinboard` (`CGO_ENABLED=0`) |
-| `test` | `go generate ./test` then `go test -v ./...` (builds the binaries first) |
+| `test` | `go test -v ./...` (builds the binaries first) |
 | `lint` | `go vet`, `staticcheck`, `deadcode -test` |
 | `fmt` / `fix` | `go fmt ./...` / `go fix ./...` |
 | `tags` / `TAGS` | ctags-universal indices over `SOURCES` |
@@ -209,7 +204,6 @@ Nix flake (`flake.nix`) provides the second CI job; `make test` and the flake bu
 ### Core Dependencies
 - `golang.org/x/mod/semver` - Official Go semantic versioning (preferred over third-party)
 - `golang.org/x/net/html` - HTML parsing (official extended library)
-- `golang.org/x/text` - Unicode-aware title casing, used only by `test/testgen.go`. Because that file is `//go:build ignore`, the module graph cannot see the import; `test/testgen_deps.go` blank-imports `x/text/cases` and `x/text/language` to hold it in `go.mod`. Deleting it as dead code drops the dependency and breaks `go generate ./test`.
 - `github.com/goccy/go-yaml` - YAML processing (high-performance, well-maintained)
 - `github.com/yuin/goldmark` - CommonMark/Markdown parsing (standard library quality)
 
