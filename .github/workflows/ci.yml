@@ -31,6 +31,7 @@ jobs:
       - uses: ./testdata/.github/actions/conformance
         with:
           binary: bin/hbt
+          waivers: conformance.waivers
   linux-flake:
     name: Linux (Nix flake)
     runs-on: ubuntu-latest

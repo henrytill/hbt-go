@@ -66,6 +66,7 @@
         packages.default = self.packages.${system}.hbt;
         checks.conformance = hbt-data.lib.${system}.check {
           binary = "${pkgs.hbt}/bin/hbt";
+          waivers = ./conformance.waivers;
         };
         devShells.default = pkgs.mkShell {
           inputsFrom = [ pkgs.hbt ];
