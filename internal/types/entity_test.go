@@ -196,6 +196,30 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		}
 	})
 
+	// A merge that lowers CreatedAt onto an instant an earlier mention stated as its
+	// LAST_MODIFIED used to leave that instant behind, repeating CreatedAt. Fixture:
+	// bookmarks_superseded_creation. See #75.
+	t.Run("update superseded by the lowered creation is dropped", func(t *testing.T) {
+		coll := NewCollection()
+
+		inverted := entityAt("https://example.com/", 200)
+		inverted.UpdatedAt = NewSet(UpdatedAt{100})
+		inverted.Labels[Label("a")] = struct{}{}
+		coll.Upsert(inverted)
+
+		lower := entityAt("https://example.com/", 100)
+		lower.Labels[Label("b")] = struct{}{}
+		coll.Upsert(lower)
+
+		got := firstEntity(t, coll)
+		if got.CreatedAt.Unix() != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+		}
+		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
+			t.Errorf("UpdatedAt = %v, want [200]: the lowered CreatedAt is not also an update", updates)
+		}
+	})
+
 	t.Run("updates stay sorted", func(t *testing.T) {
 		coll := NewCollection()
 		coll.Upsert(entityAt("https://example.com/", 300))
