@@ -74,8 +74,7 @@ internal/
 ├── formats.go       # Format registry and dispatch logic
 └── mappings.go      # Label transformation system
 test/
-├── cli_flags_test.go
-└── testutil.go      # Shared test helpers
+└── cli_flags_test.go
 testdata/            # hbt-data submodule
 ```
 
