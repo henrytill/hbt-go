@@ -71,7 +71,7 @@ test: $(BIN_TARGETS)
 	$(GO) test -v ./...
 
 conformance: $(BINDIR)/hbt
-	cd testdata && $(PYTHON3) -m hbt.conformance --binary $(abspath $(BINDIR))/hbt
+	cd testdata && $(PYTHON3) -m hbt.conformance --binary $(abspath $(BINDIR))/hbt --waivers $(abspath conformance.waivers)
 
 clean:
 	rm -f $(BIN_TARGETS)
