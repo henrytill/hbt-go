@@ -120,6 +120,12 @@ testdata/            # hbt-data submodule
 - 429 responses are retried up to 3 times with an exponential backoff that honors `Retry-After`
 
 ### Testing Strategy
+- **Conformance** is checked by hbt-data's harness (henrytill/hbt-data#14), not by Go tests: it runs every corpus fixture through the built `hbt` and compares what the CLI writes, the serialized form all four implementations share. Adding a fixture to hbt-data needs no change here beyond the submodule bump. `make conformance` runs it against `bin/hbt` from the dev shell, which provides the harness's Python; to select cases, run it directly:
+  ```sh
+  (cd testdata && python3 -m hbt.conformance --binary ../bin/hbt markdown/basic)   # a name, substring or glob
+  ```
+  The harness's flags, what counts as a match, and its timezone policy are documented in `testdata/README.md`.
+- **The flake check** is the same harness: `testdata/` is also the `hbt-data` flake input (`path:./testdata`), whose `lib.check` runs it against the Nix-built `hbt`. A relative path input locks relative to this flake, not by hash, so bumping the submodule needs no relock. Nix sees committed state only, so a moved but uncommitted submodule checkout is not what the check runs.
 - All parsers and formatters exercised through CLI integration, plus unit tests alongside each package
 - The API client is tested against an `httptest` server; no tests hit the live Pinboard API
 
@@ -190,6 +196,7 @@ Following idiomatic Go practices with influences from:
 | --- | --- |
 | `all` | Build `bin/hbt` and `bin/pinboard` (`CGO_ENABLED=0`) |
 | `test` | `go test -v ./...` (builds the binaries first) |
+| `conformance` | Run hbt-data's conformance harness against `bin/hbt` (needs `python3` with click and PyYAML, as in the dev shell) |
 | `lint` | `go vet`, `staticcheck`, `deadcode -test` |
 | `fmt` / `fix` | `go fmt ./...` / `go fix ./...` |
 | `tags` / `TAGS` | ctags-universal indices over `SOURCES` |
@@ -197,7 +204,7 @@ Following idiomatic Go practices with influences from:
 
 `SOURCES` lists every non-test file under `internal/` and doubles as a prerequisite list and the ctags input. **A new `internal/` file must be added there** or it will neither trigger a rebuild nor appear in the tag indices. Per-binary sources come from the pattern rule's `cmd/%/*.go` prerequisite instead, so files under `cmd/` must *not* be added to `SOURCES` - doing so would make each binary depend on the other's sources.
 
-Nix flake (`flake.nix`) provides the second CI job; `make test` and the flake build must both pass before a PR can merge.
+Nix flake (`flake.nix`) provides the second CI job. The go job runs `make all` and `make test`, then the conformance harness through hbt-data's action (`testdata/.github/actions/conformance`), which brings its own Python; the Nix job runs `nix flake check`, which includes the conformance check, then `nix build`. Both must pass before a PR can merge.
 
 ## Dependencies
 
