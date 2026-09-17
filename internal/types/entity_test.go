@@ -203,7 +203,7 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll := NewCollection()
 
 		inverted := entityAt("https://example.com/", 200)
-		inverted.UpdatedAt = NewSet(UpdatedAt{100})
+		inverted.UpdatedAt = NewSet(NewUpdatedAt(100))
 		coll.Upsert(inverted)
 
 		coll.Upsert(entityAt("https://example.com/", 100))
