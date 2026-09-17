@@ -204,12 +204,9 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 
 		inverted := entityAt("https://example.com/", 200)
 		inverted.UpdatedAt = NewSet(UpdatedAt{100})
-		inverted.Labels[Label("a")] = struct{}{}
 		coll.Upsert(inverted)
 
-		lower := entityAt("https://example.com/", 100)
-		lower.Labels[Label("b")] = struct{}{}
-		coll.Upsert(lower)
+		coll.Upsert(entityAt("https://example.com/", 100))
 
 		got := firstEntity(t, coll)
 		if got.CreatedAt.Unix() != 100 {
