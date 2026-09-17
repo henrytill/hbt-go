@@ -68,7 +68,6 @@ TAGS:
 	@printf '%s\n' $(SOURCES) | $(ETAGS) -L -
 
 test: $(BIN_TARGETS)
-	$(GO) generate ./test
 	$(GO) test -v ./...
 
 conformance: $(BINDIR)/hbt

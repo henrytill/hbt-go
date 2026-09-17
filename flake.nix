@@ -32,7 +32,7 @@
             pname = "hbt";
             inherit version src;
 
-            vendorHash = "sha256-0eAlVTkJRVqr2J0noAIoJLhYurdEr6ph6JAPLbYVY9o=";
+            vendorHash = "sha256-f3EpjBzc5HTTQ43dHD1Lc21xT4yZkoX3C3NOeCAD8Us=";
 
             ldflags = [
               "-X main.Version=${version}"
