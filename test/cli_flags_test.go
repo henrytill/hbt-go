@@ -25,7 +25,14 @@ func writeFlagsTestInput(t *testing.T) string {
 func runHbt(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 
-	binaryPath := hbtBinaryPath(t)
+	binaryPath := os.Getenv("HBT_BINARY_PATH")
+	if binaryPath == "" {
+		abs, err := filepath.Abs("../bin/hbt")
+		if err != nil {
+			t.Fatalf("Failed to get binary path: %v", err)
+		}
+		binaryPath = abs
+	}
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Fatalf("hbt binary not found at %s (run make first): %v", binaryPath, err)
 	}
