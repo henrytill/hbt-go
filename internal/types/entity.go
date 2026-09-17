@@ -211,7 +211,8 @@ func (e *Entity) absorb(other Entity) {
 	// A timestamp equal to the existing CreatedAt is deliberately not recorded:
 	// an "update" whose timestamp merely repeats CreatedAt carries no
 	// information. See the bookmarks_same_timestamp fixture.
-	if other.CreatedAt.Before(e.CreatedAt) {
+	lowered := other.CreatedAt.Before(e.CreatedAt)
+	if lowered {
 		e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
 	} else if other.CreatedAt.After(e.CreatedAt) {
@@ -219,6 +220,17 @@ func (e *Entity) absorb(other Entity) {
 	}
 
 	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)
+	// The same rule, applied to the timestamp that *becomes* CreatedAt. HTML
+	// reads ADD_DATE and LAST_MODIFIED independently, so either side may
+	// already have recorded that instant as an update; after the union it
+	// would merely repeat CreatedAt. An update strictly below CreatedAt stays
+	// -- a single anchor states that shape, and whether a merge may leave it
+	// behind is a corpus question, henrytill/hbt-data#34. Fixture:
+	// bookmarks_superseded_creation.
+	if lowered {
+		delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
+	}
+
 	e.Names = e.Names.Merge(other.Names)
 	e.Labels = e.Labels.Merge(other.Labels)
 	e.Extended = e.Extended.Merge(other.Extended)
