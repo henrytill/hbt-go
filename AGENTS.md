@@ -124,7 +124,7 @@ testdata/            # hbt-data submodule
   (cd testdata && python3 -m hbt.conformance --binary ../bin/hbt markdown/basic)   # a name, substring or glob
   ```
   The harness's flags, what counts as a match, and its timezone policy are documented in `testdata/README.md`.
-- **The flake check** is the same harness: `testdata/` is also the `hbt-data` flake input (`path:./testdata`), whose `lib.check` runs it against the Nix-built `hbt`. A relative path input locks relative to this flake, not by hash, so bumping the submodule needs no relock. Nix sees committed state only, so a moved but uncommitted submodule checkout is not what the check runs.
+- **The flake check** is the same harness: `testdata/` is also the `hbt-data` flake input (`path:./testdata`), whose `lib.check` runs it against the Nix-built `hbt`. A relative path input locks relative to this flake, not by hash, so bumping the submodule needs no relock. Nix sees committed state only, so a moved but uncommitted submodule checkout is not what the check runs. A `github:` flake reference carries no submodules, so it lacks the `hbt-data` input: `nix build github:henrytill/hbt-go` still works, but `nix develop` and `nix flake check` fail on it and need a reference that includes submodules, such as `git+https://github.com/henrytill/hbt-go?submodules=1`, or a checkout.
 - Flag handling exercised through the CLI in `test/cli_flags_test.go`, plus unit tests alongside each package
 - The API client is tested against an `httptest` server; no tests hit the live Pinboard API
 
