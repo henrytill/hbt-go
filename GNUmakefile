@@ -4,6 +4,8 @@ GO = go
 CTAGS = ctags-universal
 ETAGS = ctags-universal -e
 
+PYTHON3 = python3
+
 STATICCHECK = staticcheck
 DEADCODE = deadcode
 
@@ -69,10 +71,13 @@ test: $(BIN_TARGETS)
 	$(GO) generate ./test
 	$(GO) test -v ./...
 
+conformance: $(BINDIR)/hbt
+	cd testdata && $(PYTHON3) -m hbt.conformance --binary ../$(BINDIR)/hbt
+
 clean:
 	rm -f $(BIN_TARGETS)
 
 distclean: clean
 	rmdir $(BINDIR)
 
-.PHONY: all lint fix fmt tags TAGS test clean distclean
+.PHONY: all lint fix fmt tags TAGS test conformance clean distclean
