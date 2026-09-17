@@ -217,6 +217,41 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		}
 	})
 
+	// The incoming entity's own history is kept, not discarded: a second mention can
+	// state a LAST_MODIFIED of its own. Fixture: bookmarks_incoming_update.
+	t.Run("the incoming history is kept", func(t *testing.T) {
+		coll := NewCollection()
+		coll.Upsert(entityAt("https://example.com/", 100))
+
+		later := entityAt("https://example.com/", 200)
+		later.UpdatedAt = NewSet(NewUpdatedAt(300))
+		coll.Upsert(later)
+
+		got := firstEntity(t, coll)
+		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200, 300}) {
+			t.Errorf("UpdatedAt = %v, want [200 300]", updates)
+		}
+	})
+
+	// An update that repeats a CreatedAt no merge moved goes too, which is what makes
+	// absorbing associative. Fixture: bookmarks_merged_repeat. See henrytill/hbt-data#36.
+	t.Run("an update repeating an unmoved creation is dropped", func(t *testing.T) {
+		coll := NewCollection()
+
+		repeat := entityAt("https://example.com/", 100)
+		repeat.UpdatedAt = NewSet(NewUpdatedAt(100))
+		coll.Upsert(repeat)
+		coll.Upsert(entityAt("https://example.com/", 200))
+
+		got := firstEntity(t, coll)
+		if got.CreatedAt.Unix() != 100 {
+			t.Errorf("CreatedAt = %d, want 100", got.CreatedAt.Unix())
+		}
+		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
+			t.Errorf("UpdatedAt = %v, want [200]: the repeat carries no information", updates)
+		}
+	})
+
 	t.Run("updates stay sorted", func(t *testing.T) {
 		coll := NewCollection()
 		coll.Upsert(entityAt("https://example.com/", 300))

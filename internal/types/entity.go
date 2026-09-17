@@ -208,21 +208,28 @@ func (e *Entity) absorb(other Entity) {
 		return
 	}
 
+	// The merged updates are both histories and both creation times, minus the
+	// one that wins. Adding both before removing the winner is what makes
+	// merging associative: every absorb puts its operands' creation times back
+	// into the history, so however a sequence of mentions is bracketed the
+	// result is every history and every creation time in it, minus the
+	// smallest. Removing the winner only when the two creation times differ is
+	// not associative, and neither is removing every update at or below
+	// CreatedAt; henrytill/hbt-data#36 has both counterexamples and pins this
+	// rule with bookmarks_merged_repeat, bookmarks_update_before_creation and
+	// bookmarks_incoming_update.
+	//
+	// So an update equal to the winning creation time goes -- it merely
+	// repeats CreatedAt and carries no information, #57, the rule
+	// bookmarks_same_timestamp pins -- and one strictly below it stays, which
+	// HTML can state by reading ADD_DATE and LAST_MODIFIED independently.
 	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)
-
-	// A timestamp equal to the existing CreatedAt is deliberately not recorded:
-	// an "update" whose timestamp merely repeats CreatedAt carries no
-	// information. See the bookmarks_same_timestamp fixture.
+	e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(e.CreatedAt))
+	e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(other.CreatedAt))
 	if other.CreatedAt.Before(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(e.CreatedAt))
 		e.CreatedAt = other.CreatedAt
-		// HTML reads ADD_DATE and LAST_MODIFIED independently, so either side
-		// may already have recorded the new CreatedAt as an update, which the
-		// union above would then keep. Fixture: bookmarks_superseded_creation.
-		delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
-	} else if other.CreatedAt.After(e.CreatedAt) {
-		e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(other.CreatedAt))
 	}
+	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 
 	e.Names = e.Names.Merge(other.Names)
 	e.Labels = e.Labels.Merge(other.Labels)
