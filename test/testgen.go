@@ -203,7 +203,7 @@ func {{.Name}}(t *testing.T) {
 }
 
 func main() {
-	testDataDir := "testdata"
+	testDataDir := "../testdata"
 	outputFile := "cli_test.go"
 
 	testCases, err := findTestCases(testDataDir)
