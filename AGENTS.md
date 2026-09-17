@@ -24,7 +24,7 @@ Two binaries are built into `bin/`:
 - `pinboard` - a Pinboard API client for testing and exercising the live API
 
 Language-agnostic test data for conformance testing:
-- [hbt-data](https://github.com/henrytill/hbt-data) - imported as git submodule in `test/testdata/`
+- [hbt-data](https://github.com/henrytill/hbt-data) - imported as git submodule in `testdata/`
 
 ## Architecture
 
@@ -78,8 +78,8 @@ test/
 ├── testgen_deps.go  # Blank imports keeping testgen.go's deps in the module graph
 ├── cli_test.go      # Generated conformance tests (committed)
 ├── cli_flags_test.go
-├── testutil.go      # Shared test helpers
-└── testdata/        # hbt-data submodule
+└── testutil.go      # Shared test helpers
+testdata/            # hbt-data submodule
 ```
 
 **Dependency Flow**: Clean acyclic tree with `internal/types` as root, ensuring no circular dependencies. `internal/pinboard` holds the wire types so that both `internal/types` and the parsers can use them without a cycle.
