@@ -3,6 +3,14 @@
     self.submodules = true;
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    # hbt-data's own flake, read from the corpus submodule: a relative path
+    # input locks relative to this flake, not by hash, so the submodule stays
+    # the one pin on the harness and the corpus it checks; see AGENTS.md.
+    hbt-data = {
+      url = "path:./testdata";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
   outputs =
@@ -10,6 +18,7 @@
       self,
       nixpkgs,
       flake-utils,
+      hbt-data,
       ...
     }:
     let
@@ -55,6 +64,9 @@
       {
         packages.hbt = pkgs.hbt;
         packages.default = self.packages.${system}.hbt;
+        checks.conformance = hbt-data.lib.${system}.check {
+          binary = "${pkgs.hbt}/bin/hbt";
+        };
         devShells.default = pkgs.mkShell {
           inputsFrom = [ pkgs.hbt ];
           packages = with pkgs; [
@@ -64,6 +76,7 @@
             go-tools
             universal-ctags
             yaml-language-server
+            hbt-data.packages.${system}.python
           ];
         };
       }

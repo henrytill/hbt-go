@@ -18,6 +18,25 @@
         "type": "github"
       }
     },
+    "hbt-data": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./testdata",
+        "type": "path"
+      },
+      "original": {
+        "path": "./testdata",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1788686502,
@@ -37,6 +56,7 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "hbt-data": "hbt-data",
         "nixpkgs": "nixpkgs"
       }
     },
