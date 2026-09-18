@@ -256,6 +256,13 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 	// The discriminating shape is a history holding an instant equal to its own
 	// CreatedAt, which one anchor states by repeating ADD_DATE in LAST_MODIFIED.
 	// hbt-hs and hbt-rs pin the same triple.
+	//
+	// What this catches is a return to "remove the winner only when the two
+	// creation times differ", the narrow rule hbt-data#36 rejects: that gives
+	// {200} bracketed left and {100, 200} bracketed right. It does not catch the
+	// rule this repository had before that PR, which is associative on this
+	// triple and wrong for another reason -- "an update repeating an unmoved
+	// creation is dropped" above is the subtest that fails against it.
 	t.Run("absorbing is associative", func(t *testing.T) {
 		// Each mention is rebuilt per use: Upsert stores the entity as given and
 		// Set.Merge mutates in place, so sharing one value between the two
