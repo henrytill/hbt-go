@@ -252,6 +252,38 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		}
 	})
 
+	// Absorbing is associative, which is what decides the rule: henrytill/hbt-data#36.
+	// The discriminating shape is a history holding an instant equal to its own
+	// CreatedAt, which one anchor states by repeating ADD_DATE in LAST_MODIFIED.
+	// hbt-hs and hbt-rs pin the same triple.
+	t.Run("absorbing is associative", func(t *testing.T) {
+		// Each mention is rebuilt per use: Upsert stores the entity as given and
+		// Set.Merge mutates in place, so sharing one value between the two
+		// bracketings would let the first mutate the second's operands.
+		mention := func(unix int64, updates ...int64) Entity {
+			e := entityAt("https://example.com/", unix)
+			e.UpdatedAt = unixToSet(updates)
+			return e
+		}
+
+		left := NewCollection()
+		left.Upsert(mention(100, 100))
+		left.Upsert(mention(100))
+		left.Upsert(mention(200))
+
+		inner := NewCollection()
+		inner.Upsert(mention(100))
+		inner.Upsert(mention(200))
+
+		right := NewCollection()
+		right.Upsert(mention(100, 100))
+		right.Upsert(firstEntity(t, inner))
+
+		if got, want := firstEntity(t, right), firstEntity(t, left); !got.Equal(want) {
+			t.Errorf("a+(b+c) = %+v, (a+b)+c = %+v", got, want)
+		}
+	})
+
 	t.Run("updates stay sorted", func(t *testing.T) {
 		coll := NewCollection()
 		coll.Upsert(entityAt("https://example.com/", 300))
