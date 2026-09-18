@@ -87,8 +87,6 @@ func (c CreatedAt) Unix() int64 { return c.unix() }
 
 func (c CreatedAt) Before(d CreatedAt) bool { return c.timestamp < d.timestamp }
 
-func (c CreatedAt) After(d CreatedAt) bool { return c.timestamp > d.timestamp }
-
 type UpdatedAt struct{ timestamp }
 
 func NewUpdatedAt(unix int64) UpdatedAt { return UpdatedAt{timestamp(unix)} }
@@ -198,38 +196,48 @@ func (e Entity) LatestUpdate() (int64, bool) {
 	return latest, found
 }
 
-// absorb merges other into e. The two behaviors commented below are shared with
-// hbt-ocaml and hbt-rs, settled in #57 and pinned by fixtures in hbt-data.
+// mergedUpdates returns the creation time and the update history of a and b
+// merged: both histories and both creation times, minus the one that wins.
+//
+// Putting the operands' creation times back into the history before removing
+// the winner is what makes absorbing associative. Every merge does it, so
+// however a sequence of mentions is bracketed the result is every history and
+// every creation time in it, minus the smallest. Removing the winner only when
+// the two creation times differ is not associative, and neither is removing
+// every update at or below the winner; henrytill/hbt-data#36 has both
+// counterexamples and pins this rule with bookmarks_merged_repeat,
+// bookmarks_update_before_creation and bookmarks_incoming_update. An update
+// equal to the winner merely repeats it (#57, bookmarks_same_timestamp); one
+// strictly below it stays, a shape HTML states by reading ADD_DATE and
+// LAST_MODIFIED independently.
+//
+// Like Set.Merge, this may reuse a's set rather than allocating.
+func mergedUpdates(a, b Entity) (CreatedAt, Set[UpdatedAt]) {
+	created := a.CreatedAt
+	if b.CreatedAt.Before(created) {
+		created = b.CreatedAt
+	}
+
+	updates := a.UpdatedAt.Merge(b.UpdatedAt).
+		Add(UpdatedAt(a.CreatedAt)).
+		Add(UpdatedAt(b.CreatedAt))
+	delete(updates, UpdatedAt(created))
+
+	return created, updates
+}
+
+// absorb merges other into e, by the rule mergedUpdates states for the
+// timestamps and by union or comparison for every other field.
 func (e *Entity) absorb(other Entity) {
-	// Absorbing an identical entity is a no-op, which the guard states
-	// directly rather than leaving to the merge below, where every field
-	// merges by union or by a comparison. Fixture: bookmarks_repeated.
+	// Absorbing an identical entity is a no-op. Under the rule above that is
+	// not redundant: the rule would strip an update equal to CreatedAt, so
+	// without the guard the same anchor twice would not read like the same
+	// anchor once. hbt-hs and hbt-rs guard the same way.
 	if e.Equal(other) {
 		return
 	}
 
-	// The merged updates are both histories and both creation times, minus the
-	// one that wins. Adding both before removing the winner is what makes
-	// merging associative: every absorb puts its operands' creation times back
-	// into the history, so however a sequence of mentions is bracketed the
-	// result is every history and every creation time in it, minus the
-	// smallest. Removing the winner only when the two creation times differ is
-	// not associative, and neither is removing every update at or below
-	// CreatedAt; henrytill/hbt-data#36 has both counterexamples and pins this
-	// rule with bookmarks_merged_repeat, bookmarks_update_before_creation and
-	// bookmarks_incoming_update.
-	//
-	// So an update equal to the winning creation time goes -- it merely
-	// repeats CreatedAt and carries no information, #57, the rule
-	// bookmarks_same_timestamp pins -- and one strictly below it stays, which
-	// HTML can state by reading ADD_DATE and LAST_MODIFIED independently.
-	e.UpdatedAt = e.UpdatedAt.Merge(other.UpdatedAt)
-	e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(e.CreatedAt))
-	e.UpdatedAt = e.UpdatedAt.Add(UpdatedAt(other.CreatedAt))
-	if other.CreatedAt.Before(e.CreatedAt) {
-		e.CreatedAt = other.CreatedAt
-	}
-	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
+	e.CreatedAt, e.UpdatedAt = mergedUpdates(*e, other)
 
 	e.Names = e.Names.Merge(other.Names)
 	e.Labels = e.Labels.Merge(other.Labels)
