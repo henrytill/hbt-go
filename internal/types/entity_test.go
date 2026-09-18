@@ -280,9 +280,14 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 	})
 }
 
+// The update equal to CreatedAt is what keeps this test load-bearing: under the merge
+// rule that is the one element mergedUpdates removes, so it is the only thing the
+// identical-entity guard still changes. An anchor stating LAST_MODIFIED == ADD_DATE
+// parses to exactly this shape.
 func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	identical := func() Entity {
 		e := entityAt("https://e.test/", 100)
+		e.UpdatedAt = NewSet(NewUpdatedAt(100))
 		e.Names[Name("a")] = struct{}{}
 		e.Extended = NewSet[Extended]("desc")
 		return e
@@ -297,8 +302,8 @@ func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	if extended := SortedSlice(got.Extended); !slices.Equal(extended, []string{"desc"}) {
 		t.Errorf("Extended = %v, want [desc]: a repeated bookmark should not repeat its description", extended)
 	}
-	if len(got.UpdatedAt) != 0 {
-		t.Errorf("UpdatedAt = %v, want empty", got.UpdatedAt)
+	if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{100}) {
+		t.Errorf("UpdatedAt = %v, want [100]: the guard keeps what one mention stated", updates)
 	}
 	if names := SortedSlice(got.Names); !slices.Equal(names, []string{"a"}) {
 		t.Errorf("Names = %v, want [a]", names)
