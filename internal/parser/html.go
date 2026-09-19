@@ -116,6 +116,12 @@ func add(
 		IsFeed:    isFeed,
 	}
 
+	// ADD_DATE and LAST_MODIFIED are read independently above, so an anchor
+	// stating the same instant in both arrives here with the repeat -- the
+	// html/bookmarks_simple shape. Normalizing once the whole anchor is read is
+	// what drops it.
+	entity.Normalize()
+
 	if pending.description != "" {
 		entity.Extended = types.NewSet(types.Extended(pending.description))
 	}

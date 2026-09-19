@@ -183,6 +183,29 @@ func (e Entity) Equal(other Entity) bool {
 	return e.LastVisitedAt.Equal(other.LastVisitedAt)
 }
 
+// Normalize drops an update that merely repeats CreatedAt.
+//
+// A timestamp equal to CreatedAt carries no information that CreatedAt does
+// not (#57). An update strictly below it is a different thing and is
+// untouched: henrytill/hbt-data#34.
+//
+// This is the whole of the normal form (henrytill/hbt-data#38), and three
+// places maintain it -- the three that take a history from input. absorb ends
+// here, so a merge that demotes the later creation time to an update does not
+// then record the earlier one twice. fromRepr ends here because a serialized
+// history is input like any other. The HTML parser ends here because it reads
+// ADD_DATE and LAST_MODIFIED independently, so one anchor may state the same
+// instant in both -- html/bookmarks_simple. It is exported for that third
+// caller, which lives in internal/parser.
+//
+// The Markdown parser and NewEntityFromPost are normal for a weaker reason:
+// they record no updates at all. One that learns to must normalize too --
+// Entity's fields are exported by decision (see AGENTS.md), so nothing but
+// this note enforces it.
+func (e *Entity) Normalize() {
+	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
+}
+
 // LatestUpdate returns the most recent recorded update instant as a Unix second
 // count, and whether there is one.
 func (e Entity) LatestUpdate() (int64, bool) {
@@ -197,14 +220,16 @@ func (e Entity) LatestUpdate() (int64, bool) {
 }
 
 // mergedUpdates returns the creation time and the update history of a and b
-// merged: both histories and both creation times, minus the one that wins.
+// merged: both histories and both creation times.
 //
-// Putting the operands' creation times back into the history before removing
-// the winner is what makes absorbing associative. Every merge does it, so
+// Putting the operands' creation times back into the history, and leaving it
+// to Normalize to take the winner back out, is what makes absorbing
+// associative. Every merge does it, so
 // however a sequence of mentions is bracketed the result is every history and
-// every creation time in it, minus the smallest. Removing the winner only when
-// the two creation times differ is not associative, and neither is removing
-// every update at or below the winner; henrytill/hbt-data#36 has both
+// every creation time in it, minus the smallest -- which Normalize removes, so
+// the rule has one spelling rather than two. Removing the winner only when the
+// two creation times differ is not associative, and neither is removing every
+// update at or below the winner; henrytill/hbt-data#36 has both
 // counterexamples and pins this rule with bookmarks_merged_repeat,
 // bookmarks_update_before_creation and bookmarks_incoming_update. An update
 // equal to the winner merely repeats it (#57, bookmarks_same_timestamp); one
@@ -221,18 +246,25 @@ func mergedUpdates(a, b Entity) (CreatedAt, Set[UpdatedAt]) {
 	updates := a.UpdatedAt.Merge(b.UpdatedAt).
 		Add(UpdatedAt(a.CreatedAt)).
 		Add(UpdatedAt(b.CreatedAt))
-	delete(updates, UpdatedAt(created))
 
 	return created, updates
 }
 
-// absorb merges other into e, by the rule mergedUpdates states for the
-// timestamps and by union or comparison for every other field.
+// absorb merges other into e: field-wise, by the rule mergedUpdates states for
+// the timestamps and by union or comparison for every other field, then
+// Normalize. Do not give mergedUpdates a removal of its own -- two spellings of
+// one rule is what a later change would have to keep in step.
 func (e *Entity) absorb(other Entity) {
-	// Absorbing an identical entity is a no-op. Under the rule above that is
-	// not redundant: the rule would strip an update equal to CreatedAt, so
-	// without the guard the same anchor twice would not read like the same
-	// anchor once. hbt-hs and hbt-rs guard the same way.
+	// Absorbing an identical entity is a no-op, and that is not redundant: the
+	// rule strips an update equal to CreatedAt, so for an entity whose history
+	// repeats its own creation time the same mention twice would not read like
+	// it once.
+	//
+	// Normalizing at the parse and decode boundaries means such an entity no
+	// longer arrives from input -- html/bookmarks_simple used to parse to that
+	// shape and no longer does -- but Entity's fields are exported, so any
+	// package can still write one. hbt-hs, hbt-rs and hbt-ocaml guard the same
+	// way.
 	if e.Equal(other) {
 		return
 	}
@@ -248,6 +280,8 @@ func (e *Entity) absorb(other Entity) {
 	e.IsFeed = e.IsFeed.Merge(other.IsFeed)
 
 	e.LastVisitedAt = e.LastVisitedAt.Merge(other.LastVisitedAt)
+
+	e.Normalize()
 }
 
 type entityRepr struct {
@@ -345,6 +379,17 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 
 	e.Extended = sliceToSet[Extended](s.Extended)
+
+	// A serialized history is input like any other, so decoding must not
+	// reintroduce an entity whose UpdatedAt holds its CreatedAt.
+	//
+	// No fixture can pin this half. YAML is output-only here, and the JSON
+	// input format is Pinboard JSON rather than a serialized collection, so no
+	// CLI path reaches fromRepr -- it is entered only through Collection's
+	// UnmarshalYAML/UnmarshalJSON. TestEntityFromReprNormalizes covers it.
+	// (hbt-ocaml differs: it does accept -f yaml, so there the same call is on
+	// a real CLI path.)
+	e.Normalize()
 
 	return nil
 }
