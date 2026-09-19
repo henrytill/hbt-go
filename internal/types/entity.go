@@ -206,7 +206,8 @@ func (e Entity) Equal(other Entity) bool {
 // Three call sites is a choice, not a discovered fact. Collection.insert is a
 // narrower funnel: every production parser reaches it through Upsert, so
 // normalizing there would cover the parse path in one place, let this method
-// be unexported, and make absorb's equality guard inert as it is in hbt-rs.
+// be unexported, and leave absorb's equality guard with nothing to protect
+// that a Collection can hold.
 // It was not taken because it changes what Upsert means -- from "store what
 // you were given" to "store the normal form" -- and Collection.fromRepr
 // assigns entities directly rather than through insert, so the decode half
