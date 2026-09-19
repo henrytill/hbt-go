@@ -213,6 +213,11 @@ func (e Entity) Equal(other Entity) bool {
 // assigns entities directly rather than through insert, so the decode half
 // would still need its own call. Raised in review of the PR that added this;
 // revisit it there rather than re-deriving it.
+//
+// Mutates e.UpdatedAt in place, so call it only on an entity you own.
+// Collection.Entities yields copies that share their interior maps with the
+// collection, so ranging over those copies and calling this would rewrite the
+// collection's stored histories -- the hazard Set.Merge warns about.
 func (e *Entity) Normalize() {
 	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 }
