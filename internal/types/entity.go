@@ -79,13 +79,48 @@ func (t timestamp) unix() int64 {
 	return int64(t)
 }
 
-type CreatedAt struct{ timestamp }
+// CreatedAt is the instant a bookmark was created, or nothing at all: HTML
+// makes ADD_DATE optional, and an anchor without one says nothing about when
+// the bookmark was created (henrytill/hbt-data#37). It carries a Valid flag
+// like LastVisitedAt rather than standing an absence in as the epoch, which
+// would win every comparison and demote a real creation time to an update.
+type CreatedAt struct {
+	timestamp
+	Valid bool
+}
 
-func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{timestamp(unix)} }
+func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{timestamp(unix), true} }
 
-func (c CreatedAt) Unix() int64 { return c.unix() }
+// Get returns the instant as a Unix second count, and whether it is set.
+func (c CreatedAt) Get() (int64, bool) {
+	return c.unix(), c.Valid
+}
 
-func (c CreatedAt) Before(d CreatedAt) bool { return c.timestamp < d.timestamp }
+// Equal reports whether c and d denote the same instant, or are both unset.
+func (c CreatedAt) Equal(d CreatedAt) bool {
+	if c.Valid != d.Valid {
+		return false
+	}
+	return !c.Valid || c.timestamp == d.timestamp
+}
+
+// Merge combines two creation times, keeping the earlier one. An absent
+// creation time is the identity: an undated mention neither claims the
+// creation time nor pushes a real one into the update history
+// (henrytill/hbt-data#37). That is why this cannot be a minimum over the zero
+// value, which sorts below every real instant -- the behaviour being removed.
+func (c CreatedAt) Merge(d CreatedAt) CreatedAt {
+	if !c.Valid {
+		return d
+	}
+	if !d.Valid {
+		return c
+	}
+	if d.timestamp < c.timestamp {
+		return d
+	}
+	return c
+}
 
 type UpdatedAt struct{ timestamp }
 
@@ -165,7 +200,7 @@ func (e Entity) Equal(other Entity) bool {
 	if e.URI != nil && e.URI.String() != other.URI.String() {
 		return false
 	}
-	if e.CreatedAt != other.CreatedAt {
+	if !e.CreatedAt.Equal(other.CreatedAt) {
 		return false
 	}
 	if !maps.Equal(e.UpdatedAt, other.UpdatedAt) {
@@ -187,7 +222,8 @@ func (e Entity) Equal(other Entity) bool {
 //
 // A timestamp equal to CreatedAt carries no information that CreatedAt does
 // not (#57). An update strictly below it is a different thing and is
-// untouched: henrytill/hbt-data#34.
+// untouched: henrytill/hbt-data#34. An absent CreatedAt repeats nothing, so
+// it removes nothing.
 //
 // This is the whole of the normal form (henrytill/hbt-data#38), and three
 // places maintain it -- the three that take a history from input. absorb ends
@@ -219,7 +255,9 @@ func (e Entity) Equal(other Entity) bool {
 // collection, so ranging over those copies and calling this would rewrite the
 // collection's stored histories -- the hazard Set.Merge warns about.
 func (e *Entity) Normalize() {
-	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
+	if unix, ok := e.CreatedAt.Get(); ok {
+		delete(e.UpdatedAt, NewUpdatedAt(unix))
+	}
 }
 
 // LatestUpdate returns the most recent recorded update instant as a Unix second
@@ -253,14 +291,16 @@ func (e Entity) LatestUpdate() (int64, bool) {
 //
 // Like Set.Merge, this may reuse a's set rather than allocating.
 func mergedUpdates(a, b Entity) (CreatedAt, Set[UpdatedAt]) {
-	created := a.CreatedAt
-	if b.CreatedAt.Before(created) {
-		created = b.CreatedAt
-	}
+	created := a.CreatedAt.Merge(b.CreatedAt)
 
-	updates := a.UpdatedAt.Merge(b.UpdatedAt).
-		Add(UpdatedAt(a.CreatedAt)).
-		Add(UpdatedAt(b.CreatedAt))
+	updates := a.UpdatedAt.Merge(b.UpdatedAt)
+	// Only a creation time that exists goes back into the history: an absent
+	// one has nothing to contribute and must not arrive as an epoch update.
+	for _, c := range []CreatedAt{a.CreatedAt, b.CreatedAt} {
+		if unix, ok := c.Get(); ok {
+			updates = updates.Add(NewUpdatedAt(unix))
+		}
+	}
 
 	return created, updates
 }
@@ -310,7 +350,7 @@ func (e *Entity) absorb(other Entity) {
 
 type entityRepr struct {
 	URI           string   `yaml:"uri"                     json:"uri"`
-	CreatedAt     int64    `yaml:"createdAt"               json:"createdAt"`
+	CreatedAt     *int64   `yaml:"createdAt,omitempty"     json:"createdAt,omitempty"`
 	UpdatedAt     []int64  `yaml:"updatedAt"               json:"updatedAt"`
 	Names         []string `yaml:"names"                   json:"names"`
 	Labels        []string `yaml:"labels"                  json:"labels"`
@@ -325,6 +365,16 @@ func (e Entity) toRepr() entityRepr {
 	var uriString string
 	if e.URI != nil {
 		uriString = e.URI.String()
+	}
+
+	// An absent creation time is omitted rather than written as the epoch, the
+	// way lastVisitedAt and shared already are: the wire had no way to say
+	// "undated", so an undated mention round-tripped into one created on
+	// 1970-01-01 and merged differently afterwards (henrytill/hbt-data#37). A
+	// creation time of 0 is a real instant and still serializes.
+	var createdAt *int64
+	if unix, ok := e.CreatedAt.Get(); ok {
+		createdAt = &unix
 	}
 
 	var lastVisitedAt *int64
@@ -349,7 +399,7 @@ func (e Entity) toRepr() entityRepr {
 
 	return entityRepr{
 		URI:           uriString,
-		CreatedAt:     e.CreatedAt.Unix(),
+		CreatedAt:     createdAt,
 		UpdatedAt:     sortedUnix(e.UpdatedAt),
 		Names:         SortedSlice(e.Names),
 		Labels:        SortedSlice(e.Labels),
@@ -371,7 +421,11 @@ func (e *Entity) fromRepr(s entityRepr) error {
 	}
 	e.URI = parsedURL
 
-	e.CreatedAt = NewCreatedAt(s.CreatedAt)
+	if s.CreatedAt != nil {
+		e.CreatedAt = NewCreatedAt(*s.CreatedAt)
+	} else {
+		e.CreatedAt = CreatedAt{}
+	}
 
 	e.UpdatedAt = unixToSet(s.UpdatedAt)
 

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/henrytill/hbt-go/internal/types"
 	"golang.org/x/net/html"
@@ -45,10 +44,13 @@ func add(
 		parsedURL.Path = "/"
 	}
 
-	createdAt := time.Now().Unix()
+	// An anchor without ADD_DATE is undated, not created now: the wall clock
+	// made output depend on when it was produced (#87), and an epoch stood in
+	// for the absence and won every merge (henrytill/hbt-data#37).
+	var createdAt types.CreatedAt
 	if pending.addDate != "" {
 		if parsed, err := strconv.ParseInt(pending.addDate, 10, 64); err == nil {
-			createdAt = parsed
+			createdAt = types.NewCreatedAt(parsed)
 		}
 	}
 
@@ -107,7 +109,7 @@ func add(
 
 	entity := types.Entity{
 		URI:       parsedURL,
-		CreatedAt: types.NewCreatedAt(createdAt),
+		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 		Names:     names,
 		Labels:    labels,
