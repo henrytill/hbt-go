@@ -237,14 +237,13 @@ func (e Entity) LatestUpdate() (int64, bool) {
 // associative. Every merge does it, so however a sequence of mentions is
 // bracketed the result is every history and every creation time in it, minus
 // the smallest -- which Normalize removes, so the rule has one spelling rather
-// than two. Removing the winner only when the
-// two creation times differ is not associative, and neither is removing every
-// update at or below the winner; henrytill/hbt-data#36 has both
-// counterexamples and pins this rule with bookmarks_merged_repeat,
-// bookmarks_update_before_creation and bookmarks_incoming_update. An update
-// equal to the winner merely repeats it (#57, bookmarks_same_timestamp); one
-// strictly below it stays, a shape HTML states by reading ADD_DATE and
-// LAST_MODIFIED independently.
+// than two. Removing the winner only when the two creation times differ is not
+// associative, and neither is removing every update at or below the winner;
+// henrytill/hbt-data#36 has both counterexamples and pins this rule with
+// bookmarks_merged_repeat, bookmarks_update_before_creation and
+// bookmarks_incoming_update. An update equal to the winner merely repeats it
+// (#57, bookmarks_same_timestamp); one strictly below it stays, a shape HTML
+// states by reading ADD_DATE and LAST_MODIFIED independently.
 //
 // Like Set.Merge, this may reuse a's set rather than allocating.
 func mergedUpdates(a, b Entity) (CreatedAt, Set[UpdatedAt]) {
