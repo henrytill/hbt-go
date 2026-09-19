@@ -224,10 +224,10 @@ func (e Entity) LatestUpdate() (int64, bool) {
 //
 // Putting the operands' creation times back into the history, and leaving it
 // to Normalize to take the winner back out, is what makes absorbing
-// associative. Every merge does it, so
-// however a sequence of mentions is bracketed the result is every history and
-// every creation time in it, minus the smallest -- which Normalize removes, so
-// the rule has one spelling rather than two. Removing the winner only when the
+// associative. Every merge does it, so however a sequence of mentions is
+// bracketed the result is every history and every creation time in it, minus
+// the smallest -- which Normalize removes, so the rule has one spelling rather
+// than two. Removing the winner only when the
 // two creation times differ is not associative, and neither is removing every
 // update at or below the winner; henrytill/hbt-data#36 has both
 // counterexamples and pins this rule with bookmarks_merged_repeat,
