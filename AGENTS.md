@@ -103,6 +103,13 @@ testdata/            # hbt-data submodule
 - `Collection` and `Entity` convert through unexported `collectionRepr` / `entityRepr` shapes rather than tagging the domain types
 - `MarshalYAML`/`UnmarshalYAML` and `MarshalJSON`/`UnmarshalJSON` are thin wrappers over `toRepr`/`fromRepr`
 
+### The update history's normal form
+- **An `Entity`'s `UpdatedAt` never contains its `CreatedAt`.** `Entity.Normalize` is the whole of the rule, settled for all four implementations as henrytill/hbt-data#38, and three places end in it -- the three that take a history from input: `absorb`, `fromRepr`, and the HTML parser (which reads `ADD_DATE` and `LAST_MODIFIED` independently, so one anchor may state the same instant in both -- the `html/bookmarks_simple` shape). It is exported only for that third caller, which lives in `internal/parser`.
+- **Merging is field-wise, then normalized.** Do not give `mergedUpdates` a removal of its own; two spellings of one rule is what a later change would have to keep in step.
+- **`Entity`'s fields stay exported**, so nothing structurally prevents a fourth construction site writing a non-normal entity -- the decision and its reasoning are henrytill/hbt-data#38's Go half, and `Normalize`'s doc comment is the only thing that says so. The Markdown parser and `NewEntityFromPost` are normal for the weaker reason that they record no updates at all; one that learns to must normalize too.
+- **The identical-entity guard in `absorb` is still load-bearing**, unlike hbt-rs's, where private fields make the protected shape unreachable. Here any package can write an entity whose history repeats its creation time, which is what `TestUpsertIdenticalEntityIsNoOp` builds.
+- **The decoding half has no fixture and cannot get one**: YAML is output-only and the JSON input format is Pinboard JSON, not a serialized collection, so no CLI path reaches `fromRepr`. `TestEntityFromReprNormalizes` covers it. (hbt-ocaml differs -- it accepts `-f yaml`, so there the same call sits on a real CLI path.)
+
 ## Implementation Notes
 
 ### Memory Efficiency

@@ -319,10 +319,12 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 	})
 }
 
-// The update equal to CreatedAt is what keeps this test load-bearing: under the merge
-// rule that is the one element mergedUpdates removes, so it is the only thing the
-// identical-entity guard still changes. An anchor stating LAST_MODIFIED == ADD_DATE
-// parses to exactly this shape.
+// The update equal to CreatedAt is what keeps this test load-bearing: that is the one
+// element Normalize removes, so it is the only thing the identical-entity guard still
+// changes. Since the parse path normalizes, an anchor stating LAST_MODIFIED == ADD_DATE
+// no longer produces this shape -- html/bookmarks_simple used to and no longer does
+// (henrytill/hbt-data#38). What still can is writing the field directly, as below;
+// Entity's fields are exported by decision, so that stays reachable.
 func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	identical := func() Entity {
 		e := entityAt("https://e.test/", 100)
@@ -346,6 +348,32 @@ func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 	}
 	if names := SortedSlice(got.Names); !slices.Equal(names, []string{"a"}) {
 		t.Errorf("Names = %v, want [a]", names)
+	}
+}
+
+// Decoding normalizes, so a serialized collection cannot reintroduce an entity whose
+// history repeats its own creation time. No fixture can pin this: YAML is output-only
+// and the JSON input format is Pinboard JSON, not a serialized collection, so no CLI
+// path reaches fromRepr.
+//
+// Both halves are asserted: an implementation dropping every update at or below
+// CreatedAt would pass on the 100 alone, and only the 50 separates that from the rule
+// that removes exactly CreatedAt (henrytill/hbt-data#34).
+func TestEntityFromReprNormalizes(t *testing.T) {
+	var e Entity
+	if err := e.fromRepr(entityRepr{
+		URI:       "https://e.test/",
+		CreatedAt: 100,
+		UpdatedAt: []int64{50, 100, 300},
+	}); err != nil {
+		t.Fatalf("fromRepr: %v", err)
+	}
+
+	if got := e.CreatedAt.Unix(); got != 100 {
+		t.Errorf("CreatedAt = %d, want 100", got)
+	}
+	if updates := sortedUnix(e.UpdatedAt); !slices.Equal(updates, []int64{50, 300}) {
+		t.Errorf("UpdatedAt = %v, want [50 300]: the update equal to CreatedAt goes, the one below it stays", updates)
 	}
 }
 
