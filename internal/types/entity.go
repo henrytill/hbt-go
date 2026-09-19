@@ -202,6 +202,16 @@ func (e Entity) Equal(other Entity) bool {
 // they record no updates at all. One that learns to must normalize too --
 // Entity's fields are exported by decision (see AGENTS.md), so nothing but
 // this note enforces it.
+//
+// Three call sites is a choice, not a discovered fact. Collection.insert is a
+// narrower funnel: every production parser reaches it through Upsert, so
+// normalizing there would cover the parse path in one place, let this method
+// be unexported, and make absorb's equality guard inert as it is in hbt-rs.
+// It was not taken because it changes what Upsert means -- from "store what
+// you were given" to "store the normal form" -- and Collection.fromRepr
+// assigns entities directly rather than through insert, so the decode half
+// would still need its own call. Raised in review of the PR that added this;
+// revisit it there rather than re-deriving it.
 func (e *Entity) Normalize() {
 	delete(e.UpdatedAt, UpdatedAt(e.CreatedAt))
 }
