@@ -71,6 +71,37 @@ func TestLastVisitedAtMerge(t *testing.T) {
 	}
 }
 
+// An absent creation time is the identity, not a very old instant: an undated mention
+// says nothing about when a bookmark was created, so it neither claims the creation time
+// nor demotes a real one to an update (henrytill/hbt-data#37).
+func TestCreatedAtMerge(t *testing.T) {
+	absent := CreatedAt{}
+	epoch := NewCreatedAt(0)
+	early := NewCreatedAt(100)
+	late := NewCreatedAt(200)
+
+	tests := []struct {
+		name string
+		a, b CreatedAt
+		want CreatedAt
+	}{
+		{"earlier wins", late, early, early},
+		{"earlier wins whichever side states it", early, late, early},
+		{"absent absorbs other", absent, early, early},
+		{"set keeps value over absent", early, absent, early},
+		{"both absent", absent, absent, absent},
+		// The epoch is a real instant, so it survives an absence rather than
+		// being read as one -- the distinction the zero value used to lose.
+		{"absent absorbs the epoch", absent, epoch, epoch},
+	}
+
+	for _, tt := range tests {
+		if got := tt.a.Merge(tt.b); !got.Equal(tt.want) {
+			t.Errorf("%s: %v.Merge(%v) = %v, want %v", tt.name, tt.a, tt.b, got, tt.want)
+		}
+	}
+}
+
 func entityAt(uri string, unix int64) Entity {
 	return Entity{
 		URI:       mustParseURL(uri),
@@ -79,6 +110,24 @@ func entityAt(uri string, unix int64) Entity {
 		Names:     make(Set[Name]),
 		Labels:    make(Set[Label]),
 	}
+}
+
+// undatedEntityAt is what an anchor without ADD_DATE parses to: an entity with no
+// creation time at all, which the zero value denotes.
+func undatedEntityAt(uri string) Entity {
+	e := entityAt(uri, 0)
+	e.CreatedAt = CreatedAt{}
+	return e
+}
+
+// createdUnix reports an entity's creation time as a Unix second count, or -1 if it has
+// none -- a value no test below states, so reading an absence as an instant fails rather
+// than passing as the epoch.
+func createdUnix(e Entity) int64 {
+	if unix, ok := e.CreatedAt.Get(); ok {
+		return unix
+	}
+	return -1
 }
 
 func firstEntity(t *testing.T, coll Collection) Entity {
@@ -174,8 +223,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 200))
 
 		got := firstEntity(t, coll)
-		if got.CreatedAt.Unix() != 100 {
-			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+		if createdUnix(got) != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest)", createdUnix(got))
 		}
 		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
 			t.Errorf("UpdatedAt = %v, want [200]", updates)
@@ -188,8 +237,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 100))
 
 		got := firstEntity(t, coll)
-		if got.CreatedAt.Unix() != 100 {
-			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+		if createdUnix(got) != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest)", createdUnix(got))
 		}
 		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
 			t.Errorf("UpdatedAt = %v, want [200]", updates)
@@ -209,8 +258,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 100))
 
 		got := firstEntity(t, coll)
-		if got.CreatedAt.Unix() != 100 {
-			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+		if createdUnix(got) != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest)", createdUnix(got))
 		}
 		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
 			t.Errorf("UpdatedAt = %v, want [200]: the lowered CreatedAt is not also an update", updates)
@@ -244,8 +293,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 200))
 
 		got := firstEntity(t, coll)
-		if got.CreatedAt.Unix() != 100 {
-			t.Errorf("CreatedAt = %d, want 100", got.CreatedAt.Unix())
+		if createdUnix(got) != 100 {
+			t.Errorf("CreatedAt = %d, want 100", createdUnix(got))
 		}
 		if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200}) {
 			t.Errorf("UpdatedAt = %v, want [200]: the repeat carries no information", updates)
@@ -298,8 +347,8 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 		coll.Upsert(entityAt("https://example.com/", 200))
 
 		got := firstEntity(t, coll)
-		if got.CreatedAt.Unix() != 100 {
-			t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+		if createdUnix(got) != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest)", createdUnix(got))
 		}
 		updates := sortedUnix(got.UpdatedAt)
 		if !slices.Equal(updates, []int64{200, 300}) {
@@ -317,6 +366,117 @@ func TestUpsertKeepsEarliestCreatedAt(t *testing.T) {
 			t.Errorf("UpdatedAt = %v, want empty for identical timestamps", got.UpdatedAt)
 		}
 	})
+}
+
+// An undated mention says nothing about when the bookmark was created, so a dated one
+// wins outright rather than being demoted to an update by an absence standing in as the
+// epoch (henrytill/hbt-data#37). HTML states this shape by making ADD_DATE optional;
+// fixtures html/bookmarks_undated, html/bookmarks_undated_merged and
+// html/bookmarks_undated_both pin all three cases.
+func TestUpsertUndatedMention(t *testing.T) {
+	// Rebuilt per use: Upsert stores the entity as given and Set.Merge mutates in
+	// place, so sharing one value between two bracketings would let the first
+	// mutate the second's operands.
+	undated := func(label Label) Entity {
+		e := undatedEntityAt("https://example.com/")
+		e.Labels[label] = struct{}{}
+		return e
+	}
+	dated := func(unix int64, label Label) Entity {
+		e := entityAt("https://example.com/", unix)
+		e.Labels[label] = struct{}{}
+		return e
+	}
+
+	t.Run("a dated mention wins over an undated one", func(t *testing.T) {
+		coll := NewCollection()
+		coll.Upsert(undated("undated"))
+		coll.Upsert(dated(1609459200, "dated"))
+
+		got := firstEntity(t, coll)
+		if createdUnix(got) != 1609459200 {
+			t.Errorf("CreatedAt = %d, want 1609459200 (the only stated instant)", createdUnix(got))
+		}
+		if len(got.UpdatedAt) != 0 {
+			t.Errorf("UpdatedAt = %v, want empty: an absence is not an update", sortedUnix(got.UpdatedAt))
+		}
+	})
+
+	// The other order agrees, which is what makes absence an identity rather than a value.
+	t.Run("in either order", func(t *testing.T) {
+		coll := NewCollection()
+		coll.Upsert(dated(1609459200, "dated"))
+		coll.Upsert(undated("undated"))
+
+		got := firstEntity(t, coll)
+		if createdUnix(got) != 1609459200 {
+			t.Errorf("CreatedAt = %d, want 1609459200 (the only stated instant)", createdUnix(got))
+		}
+		if len(got.UpdatedAt) != 0 {
+			t.Errorf("UpdatedAt = %v, want empty: an absence is not an update", sortedUnix(got.UpdatedAt))
+		}
+	})
+
+	t.Run("two undated mentions stay undated", func(t *testing.T) {
+		coll := NewCollection()
+		coll.Upsert(undated("first"))
+		coll.Upsert(undated("second"))
+
+		got := firstEntity(t, coll)
+		if _, ok := got.CreatedAt.Get(); ok {
+			t.Errorf("CreatedAt = %d, want absent: merging two absences cannot invent an instant", createdUnix(got))
+		}
+		if len(got.UpdatedAt) != 0 {
+			t.Errorf("UpdatedAt = %v, want empty", sortedUnix(got.UpdatedAt))
+		}
+		if labels := SortedSlice(got.Labels); !slices.Equal(labels, []string{"first", "second"}) {
+			t.Errorf("Labels = %v, want union [first second]: the mentions still merged", labels)
+		}
+	})
+
+	// Associativity has to survive an absence too, since Merge is the one place the
+	// rule stops being a minimum: henrytill/hbt-data#36 decides the rule, #37 adds
+	// the operand it has to hold for.
+	t.Run("absorbing stays associative", func(t *testing.T) {
+		left := NewCollection()
+		left.Upsert(undated("a"))
+		left.Upsert(dated(200, "b"))
+		left.Upsert(dated(100, "c"))
+
+		inner := NewCollection()
+		inner.Upsert(dated(200, "b"))
+		inner.Upsert(dated(100, "c"))
+
+		right := NewCollection()
+		right.Upsert(undated("a"))
+		right.Upsert(firstEntity(t, inner))
+
+		want := firstEntity(t, left)
+		if got := firstEntity(t, right); !got.Equal(want) {
+			t.Errorf("a+(b+c) = %+v, (a+b)+c = %+v", got, want)
+		}
+		if createdUnix(want) != 100 {
+			t.Errorf("CreatedAt = %d, want 100 (earliest stated)", createdUnix(want))
+		}
+		if updates := sortedUnix(want.UpdatedAt); !slices.Equal(updates, []int64{200}) {
+			t.Errorf("UpdatedAt = %v, want [200]", updates)
+		}
+	})
+}
+
+// An absent creation time is not the epoch. The zero value denoted both before
+// henrytill/hbt-data#37, so an undated entity and one created on 1970-01-01 compared
+// equal, merged alike, and serialized the same.
+func TestEntityAbsentCreatedAtIsNotTheEpoch(t *testing.T) {
+	undated := undatedEntityAt("https://e.test/")
+	epoch := entityAt("https://e.test/", 0)
+
+	if undated.Equal(epoch) || epoch.Equal(undated) {
+		t.Error("an undated entity should not equal one created at the epoch")
+	}
+	if unix, ok := epoch.CreatedAt.Get(); !ok || unix != 0 {
+		t.Errorf("CreatedAt = (%d, %v), want (0, true): 0 is a real instant", unix, ok)
+	}
 }
 
 // The update equal to CreatedAt is what keeps this test load-bearing: that is the one
@@ -361,15 +521,16 @@ func TestUpsertIdenticalEntityIsNoOp(t *testing.T) {
 // that removes exactly CreatedAt (henrytill/hbt-data#34).
 func TestEntityFromReprNormalizes(t *testing.T) {
 	var e Entity
+	createdAt := int64(100)
 	if err := e.fromRepr(entityRepr{
 		URI:       "https://e.test/",
-		CreatedAt: 100,
+		CreatedAt: &createdAt,
 		UpdatedAt: []int64{50, 100, 300},
 	}); err != nil {
 		t.Fatalf("fromRepr: %v", err)
 	}
 
-	if got := e.CreatedAt.Unix(); got != 100 {
+	if got := createdUnix(e); got != 100 {
 		t.Errorf("CreatedAt = %d, want 100", got)
 	}
 	if updates := sortedUnix(e.UpdatedAt); !slices.Equal(updates, []int64{50, 300}) {
@@ -414,8 +575,8 @@ func TestUpsertSharedTimestampIsNotDuplicated(t *testing.T) {
 	coll.Upsert(updatedWithLabel(300, "e"))
 
 	got := firstEntity(t, coll)
-	if got.CreatedAt.Unix() != 100 {
-		t.Errorf("CreatedAt = %d, want 100 (earliest)", got.CreatedAt.Unix())
+	if createdUnix(got) != 100 {
+		t.Errorf("CreatedAt = %d, want 100 (earliest)", createdUnix(got))
 	}
 	if updates := sortedUnix(got.UpdatedAt); !slices.Equal(updates, []int64{200, 300}) {
 		t.Errorf("UpdatedAt = %v, want [200 300]: entities that differ elsewhere still share one timestamp", updates)
@@ -445,6 +606,7 @@ func TestEntityEqual(t *testing.T) {
 		{"uri", func(e *Entity) { e.URI = mustParseURL("https://other.test/") }},
 		{"nil uri", func(e *Entity) { e.URI = nil }},
 		{"createdAt", func(e *Entity) { e.CreatedAt = NewCreatedAt(101) }},
+		{"absent createdAt", func(e *Entity) { e.CreatedAt = CreatedAt{} }},
 		{"updatedAt", func(e *Entity) { e.UpdatedAt[UpdatedAt{400}] = struct{}{} }},
 		{"names", func(e *Entity) { e.Names[Name("b")] = struct{}{} }},
 		{"labels", func(e *Entity) { delete(e.Labels, Label("l")) }},

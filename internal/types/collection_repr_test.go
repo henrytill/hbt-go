@@ -91,6 +91,66 @@ func TestCollectionYAMLRoundTrip(t *testing.T) {
 	}
 }
 
+// An absent creation time is omitted from the wire rather than written as the epoch,
+// and decodes back to an absence. Without that, an undated entity serialized as
+// createdAt: 0 and decoded as one created on 1970-01-01, so the same collection merged
+// differently depending on whether it had passed through YAML -- the serialization-only
+// divergence henrytill/hbt-data#37 closes. A creation time of 0 is a real instant and
+// still serializes.
+func TestCollectionCreatedAtOmittedOnlyWhenAbsent(t *testing.T) {
+	collectionWith := func(created CreatedAt) Collection {
+		coll := NewCollection()
+		coll.Upsert(Entity{
+			URI:       mustParseURL("https://e.test/"),
+			CreatedAt: created,
+			UpdatedAt: make(Set[UpdatedAt]),
+			Names:     NewSet[Name](),
+			Labels:    NewSet[Label](),
+		})
+		return coll
+	}
+
+	encode := func(t *testing.T, marshal func(any) ([]byte, error), created CreatedAt) string {
+		t.Helper()
+		coll := collectionWith(created)
+		data, err := marshal(&coll)
+		if err != nil {
+			t.Fatalf("Marshal: %v", err)
+		}
+		return string(data)
+	}
+
+	marshalers := []struct {
+		name    string
+		marshal func(any) ([]byte, error)
+		epoch   string
+	}{
+		{"json", json.Marshal, `"createdAt":0`},
+		{"yaml", yaml.Marshal, "createdAt: 0"},
+	}
+
+	for _, m := range marshalers {
+		t.Run(m.name, func(t *testing.T) {
+			if out := encode(t, m.marshal, CreatedAt{}); strings.Contains(out, "createdAt") {
+				t.Errorf("an undated entity should carry no createdAt:\n%s", out)
+			}
+			if out := encode(t, m.marshal, NewCreatedAt(0)); !strings.Contains(out, m.epoch) {
+				t.Errorf("output missing %q:\n%s", m.epoch, out)
+			}
+		})
+	}
+
+	var decoded Collection
+	if err := json.Unmarshal([]byte(encode(t, json.Marshal, CreatedAt{})), &decoded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	for e := range decoded.Entities() {
+		if unix, ok := e.CreatedAt.Get(); ok {
+			t.Errorf("CreatedAt = (%d, %v), want absent after a round trip", unix, ok)
+		}
+	}
+}
+
 func TestCollectionUnmarshalMalformed(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -85,6 +85,32 @@ func TestHTMLFormatterPreservesSingleQuotes(t *testing.T) {
 	}
 }
 
+// ADD_DATE is emitted whenever there is a creation time and omitted only when there is
+// none, so an undated anchor round-trips unchanged. Testing the int64 for truth dropped
+// ADD_DATE="0" as well (#74), which is the trap the pointer removes.
+func TestHTMLFormatterAddDateIsOmittedOnlyWhenAbsent(t *testing.T) {
+	format := func(created types.CreatedAt) string {
+		u, err := url.Parse("https://example.com/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		coll := types.NewCollection()
+		coll.Upsert(types.Entity{
+			URI:       u,
+			CreatedAt: created,
+			Names:     types.NewSet(types.Name("Ex")),
+		})
+		return formatCollection(t, &coll)
+	}
+
+	if out := format(types.CreatedAt{}); strings.Contains(out, "ADD_DATE") {
+		t.Errorf("an undated bookmark should carry no ADD_DATE\noutput:\n%s", out)
+	}
+	if out := format(types.NewCreatedAt(0)); !strings.Contains(out, `ADD_DATE="0"`) {
+		t.Errorf("a creation time of 0 is a real instant\noutput:\n%s", out)
+	}
+}
+
 func TestHTMLFormatterRoundTrip(t *testing.T) {
 	coll := types.NewCollection()
 	original := specialEntity(t)

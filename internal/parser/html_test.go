@@ -32,6 +32,33 @@ func parseSingleBookmark(t *testing.T, anchor string) types.Entity {
 	return types.Entity{}
 }
 
+// An anchor without ADD_DATE parses to an absent creation time: not the wall clock,
+// which made output depend on when it was produced (#87), and not the epoch, which
+// would win every merge and demote a real creation time to an update
+// (henrytill/hbt-data#37). Fixture: html/bookmarks_undated.
+func TestHTMLParserUndatedAnchor(t *testing.T) {
+	undated := parseSingleBookmark(t, `<A HREF="https://example.com/" TAGS="a">Ex</A>`)
+	if unix, ok := undated.CreatedAt.Get(); ok {
+		t.Errorf("CreatedAt = (%d, %v), want absent", unix, ok)
+	}
+
+	// Only ADD_DATE's presence separates an absence from the epoch, which is a
+	// real instant. Fixture: html/bookmarks_epoch_creation.
+	epoch := parseSingleBookmark(t, `<A HREF="https://example.com/" ADD_DATE="0" TAGS="a">Ex</A>`)
+	if unix, ok := epoch.CreatedAt.Get(); !ok || unix != 0 {
+		t.Errorf("CreatedAt = (%d, %v), want (0, true)", unix, ok)
+	}
+
+	// An ADD_DATE that is not a timestamp states nothing usable, so it lands in the
+	// same absence rather than in the wall clock it used to fall back to (#79).
+	// Whether malformed input should instead be rejected is henrytill/hbt-data#11,
+	// which the corpus cannot express yet.
+	malformed := parseSingleBookmark(t, `<A HREF="https://example.com/" ADD_DATE="bogus" TAGS="a">Ex</A>`)
+	if unix, ok := malformed.CreatedAt.Get(); ok {
+		t.Errorf("CreatedAt = (%d, %v), want absent", unix, ok)
+	}
+}
+
 func TestHTMLParserToreadTag(t *testing.T) {
 	t.Run("exact toread tag sets flag and is dropped from labels", func(t *testing.T) {
 		e := parseSingleBookmark(t, `<A HREF="https://example.com/" ADD_DATE="100" TAGS="toread,go">Ex</A>`)

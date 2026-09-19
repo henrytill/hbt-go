@@ -37,7 +37,7 @@ type HTMLFormatter struct{}
 type templateEntity struct {
 	Href         string
 	Text         string
-	AddDate      int64
+	AddDate      *int64
 	LastModified *int64
 	Tags         string
 	Private      string
@@ -64,6 +64,14 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	text := href
 	if len(names) > 0 {
 		text = names[0]
+	}
+
+	// ADD_DATE is emitted whenever there is a creation time, including one of
+	// 0: a pointer distinguishes an absence from the epoch, where testing the
+	// int64 for truth dropped both (#74).
+	var addDate *int64
+	if unix, ok := entity.CreatedAt.Get(); ok {
+		addDate = &unix
 	}
 
 	var lastVisit *int64
@@ -97,7 +105,7 @@ func newTemplateEntity(entity types.Entity) templateEntity {
 	ret := templateEntity{
 		Href:      attrEscaper.Replace(href),
 		Text:      textEscaper.Replace(text),
-		AddDate:   entity.CreatedAt.Unix(),
+		AddDate:   addDate,
 		Tags:      attrEscaper.Replace(strings.Join(tags, ",")),
 		Private:   private,
 		ToRead:    toRead,
