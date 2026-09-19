@@ -263,8 +263,13 @@ func (e *Entity) absorb(other Entity) {
 	// Normalizing at the parse and decode boundaries means such an entity no
 	// longer arrives from input -- html/bookmarks_simple used to parse to that
 	// shape and no longer does -- but Entity's fields are exported, so any
-	// package can still write one. hbt-hs, hbt-rs and hbt-ocaml guard the same
-	// way.
+	// package can still write one. TestUpsertIdenticalEntityIsNoOp does, and
+	// removing this guard fails that test and nothing else.
+	//
+	// hbt-hs, hbt-rs and hbt-ocaml guard the same way, but not to the same
+	// effect: hbt-rs's fields are private and its constructor takes no updates,
+	// so there the shape is unreachable and the guard is inert. Here and in
+	// hbt-ocaml it still changes results.
 	if e.Equal(other) {
 		return
 	}
