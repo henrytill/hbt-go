@@ -276,10 +276,14 @@ func (e *Entity) absorb(other Entity) {
 	// package can still write one. TestUpsertIdenticalEntityIsNoOp does, and
 	// removing this guard fails that test and nothing else.
 	//
-	// hbt-hs, hbt-rs and hbt-ocaml guard the same way, but not to the same
-	// effect: hbt-rs's fields are private and its constructor takes no updates,
-	// so there the shape is unreachable and the guard is inert. Here and in
-	// hbt-ocaml it still changes results.
+	// hbt-hs, hbt-rs and hbt-ocaml guard the same way, and in all four the
+	// guard still changes results -- what differs is only how far the shape
+	// reaches. Here and in hbt-hs the fields are exported, so any package or
+	// module can write it. hbt-ocaml's type is abstract, but its make takes an
+	// ?updated_at it deliberately does not normalize, so any caller can too.
+	// hbt-rs is the closed one: its fields are private, so only its own module
+	// can -- which its tests do, and its merge doc says the guard is what keeps
+	// that update. None of the four is inert.
 	if e.Equal(other) {
 		return
 	}
