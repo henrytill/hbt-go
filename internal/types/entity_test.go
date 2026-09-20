@@ -115,9 +115,12 @@ func entityAt(uri string, unix int64) Entity {
 // undatedEntityAt is what an anchor without ADD_DATE parses to: an entity with no
 // creation time at all, which the zero value denotes.
 func undatedEntityAt(uri string) Entity {
-	e := entityAt(uri, 0)
-	e.CreatedAt = CreatedAt{}
-	return e
+	return Entity{
+		URI:       mustParseURL(uri),
+		UpdatedAt: make(Set[UpdatedAt]),
+		Names:     make(Set[Name]),
+		Labels:    make(Set[Label]),
+	}
 }
 
 // createdUnix reports an entity's creation time as a Unix second count, or -1 if it has
