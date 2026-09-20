@@ -298,10 +298,11 @@ func mergedUpdates(a, b Entity) (CreatedAt, Set[UpdatedAt]) {
 	updates := a.UpdatedAt.Merge(b.UpdatedAt)
 	// Only a creation time that exists goes back into the history: an absent
 	// one has nothing to contribute and must not arrive as an epoch update.
-	for _, c := range []CreatedAt{a.CreatedAt, b.CreatedAt} {
-		if unix, ok := c.Get(); ok {
-			updates = updates.Add(NewUpdatedAt(unix))
-		}
+	if unix, ok := a.CreatedAt.Get(); ok {
+		updates = updates.Add(NewUpdatedAt(unix))
+	}
+	if unix, ok := b.CreatedAt.Get(); ok {
+		updates = updates.Add(NewUpdatedAt(unix))
 	}
 
 	return created, updates
