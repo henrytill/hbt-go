@@ -84,25 +84,41 @@ func (t timestamp) unix() int64 {
 // the bookmark was created (henrytill/hbt-data#37). It carries a Valid flag
 // like LastVisitedAt rather than standing an absence in as the epoch, which
 // would win every comparison and demote a real creation time to an update.
-type CreatedAt struct {
+// optTimestamp is an instant that may be absent: the zero value is unset, and
+// a set one carries a Unix second count. It is the shared implementation
+// behind CreatedAt and LastVisitedAt, which stay distinct types so Entity
+// fields cannot be mixed up -- the same reason optBool sits behind Shared,
+// ToRead, and IsFeed. Merge stays on each of them, because they combine in
+// opposite directions: the earlier creation time wins, the later visit does.
+type optTimestamp struct {
 	timestamp
 	Valid bool
 }
 
-func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{timestamp(unix), true} }
-
-// Get returns the instant as a Unix second count, and whether it is set.
-func (c CreatedAt) Get() (int64, bool) {
-	return c.unix(), c.Valid
+func newOptTimestamp(unix int64) optTimestamp {
+	return optTimestamp{timestamp(unix), true}
 }
 
-// Equal reports whether c and d denote the same instant, or are both unset.
-func (c CreatedAt) Equal(d CreatedAt) bool {
-	if c.Valid != d.Valid {
+// get returns the instant as a Unix second count, and whether it is set.
+func (o optTimestamp) get() (int64, bool) {
+	return o.unix(), o.Valid
+}
+
+// equal reports whether o and p denote the same instant, or are both unset.
+func (o optTimestamp) equal(p optTimestamp) bool {
+	if o.Valid != p.Valid {
 		return false
 	}
-	return !c.Valid || c.timestamp == d.timestamp
+	return !o.Valid || o.timestamp == p.timestamp
 }
+
+type CreatedAt struct{ optTimestamp }
+
+func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{newOptTimestamp(unix)} }
+
+func (c CreatedAt) Get() (int64, bool) { return c.get() }
+
+func (c CreatedAt) Equal(d CreatedAt) bool { return c.equal(d.optTimestamp) }
 
 // Merge combines two creation times, keeping the earlier one. An absent
 // creation time is the identity: an undated mention neither claims the
@@ -143,27 +159,13 @@ func unixToSet(unix []int64) Set[UpdatedAt] {
 	return s
 }
 
-type LastVisitedAt struct {
-	timestamp
-	Valid bool
-}
+type LastVisitedAt struct{ optTimestamp }
 
-func NewLastVisitedAt(unix int64) LastVisitedAt {
-	return LastVisitedAt{timestamp(unix), true}
-}
+func NewLastVisitedAt(unix int64) LastVisitedAt { return LastVisitedAt{newOptTimestamp(unix)} }
 
-// Get returns the instant as a Unix second count, and whether it is set.
-func (l LastVisitedAt) Get() (int64, bool) {
-	return l.unix(), l.Valid
-}
+func (l LastVisitedAt) Get() (int64, bool) { return l.get() }
 
-// Equal reports whether l and m denote the same instant, or are both unset.
-func (l LastVisitedAt) Equal(m LastVisitedAt) bool {
-	if l.Valid != m.Valid {
-		return false
-	}
-	return !l.Valid || l.timestamp == m.timestamp
-}
+func (l LastVisitedAt) Equal(m LastVisitedAt) bool { return l.equal(m.optTimestamp) }
 
 func (l LastVisitedAt) Merge(m LastVisitedAt) LastVisitedAt {
 	if !l.Valid {

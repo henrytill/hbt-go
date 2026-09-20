@@ -36,7 +36,7 @@ Language-agnostic test data for conformance testing:
 - `Id` - an opaque handle pairing an owning `*Collection` with an index; `checkId` rejects ids from a different collection
 - `Entity` - a bookmark: `URI`, `CreatedAt`, `UpdatedAt Set[UpdatedAt]`, `Names`, `Labels`, `Shared`, `ToRead`, `IsFeed`, `Extended`, `LastVisitedAt`
 
-**Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `CreatedAt` and `LastVisitedAt` are optional too, but as a timestamp plus a `Valid` flag rather than an `optBool` wrapper.
+**Tri-state fields**: `Shared`, `ToRead`, and `IsFeed` wrap an unexported `optBool` (set/unset plus value) so that "absent" is distinct from "false". Each exposes `Get() (bool, bool)` and a `Merge` that combines two values. `CreatedAt` and `LastVisitedAt` are optional the same way, over an unexported `optTimestamp` rather than an `optBool`; each keeps its own `Merge`, since they combine in opposite directions -- the earlier creation time wins, the later visit does.
 
 **Timestamps**: `CreatedAt`, `UpdatedAt`, and `LastVisitedAt` are distinct types over an unexported `timestamp`, a Unix second count -- the resolution the wire format carries, and what they are constructed from. This mirrors hbt-rs, where all three are newtypes over one `Time`. The doc comment on `timestamp` says why seconds rather than `time.Time`.
 
