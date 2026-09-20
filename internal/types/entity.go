@@ -70,20 +70,15 @@ func (f IsFeed) Merge(g IsFeed) IsFeed { return IsFeed{f.merge(g.optBool)} }
 // timestamp is an instant as a Unix second count, the resolution the wire
 // format carries. It is not a time.Time because == on one compares the
 // monotonic reading and the *Location as well as the instant, which would let
-// a Set[UpdatedAt] hold two members denoting the same moment. It is the shared
-// implementation behind CreatedAt, UpdatedAt, and LastVisitedAt, which stay
-// distinct types so Entity fields cannot be mixed up.
+// a Set[UpdatedAt] hold two members denoting the same moment. UpdatedAt wraps
+// it directly; CreatedAt and LastVisitedAt reach it through optTimestamp. All
+// three stay distinct types so Entity fields cannot be mixed up.
 type timestamp int64
 
 func (t timestamp) unix() int64 {
 	return int64(t)
 }
 
-// CreatedAt is the instant a bookmark was created, or nothing at all: HTML
-// makes ADD_DATE optional, and an anchor without one says nothing about when
-// the bookmark was created (henrytill/hbt-data#37). It carries a Valid flag
-// like LastVisitedAt rather than standing an absence in as the epoch, which
-// would win every comparison and demote a real creation time to an update.
 // optTimestamp is an instant that may be absent: the zero value is unset, and
 // a set one carries a Unix second count. It is the shared implementation
 // behind CreatedAt and LastVisitedAt, which stay distinct types so Entity
@@ -112,6 +107,11 @@ func (o optTimestamp) equal(p optTimestamp) bool {
 	return !o.Valid || o.timestamp == p.timestamp
 }
 
+// CreatedAt is the instant a bookmark was created, or nothing at all: HTML
+// makes ADD_DATE optional, and an anchor without one says nothing about when
+// the bookmark was created (henrytill/hbt-data#37). It carries a Valid flag
+// like LastVisitedAt rather than standing an absence in as the epoch, which
+// would win every comparison and demote a real creation time to an update.
 type CreatedAt struct{ optTimestamp }
 
 func NewCreatedAt(unix int64) CreatedAt { return CreatedAt{newOptTimestamp(unix)} }
