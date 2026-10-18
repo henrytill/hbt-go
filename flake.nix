@@ -48,6 +48,7 @@
             meta = with final.lib; {
               description = "Heterogeneous Bookmark Transformation";
               homepage = "https://github.com/henrytill/hbt-go";
+              mainProgram = "hbt";
               maintainers = with maintainers; [ ];
             };
           };
