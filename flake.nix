@@ -66,7 +66,7 @@
         packages.hbt = pkgs.hbt;
         packages.default = self.packages.${system}.hbt;
         checks.conformance = hbt-data.lib.${system}.check {
-          binary = "${pkgs.hbt}/bin/hbt";
+          binary = pkgs.lib.getExe pkgs.hbt;
         };
         devShells.default = pkgs.mkShell {
           inputsFrom = [ pkgs.hbt ];
